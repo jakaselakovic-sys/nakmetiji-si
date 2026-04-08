@@ -183,8 +183,10 @@ export async function GET() {
     checks,
   };
 
+  // Always return 200 — monitoring tools (Better Stack) treat non-200 as "down".
+  // The JSON body contains the real status ("ok" | "degraded") for detailed checks.
   return NextResponse.json(response, {
-    status: overallStatus === "ok" ? 200 : 503,
+    status: 200,
     headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
   });
 }
