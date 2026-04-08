@@ -51,7 +51,7 @@ jobs:
 
       - name: Pošlji alert ob napaki
         if: failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             // Ustvari GitHub Issue ob napaki (samo en odprt issue naenkrat)
@@ -74,7 +74,7 @@ jobs:
 
       - name: Zapri alert issue ko je vse OK
         if: success()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const issues = await github.rest.issues.listForRepo({
