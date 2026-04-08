@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800">
+  <defs>
+    <!-- Base turbulence for wood grain -->
+    <filter id="wood" x="0%" y="0%" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.015 0.15" numOctaves="6" seed="3" result="noise"/>
+      <feColorMatrix type="matrix" in="noise" result="brown"
+        values="0.4 0.15 0 0 0.18
+                0.25 0.12 0 0 0.1
+                0.1 0.05 0 0 0.06
+                0 0 0 1 0"/>
+      <!-- Add grain detail -->
+      <feTurbulence type="fractalNoise" baseFrequency="0.03 0.4" numOctaves="3" seed="7" result="grain"/>
+      <feColorMatrix type="matrix" in="grain" result="grainColor"
+        values="0.08 0 0 0 0
+                0.04 0 0 0 0
+                0.02 0 0 0 0
+                0 0 0 0.3 0"/>
+      <feComposite operator="arithmetic" k1="0" k2="1" k3="0.4" k4="0" in="brown" in2="grainColor" result="combined"/>
+      <!-- Darken overall -->
+      <feComponentTransfer in="combined">
+        <feFuncR type="linear" slope="0.85" intercept="0.05"/>
+        <feFuncG type="linear" slope="0.7" intercept="0.03"/>
+        <feFuncB type="linear" slope="0.5" intercept="0.02"/>
+      </feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="100%" height="100%" filter="url(#wood)"/>
+</svg>

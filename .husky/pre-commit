@@ -1,0 +1,2 @@
+echo "🔍 Auto-fix pred commitom..."
+npx lint-staged

@@ -1,0 +1,124 @@
+name: CI — Build, Lint & Auto-Fix
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # ── 1. Auto-fix ESLint napake in jih commita nazaj ───────────────────────
+  auto-fix:
+    name: Auto-Fix (ESLint)
+    runs-on: ubuntu-latest
+    # Samo na push na branch (ne na PR iz forka)
+    if: github.event_name == 'push'
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: ESLint auto-fix
+        run: npx eslint src --ext .ts,.tsx --fix --max-warnings=0
+        continue-on-error: true
+
+      - name: Commita popravke (če so)
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "fix: auto-fix ESLint napake [skip ci]"
+          commit_author: "NaKmetiji Bot <bot@nakmetiji.si>"
+
+  # ── 2. TypeScript + Build preveritev ────────────────────────────────────
+  build:
+    name: TypeScript & Build
+    runs-on: ubuntu-latest
+    needs: [auto-fix]
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: TypeScript preveritev
+        run: npx tsc --noEmit
+
+      - name: Build produkcija
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder' }}
+          NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || 'placeholder' }}
+
+      - name: Shrani build (3 dni)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build-${{ github.sha }}
+          path: .next/
+          retention-days: 3
+
+  # ── 3. Playwright E2E testi ───────────────────────────────────────────────
+  e2e:
+    name: E2E Testi (Playwright)
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: always() && needs.build.result == 'success'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Namesti Playwright brskalnik
+        run: npx playwright install chromium --with-deps
+
+      - name: Poženi E2E teste
+        run: npx playwright test --project=chromium
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder' }}
+          NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || 'placeholder' }}
+          CI: true
+
+      - name: Naloži poročilo testov
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.sha }}
+          path: tests/playwright-report/
+          retention-days: 7
+
+      - name: Pokaži rezultate v PR komentarju
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ **E2E testi so padli!** Poglej [Playwright poročilo](' +
+                context.serverUrl + '/' + context.repo.owner + '/' +
+                context.repo.repo + '/actions/runs/' + context.runId + ')'
+            })

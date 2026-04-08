@@ -1,0 +1,35 @@
+version: 2
+
+updates:
+  # Avtomatsko posodabljaj npm pakete vsak teden
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Europe/Ljubljana"
+    # Odpri največ 5 PR-jev hkrati
+    open-pull-requests-limit: 5
+    # Skupaj minor/patch posodobitve v en PR
+    groups:
+      dependencies:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    # Označi PR-je
+    labels:
+      - "dependencies"
+      - "auto-update"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # Posodabljaj tudi GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "github-actions"

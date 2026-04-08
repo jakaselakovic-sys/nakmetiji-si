@@ -1,0 +1,22 @@
+{
+  "name": "NaKmetiji — Nadzorna plošča",
+  "short_name": "NaKmetiji",
+  "description": "Upravljajte svojo turistično kmetijo na platformi NaKmetiji.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#F4F1EA",
+  "theme_color": "#1a3a2a",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["tourism", "business"],
+  "lang": "sl",
+  "dir": "ltr"
+}

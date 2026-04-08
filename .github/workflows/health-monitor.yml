@@ -1,0 +1,100 @@
+name: Health Monitor — Vsakih 15 minut
+
+on:
+  schedule:
+    # Vsako uro ob 0, 15, 30, 45 minutah
+    - cron: "0,15,30,45 * * * *"
+  # Lahko sproži ročno
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    name: Preveri zdravje aplikacije
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Pokliči /api/health
+        id: health
+        run: |
+          PROD_URL="${{ secrets.PRODUCTION_URL || 'http://localhost:3000' }}"
+
+          echo "Preverjam: $PROD_URL/api/health"
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            --max-time 15 \
+            --retry 2 \
+            --retry-delay 3 \
+            "$PROD_URL/api/health" 2>&1)
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+
+          echo "http_code=$HTTP_CODE" >> $GITHUB_OUTPUT
+          echo "body=$BODY" >> $GITHUB_OUTPUT
+
+          # Izhod z napako če ni 200
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ Health check FAILED: HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          echo "✅ Health check OK"
+
+      - name: Ping Better Stack Heartbeat
+        if: success() && secrets.BETTER_STACK_HEARTBEAT_URL != ''
+        run: |
+          curl -s "${{ secrets.BETTER_STACK_HEARTBEAT_URL }}" || true
+
+      - name: Pošlji alert ob napaki
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Ustvari GitHub Issue ob napaki (samo en odprt issue naenkrat)
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'health-alert'
+            });
+
+            if (issues.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '🚨 Produkcija je DOLE — Health check neuspešen',
+                body: `## Aplikacija ne odgovarja!\n\n**Čas:** ${new Date().toISOString()}\n**URL:** ${{ secrets.PRODUCTION_URL }}\n\nHealth check endpoint vrnil napako.\n\n**Akcija:** Takoj preveri Vercel dashboard in Supabase.`,
+                labels: ['health-alert', 'urgent']
+              });
+            }
+
+      - name: Zapri alert issue ko je vse OK
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'health-alert'
+            });
+
+            for (const issue of issues.data) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: '✅ Aplikacija je spet normalno dostopna. Auto-zaprto.'
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed'
+              });
+            }

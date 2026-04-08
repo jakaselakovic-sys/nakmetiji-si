@@ -1,0 +1,656 @@
+@import "tailwindcss";
+
+/* =============================================================================
+   NaKmetiji.si — Design System
+   Zeleno-zemeljski toni, glassmorphism, moderna tipografija
+   ============================================================================= */
+
+/* ── Barvna paleta ───────────────────────────────────────────────────────── */
+
+@theme inline {
+  /* Zelena — Forest / Gozd */
+  --color-forest-950: #0f2318;
+  --color-forest-900: #1a3a2a;
+  --color-forest-800: #1f4d35;
+  --color-forest-700: #2D5A27;
+  --color-forest-600: #2d8a56;
+  --color-forest-500: #38a169;
+  --color-forest-400: #68d391;
+  --color-forest-300: #9ae6b4;
+  --color-forest-200: #c6f6d5;
+  --color-forest-100: #e8f7ed;
+  --color-forest-50: #f0faf4;
+
+  /* Zemeljska — Earth / Narava */
+  --color-earth-900: #3d2c1e;
+  --color-earth-800: #5c4033;
+  --color-earth-700: #7b5b43;
+  --color-earth-600: #9a7b5b;
+  --color-earth-500: #b49a7c;
+  --color-earth-400: #c8b49a;
+  --color-earth-300: #ddd0bf;
+  --color-earth-200: #ede5da;
+  --color-earth-100: #f5f0e8;
+  --color-earth-50: #faf8f4;
+
+  /* Akcentne */
+  --color-cream: #F4F1EA;
+  --color-cream-warm: #f0e8d8;
+  --color-gold-500: #d4a853;
+  --color-gold-600: #b8912e;
+
+  /* Semantične */
+  --color-background: #F4F1EA;
+  --color-foreground: #1a3a2a;
+  --color-card-bg: #ffffff;
+  --color-card-border: #ede5da;
+  --color-muted: #9a7b5b;
+
+  /* Fonti */
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+  --font-display: var(--font-playfair), Georgia, "Times New Roman", serif;
+}
+
+/* ── Base stili ──────────────────────────────────────────────────────────── */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-earth-100);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-earth-400);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-earth-500);
+}
+
+/* ── Selection ───────────────────────────────────────────────────────────── */
+
+::selection {
+  background: var(--color-forest-200);
+  color: var(--color-forest-900);
+}
+
+/* ── Glassmorphism utilities ─────────────────────────────────────────────── */
+
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.glass-dark {
+  background: rgba(26, 58, 42, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 2px 4px -2px rgba(0, 0, 0, 0.03);
+}
+
+.glass-nav {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Animacije ───────────────────────────────────────────────────────────── */
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.7s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out both;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.5s ease-out both;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s ease-in-out infinite;
+  background-size: 200% 100%;
+}
+
+/* Floating animations for hero social proof cards */
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(0.5deg); }
+}
+
+.animate-float-gentle {
+  animation: float-gentle 4s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float-slow 5s ease-in-out infinite;
+}
+
+/* ── Animated clouds ────────────────────────────────────────────────────── */
+
+@keyframes cloud-move-right {
+  from { transform: translateX(-110%); }
+  to   { transform: translateX(110vw); }
+}
+
+@keyframes cloud-move-left {
+  from { transform: translateX(110vw); }
+  to   { transform: translateX(-110%); }
+}
+
+.cloud {
+  position: absolute;
+  will-change: transform;
+  height: auto;
+}
+
+.cloud-1 {
+  width: clamp(380px, 42vw, 750px);
+  top: -1%;
+  animation: cloud-move-right 100s linear infinite;
+}
+
+.cloud-2 {
+  width: clamp(300px, 34vw, 600px);
+  top: 5%;
+  animation: cloud-move-left 85s linear infinite;
+  animation-delay: -25s;
+}
+
+.cloud-3 {
+  width: clamp(240px, 26vw, 450px);
+  top: 1%;
+  animation: cloud-move-right 65s linear infinite;
+  animation-delay: -40s;
+}
+
+.cloud-4 {
+  width: clamp(280px, 32vw, 550px);
+  top: 9%;
+  opacity: 0.7;
+  animation: cloud-move-left 110s linear infinite;
+  animation-delay: -60s;
+}
+
+.cloud-5 {
+  width: clamp(320px, 38vw, 650px);
+  top: 3%;
+  opacity: 0.55;
+  animation: cloud-move-right 90s linear infinite;
+  animation-delay: -15s;
+}
+
+/* ── Animated fog / mist ────────────────────────────────────────────────── */
+
+@keyframes fog-move-1 {
+  0%   { transform: translateX(-25%); opacity: 0.45; }
+  50%  { transform: translateX(5%);   opacity: 0.7; }
+  100% { transform: translateX(-25%); opacity: 0.45; }
+}
+
+@keyframes fog-move-2 {
+  0%   { transform: translateX(15%);  opacity: 0.3; }
+  50%  { transform: translateX(-15%); opacity: 0.55; }
+  100% { transform: translateX(15%);  opacity: 0.3; }
+}
+
+@keyframes fog-move-3 {
+  0%   { transform: translateX(-10%); opacity: 0.2; }
+  50%  { transform: translateX(10%);  opacity: 0.38; }
+  100% { transform: translateX(-10%); opacity: 0.2; }
+}
+
+@keyframes fog-move-4 {
+  0%   { transform: translateX(10%);  opacity: 0.35; }
+  50%  { transform: translateX(-20%); opacity: 0.6; }
+  100% { transform: translateX(10%);  opacity: 0.35; }
+}
+
+.fog {
+  position: absolute;
+  left: -15%;
+  width: 130%;
+  filter: blur(45px);
+  will-change: transform, opacity;
+}
+
+/* Megla 1: med griči, topla bela */
+.fog-layer-1 {
+  bottom: 20%;
+  height: 160px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(248,245,238,0.5) 20%,
+    rgba(255,255,255,0.6) 50%,
+    rgba(248,245,238,0.5) 80%,
+    transparent 100%
+  );
+  animation: fog-move-1 24s ease-in-out infinite;
+}
+
+/* Megla 2: višje, tanjša, nasprotna smer */
+.fog-layer-2 {
+  bottom: 32%;
+  height: 110px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(248,245,238,0.3) 25%,
+    rgba(255,255,255,0.4) 50%,
+    rgba(248,245,238,0.3) 75%,
+    transparent 100%
+  );
+  animation: fog-move-2 32s ease-in-out infinite;
+  animation-delay: -8s;
+}
+
+/* Megla 3: visoko, zelo rahla */
+.fog-layer-3 {
+  bottom: 42%;
+  height: 80px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255,255,255,0.15) 30%,
+    rgba(248,245,238,0.25) 50%,
+    rgba(255,255,255,0.15) 70%,
+    transparent 100%
+  );
+  animation: fog-move-3 38s ease-in-out infinite;
+  animation-delay: -18s;
+  filter: blur(35px);
+}
+
+/* Megla 4: pri tleh — "morning mist" cream toned */
+.fog-layer-4 {
+  bottom: 10%;
+  height: 130px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(244,241,234,0.5) 15%,
+    rgba(248,245,238,0.65) 45%,
+    rgba(244,241,234,0.5) 85%,
+    transparent 100%
+  );
+  animation: fog-move-4 20s ease-in-out infinite;
+  animation-delay: -5s;
+  filter: blur(55px);
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .cloud, .fog, .animate-float-gentle, .animate-float-slow {
+    animation: none !important;
+  }
+}
+
+/* Display font utility */
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Text shadows for hero readability */
+.text-shadow-hero {
+  text-shadow: 0 4px 24px rgba(15, 35, 24, 0.5), 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.text-shadow-subtle {
+  text-shadow: 0 2px 12px rgba(15, 35, 24, 0.35), 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Illustrated glassmorphism for floating cards */
+.glass-illustrated {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  box-shadow:
+    0 8px 32px rgba(45, 90, 39, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* ── Carved wood text effect ─────────────────────────────────────────────── */
+
+.wood-text {
+  background-image: url('/images/wood-texture.webp');
+  background-size: 400px 400px;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(1px 2px 2px rgba(0, 0, 0, 0.12));
+}
+
+/* "Carved" — deeper shadow for engraved look */
+.wood-carved {
+  background-image: url('/images/wood-texture.webp');
+  background-size: 400px 400px;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter:
+    drop-shadow(1px 2px 3px rgba(0, 0, 0, 0.25))
+    drop-shadow(-1px -1px 0px rgba(255, 255, 255, 0.12));
+}
+
+/* On mobile, fall back to solid dark walnut for readability */
+@media (max-width: 639px) {
+  .wood-text,
+  .wood-carved {
+    background-image: none !important;
+    -webkit-background-clip: unset !important;
+    background-clip: unset !important;
+    color: #3d2c1e !important;
+    filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.1)) !important;
+  }
+}
+
+/* Staggered delays */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+
+/* ── Mapbox marker styles ────────────────────────────────────────────────── */
+
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 168, 83, 0.5); }
+  50% { box-shadow: 0 0 0 14px rgba(212, 168, 83, 0); }
+}
+
+@keyframes pulse-blue {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
+  50% { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); }
+}
+
+/* Premium farm marker */
+.marker-premium {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+}
+.marker-premium-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: pulse-gold 2s ease-in-out infinite;
+}
+.marker-premium-core {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #d4a853, #b8912e);
+  border: 3px solid white;
+  box-shadow: 0 3px 12px rgba(212, 168, 83, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  transition: transform 0.2s;
+}
+.marker-premium:hover .marker-premium-core {
+  transform: scale(1.15);
+}
+.marker-premium.marker-active .marker-premium-core {
+  transform: scale(1.2);
+  box-shadow: 0 4px 20px rgba(212, 168, 83, 0.6);
+}
+
+/* Medium tier farm marker */
+.marker-medium {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+}
+.marker-medium-core {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7BAEAD, #5A8E8C);
+  border: 2.5px solid white;
+  box-shadow: 0 3px 10px rgba(91, 142, 140, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  transition: transform 0.2s;
+}
+.marker-medium:hover .marker-medium-core {
+  transform: scale(1.15);
+}
+.marker-medium.marker-active .marker-medium-core {
+  transform: scale(1.2);
+  box-shadow: 0 4px 16px rgba(91, 142, 140, 0.55);
+}
+
+/* Standard farm marker */
+.marker-standard {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+}
+.marker-standard-core {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2D5A27, #1f4d35);
+  border: 2.5px solid white;
+  box-shadow: 0 3px 10px rgba(45, 90, 39, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  transition: transform 0.2s;
+}
+.marker-standard:hover .marker-standard-core {
+  transform: scale(1.15);
+}
+.marker-standard.marker-active .marker-standard-core {
+  transform: scale(1.2);
+  box-shadow: 0 4px 16px rgba(45, 90, 39, 0.5);
+}
+
+/* POI marker */
+.marker-poi {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+}
+.marker-poi-core {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid var(--color-earth-300);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.marker-poi:hover .marker-poi-core {
+  transform: scale(1.2);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+/* User location marker */
+.marker-user {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+.marker-user-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: pulse-blue 2s ease-in-out infinite;
+}
+.marker-user-dot {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: #3b82f6;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+}
+
+/* Cluster marker */
+.marker-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-forest-600), var(--color-forest-800));
+  border: 3px solid white;
+  box-shadow: 0 4px 12px rgba(45, 90, 39, 0.3);
+  color: white;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.marker-cluster:hover {
+  transform: scale(1.1);
+}
+
+/* Region hover popup */
+.region-popup {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a3a2a;
+  border: 1px solid rgba(45, 90, 39, 0.15);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  pointer-events: none;
+}
+
+/* Mapbox control overrides */
+.mapboxgl-ctrl-group {
+  border-radius: 12px !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12) !important;
+  overflow: hidden;
+}
+
+.mapboxgl-ctrl-group button {
+  width: 36px !important;
+  height: 36px !important;
+}
+
+.mapboxgl-ctrl-group button:hover {
+  background-color: var(--color-forest-50) !important;
+}
+
+@media (max-width: 639px) {
+  .mapboxgl-ctrl-attrib {
+    display: none;
+  }
+}
+
+/* Weather badge markers on map */
+.weather-badge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(6px);
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
+  border-radius: 20px;
+  padding: 3px 8px 3px 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+  cursor: default;
+  pointer-events: none;
+  white-space: nowrap;
+  font-family: var(--font-sans);
+  animation: weather-pop 0.25s ease-out;
+}
+.weather-badge-emoji {
+  font-size: 15px;
+  line-height: 1;
+}
+.weather-badge-temp {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1a3a2a;
+  line-height: 1;
+}
+.weather-badge-good {
+  border-color: rgba(52, 168, 83, 0.6);
+  background: rgba(240, 250, 244, 0.97);
+}
+@keyframes weather-pop {
+  from { opacity: 0; transform: scale(0.7) translateY(4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
