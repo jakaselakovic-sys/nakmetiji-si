@@ -45,9 +45,11 @@ jobs:
           echo "✅ Health check OK"
 
       - name: Ping Better Stack Heartbeat
-        if: success() && secrets.BETTER_STACK_HEARTBEAT_URL != ''
+        if: success()
         run: |
-          curl -s "${{ secrets.BETTER_STACK_HEARTBEAT_URL }}" || true
+          if [ -n "${{ secrets.BETTER_STACK_HEARTBEAT_URL }}" ]; then
+            curl -s "${{ secrets.BETTER_STACK_HEARTBEAT_URL }}" || true
+          fi
 
       - name: Pošlji alert ob napaki
         if: failure()
