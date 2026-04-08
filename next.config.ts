@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   images: {
@@ -9,4 +10,21 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Sentry organizacija in projekt (nastavi v .env.local)
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Tiha gradnja — brez Sentry logov med buildom
+  silent: true,
+
+  // Source maps — upload samo v produkciji
+  sourcemaps: {
+    disable: process.env.NODE_ENV !== "production",
+  },
+
+  // Onemogoči Sentry tunneling (ni potrebno za osnovni setup)
+  tunnelRoute: undefined,
+
+});

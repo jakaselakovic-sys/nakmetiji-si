@@ -8,6 +8,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import * as Sentry from "@sentry/nextjs";
 
 interface ErrorPageProps {
   error: Error & { digest?: string };
@@ -23,9 +24,8 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
       stack: error.stack,
     });
 
-    // Report to Sentry if DSN configured
-    // import * as Sentry from "@sentry/nextjs";
-    // Sentry.captureException(error);
+    // Report to Sentry
+    Sentry.captureException(error);
 
     // Report to Better Stack logs if configured
     const logsUrl = process.env.NEXT_PUBLIC_BETTER_STACK_LOGS_URL;
