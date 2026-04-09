@@ -1,6 +1,7 @@
 // =============================================================================
-// NaKmetiji.si — Middleware (RBAC)
-// Zaščiti /dashboard, /admin z Supabase session + vloga
+// NaKmetiji.si — Proxy (RBAC)
+// Zaščiti /dashboard, /admin, /dodaj-kmetijo z Supabase session + vloga
+// Preimenovano iz middleware.ts → proxy.ts (Next.js 16)
 // =============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
@@ -9,7 +10,7 @@ import { createServerClient } from "@supabase/ssr";
 const ZASC_POTI = ["/dashboard", "/admin", "/dodaj-kmetijo"];
 const JAVNE_POTI = ["/prijava", "/registracija", "/api/health"];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Preskoči javne poti in statične datoteke
