@@ -1,5 +1,6 @@
 // =============================================================================
 // NaKmetiji.si — Server Actions: Kmetije (Farms)
+// N+1 FIXED: vse relacije se fetchajo z enim JOIN klicem
 // =============================================================================
 
 "use server";
@@ -11,35 +12,24 @@ import type {
   KmetijaPolna,
   KmetijeFilter,
   PaginiraniRezultat,
-  Dozivetje,
 } from "@/types/database";
 
-// ─── Pomoč: pridobi doživetja za kmetijo ────────────────────────────────────
+// ─── Helper: normalizira Supabase JOIN rezultat v KmetijaSDozivetji ──────────
 
-async function pridobiDozivetjaZaKmetijo(
-  kmetijaId: string
-): Promise<Dozivetje[]> {
-  const supabase = await createSupabaseServer();
-
-  const { data, error } = await supabase
-    .from("kmetija_dozivetje")
-    .select("dozivetje_id")
-    .eq("kmetija_id", kmetijaId);
-
-  if (error || !data || data.length === 0) return [];
-
-  const ids = data.map((d) => d.dozivetje_id);
-
-  const { data: dozivetja } = await supabase
-    .from("dozivetja")
-    .select("*")
-    .in("id", ids)
-    .order("vrstni_red", { ascending: true });
-
-  return (dozivetja as Dozivetje[]) || [];
+function normalizirajKmetijo(raw: Record<string, unknown>): KmetijaSDozivetji {
+  const { kmetija_dozivetje, ...kmetija } = raw;
+  return {
+    ...(kmetija as unknown as Kmetija),
+    dozivetja: Array.isArray(kmetija_dozivetje)
+      ? (kmetija_dozivetje as Record<string, unknown>[])
+          .filter((kd) => kd.dozivetja)
+          .map((kd) => kd.dozivetja as import("@/types/database").Dozivetje)
+          .sort((a, b) => ((a.vrstni_red ?? 0) - (b.vrstni_red ?? 0)))
+      : [],
+  };
 }
 
-// ─── Pridobi vse kmetije s filtri ───────────────────────────────────────────
+// ─── Pridobi vse kmetije s filtri — en sam query (brez N+1) ─────────────────
 
 export async function pridobiKmetije(
   filter: KmetijeFilter = {}
@@ -58,258 +48,161 @@ export async function pridobiKmetije(
     naStran = 12,
   } = filter;
 
-  // Začnemo query
-  let query = supabase.from("kmetije").select("*", { count: "exact" });
+  let query = supabase.from("kmetije").select(
+    `*, kmetija_dozivetje(dozivetja(*))`,
+    { count: "exact" }
+  );
 
-  // Filter: regija
   if (regija) {
-    if (Array.isArray(regija)) {
-      query = query.in("regija", regija);
-    } else {
-      query = query.eq("regija", regija);
-    }
+    query = Array.isArray(regija)
+      ? query.in("regija", regija)
+      : query.eq("regija", regija);
   }
-
-  // Filter: premium
-  if (premium !== undefined) {
-    query = query.eq("premium", premium);
-  }
-
-  // Filter: minimalna ocena
-  if (ocenaMin) {
-    query = query.gte("ocena", ocenaMin);
-  }
-
-  // Filter: iskanje (full-text)
-  if (iskanje && iskanje.trim()) {
+  if (premium !== undefined) query = query.eq("premium", premium);
+  if (ocenaMin) query = query.gte("ocena", ocenaMin);
+  if (iskanje?.trim()) {
     query = query.or(
       `ime.ilike.%${iskanje}%,opis.ilike.%${iskanje}%,kratki_opis.ilike.%${iskanje}%,obcina.ilike.%${iskanje}%`
     );
   }
 
-  // Sortiranje
-  switch (sortiranje) {
-    case "ocena":
-      query = query.order("ocena", {
-        ascending: smer === "asc",
-        nullsFirst: false,
-      });
-      break;
-    case "ime":
-      query = query.order("ime", { ascending: smer === "asc" });
-      break;
-    case "najnovejse":
-      query = query.order("ustvarjeno", {
-        ascending: smer === "asc",
-      });
-      break;
-  }
-
-  // Paginacija
-  const od = (stran - 1) * naStran;
-  const dokončno = od + naStran - 1;
-  query = query.range(od, dokončno);
-
-  const { data, error, count } = await query;
-
-  if (error) {
-    console.error("Napaka pri pridobivanju kmetij:", error);
-    return {
-      podatki: [],
-      skupaj: 0,
-      stran,
-      naStran,
-      skupajStrani: 0,
-    };
-  }
-
-  const kmetije = (data as Kmetija[]) || [];
-
-  // Filtriranje po doživetju (many-to-many)
-  let filtriraneKmetije = kmetije;
   if (dozivetje) {
     const slugi = Array.isArray(dozivetje) ? dozivetje : [dozivetje];
-
-    // Pridobi ID-je doživetij iz slugov
     const { data: dozData } = await supabase
       .from("dozivetja")
       .select("id")
       .in("slug", slugi);
 
-    if (dozData && dozData.length > 0) {
+    if (dozData?.length) {
       const dozIds = dozData.map((d) => d.id);
-
-      // Pridobi kmetije ki imajo ta doživetja
       const { data: kdData } = await supabase
         .from("kmetija_dozivetje")
         .select("kmetija_id")
         .in("dozivetje_id", dozIds);
 
-      if (kdData) {
-        const veljavniIds = new Set(kdData.map((kd) => kd.kmetija_id));
-        filtriraneKmetije = kmetije.filter((k) => veljavniIds.has(k.id));
+      if (kdData?.length) {
+        query = query.in("id", [...new Set(kdData.map((kd) => kd.kmetija_id))]);
       }
     }
   }
 
-  // Dodaj doživetja vsaki kmetiji
-  const kmetijeSDozivetji: KmetijaSDozivetji[] = await Promise.all(
-    filtriraneKmetije.map(async (kmetija) => ({
-      ...kmetija,
-      dozivetja: await pridobiDozivetjaZaKmetijo(kmetija.id),
-    }))
-  );
+  const ascending = smer === "asc";
+  switch (sortiranje) {
+    case "ocena":
+      query = query.order("ocena", { ascending, nullsFirst: false });
+      break;
+    case "ime":
+      query = query.order("ime", { ascending });
+      break;
+    case "najnovejse":
+      query = query.order("ustvarjeno", { ascending });
+      break;
+  }
 
-  const skupaj = dozivetje ? filtriraneKmetije.length : (count ?? 0);
+  const od = (stran - 1) * naStran;
+  query = query.range(od, od + naStran - 1).eq("aktivna", true);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    console.error("Napaka pri pridobivanju kmetij:", error);
+    return { podatki: [], skupaj: 0, stran, naStran, skupajStrani: 0 };
+  }
 
   return {
-    podatki: kmetijeSDozivetji,
-    skupaj,
+    podatki: ((data as Record<string, unknown>[]) || []).map(normalizirajKmetijo),
+    skupaj: count ?? 0,
     stran,
     naStran,
-    skupajStrani: Math.ceil(skupaj / naStran),
+    skupajStrani: Math.ceil((count ?? 0) / naStran),
   };
 }
 
-// ─── Pridobi eno kmetijo po slug-u ──────────────────────────────────────────
+// ─── Pridobi eno kmetijo — en query z vsemi relacijami ──────────────────────
 
-export async function pridobiKmetijo(
-  slug: string
-): Promise<KmetijaPolna | null> {
+export async function pridobiKmetijo(slug: string): Promise<KmetijaPolna | null> {
   const supabase = await createSupabaseServer();
 
   const { data, error } = await supabase
     .from("kmetije")
-    .select("*")
+    .select(`*, kmetija_dozivetje(dozivetja(*)), mnenja(*), izdelki(*)`)
     .eq("slug", slug)
     .single();
 
-  if (error || !data) {
-    console.error("Napaka pri pridobivanju kmetije:", error);
-    return null;
-  }
+  if (error || !data) return null;
 
-  const kmetija = data as Kmetija;
-
-  // Pridobi doživetja
-  const dozivetja = await pridobiDozivetjaZaKmetijo(kmetija.id);
-
-  // Pridobi mnenja
-  const { data: mnenjaData } = await supabase
-    .from("mnenja")
-    .select("*")
-    .eq("kmetija_id", kmetija.id)
-    .order("datum", { ascending: false });
-
+  const raw = data as Record<string, unknown>;
   return {
-    ...kmetija,
-    dozivetja,
-    mnenja: mnenjaData || [],
-  };
+    ...normalizirajKmetijo(raw),
+    mnenja: ((raw.mnenja as unknown[]) || []) as import("@/types/database").Mnenje[],
+    izdelki: ((raw.izdelki as unknown[]) || []) as import("@/types/database").Izdelek[],
+  } as unknown as KmetijaPolna;
 }
 
-// ─── Pridobi izpostavljene (featured) kmetije ───────────────────────────────
+// ─── Izpostavljene kmetije ────────────────────────────────────────────────────
 
 export async function pridobiIzpostavljeneKmetije(
-  limit: number = 3
+  limit = 3
 ): Promise<KmetijaSDozivetji[]> {
   const supabase = await createSupabaseServer();
 
   const { data, error } = await supabase
     .from("kmetije")
-    .select("*")
+    .select(`*, kmetija_dozivetje(dozivetja(*))`)
     .eq("premium", true)
+    .eq("aktivna", true)
     .order("ocena", { ascending: false, nullsFirst: false })
     .limit(limit);
 
-  if (error || !data) {
-    console.error("Napaka pri izpostavljenih kmetijah:", error);
-    return [];
-  }
-
-  return Promise.all(
-    (data as Kmetija[]).map(async (kmetija) => ({
-      ...kmetija,
-      dozivetja: await pridobiDozivetjaZaKmetijo(kmetija.id),
-    }))
-  );
+  if (error || !data) return [];
+  return (data as Record<string, unknown>[]).map(normalizirajKmetijo);
 }
 
-// ─── Pridobi kmetije za zemljevid ───────────────────────────────────────────
+// ─── Kmetije za zemljevid (z bounding box filtrom) ───────────────────────────
 
-export async function pridobiKmetijeZaZemljevid(): Promise<
-  Pick<
-    KmetijaSDozivetji,
-    | "id"
-    | "slug"
-    | "ime"
-    | "kratki_opis"
-    | "regija"
-    | "lat"
-    | "lng"
-    | "naslovna_slika"
-    | "ocena"
-    | "stevilo_ocen"
-    | "premium"
-    | "dozivetja"
-  >[]
-> {
+export async function pridobiKmetijeZaZemljevid(filter?: {
+  regija?: string;
+  jvLat?: number; jvLng?: number;
+  szLat?: number; szLng?: number;
+}) {
   const supabase = await createSupabaseServer();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("kmetije")
-    .select(
-      "id, slug, ime, kratki_opis, regija, lat, lng, naslovna_slika, ocena, stevilo_ocen, premium"
-    )
+    .select(`id, slug, ime, kratki_opis, regija, lat, lng,
+             naslovna_slika, ocena, stevilo_ocen, premium,
+             kmetija_dozivetje(dozivetja(id, ime, slug, ikona))`)
     .not("lat", "is", null)
-    .not("lng", "is", null);
+    .not("lng", "is", null)
+    .eq("aktivna", true);
 
-  if (error || !data) {
-    console.error("Napaka pri zemljevid kmetijah:", error);
-    return [];
+  if (filter?.regija) query = query.eq("regija", filter.regija);
+
+  if (filter?.jvLat !== undefined && filter?.szLat !== undefined) {
+    query = query
+      .gte("lat", Math.min(filter.jvLat, filter.szLat))
+      .lte("lat", Math.max(filter.jvLat, filter.szLat))
+      .gte("lng", Math.min(filter.jvLng!, filter.szLng!))
+      .lte("lng", Math.max(filter.jvLng!, filter.szLng!));
   }
 
-  return Promise.all(
-    data.map(async (kmetija) => ({
-      ...(kmetija as Pick<
-        Kmetija,
-        | "id"
-        | "slug"
-        | "ime"
-        | "kratki_opis"
-        | "regija"
-        | "lat"
-        | "lng"
-        | "naslovna_slika"
-        | "ocena"
-        | "stevilo_ocen"
-        | "premium"
-      >),
-      dozivetja: await pridobiDozivetjaZaKmetijo(kmetija.id),
-    }))
-  );
+  const { data, error } = await query;
+  if (error || !data) return [];
+  return (data as Record<string, unknown>[]).map(normalizirajKmetijo);
 }
 
-// ─── Iskanje kmetij (za search bar autocomplete) ────────────────────────────
+// ─── Iskanje (autocomplete) ───────────────────────────────────────────────────
 
-export async function isciKmetije(
-  query: string,
-  limit: number = 5
-): Promise<Pick<Kmetija, "id" | "slug" | "ime" | "regija" | "naslovna_slika">[]> {
-  if (!query || query.trim().length < 2) return [];
+export async function isciKmetije(iskanje: string, limit = 5) {
+  if (!iskanje || iskanje.trim().length < 2) return [];
 
   const supabase = await createSupabaseServer();
-
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("kmetije")
     .select("id, slug, ime, regija, naslovna_slika")
-    .or(`ime.ilike.%${query}%,obcina.ilike.%${query}%,kratki_opis.ilike.%${query}%`)
+    .or(`ime.ilike.%${iskanje}%,obcina.ilike.%${iskanje}%`)
+    .eq("aktivna", true)
     .limit(limit);
 
-  if (error || !data) return [];
-
-  return data as Pick<
-    Kmetija,
-    "id" | "slug" | "ime" | "regija" | "naslovna_slika"
-  >[];
+  return data || [];
 }

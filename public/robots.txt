@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Allow: /kmetije
+Allow: /zemljevid
+Allow: /blog
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /api/
+Disallow: /prijava
+Disallow: /registracija
+
+Sitemap: https://nakmetiji.vercel.app/sitemap.xml

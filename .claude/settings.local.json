@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls /c/Users/jakas/Desktop/nakmetiji/src/app/kmetije/*/)",
+      "Bash(cat /c/Users/jakas/Desktop/nakmetiji/src/app/kmetije/*/FarmProfileClient.tsx)",
+      "Bash(xargs head:*)",
+      "Bash(wc -l /c/Users/jakas/Desktop/nakmetiji/src/app/kmetije/*/FarmProfileClient.tsx)",
+      "Bash(grep -E \"404|notFound|error.tsx\" /c/Users/jakas/Desktop/nakmetiji/src/app/*.tsx)",
+      "Bash(xargs wc:*)",
+      "Bash(curl -s \"https://nakmetiji.vercel.app\" -o /dev/null -w \"%{http_code}\")",
+      "Bash(node -e \"const d=[];process.stdin.on\\('data',c=>d.push\\(c\\)\\);process.stdin.on\\('end',\\(\\)=>{const r=JSON.parse\\(d.join\\(''\\)\\);console.log\\('Status:',r.status\\);r.checks.forEach\\(c=>console.log\\(c.name+':',c.status,c.message||''\\)\\)}\\)\")"
+    ]
+  }
+}
