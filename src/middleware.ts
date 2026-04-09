@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const ZASC_POTI = ["/dashboard", "/admin"];
+const ZASC_POTI = ["/dashboard", "/admin", "/dodaj-kmetijo"];
 const JAVNE_POTI = ["/prijava", "/registracija", "/api/health"];
 
 export async function middleware(req: NextRequest) {
@@ -69,5 +69,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*"],
+  matcher: ["/dashboard/:path*", "/admin/:path*", "/dodaj-kmetijo"],
 };

@@ -12,6 +12,7 @@ import type {
   KmetijaPolna,
   KmetijeFilter,
   PaginiraniRezultat,
+  Regija,
 } from "@/types/database";
 
 // ─── Helper: normalizira Supabase JOIN rezultat v KmetijaSDozivetji ──────────
@@ -189,6 +190,98 @@ export async function pridobiKmetijeZaZemljevid(filter?: {
   const { data, error } = await query;
   if (error || !data) return [];
   return (data as Record<string, unknown>[]).map(normalizirajKmetijo);
+}
+
+// ─── Ustvari novo kmetijo ────────────────────────────────────────────────────
+
+function slugify(besedilo: string): string {
+  return (
+    besedilo
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 50) +
+    "-" +
+    Math.random().toString(36).slice(2, 7)
+  );
+}
+
+export async function ustvariKmetijo(vhod: {
+  ime: string;
+  kratki_opis: string;
+  opis: string;
+  regija: Regija;
+  naslov: string;
+  obcina: string;
+  postna_stevilka: string;
+  kontakt_telefon: string;
+  kontakt_email: string;
+  kontakt_spletna_stran: string;
+  dozivetja_ids: string[];
+}): Promise<{ uspeh: true; slug: string } | { uspeh: false; napaka: string }> {
+  const supabase = await createSupabaseServer();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { uspeh: false, napaka: "Niste prijavljeni." };
+
+  const { data: profil } = await supabase
+    .from("profili")
+    .select("vloga")
+    .eq("id", user.id)
+    .single();
+
+  if (!profil || (profil.vloga !== "lastnik" && profil.vloga !== "super_admin")) {
+    return { uspeh: false, napaka: "Samo lastniki kmetij lahko dodajo kmetijo. Spremenite vlogo v nastavitvah." };
+  }
+
+  const slug = slugify(vhod.ime);
+
+  const kontaktniPodatki: import("@/types/database").KontaktniPodatki = {};
+  if (vhod.kontakt_telefon) kontaktniPodatki.telefon = vhod.kontakt_telefon;
+  if (vhod.kontakt_email) kontaktniPodatki.email = vhod.kontakt_email;
+  if (vhod.kontakt_spletna_stran) kontaktniPodatki.spletna_stran = vhod.kontakt_spletna_stran;
+
+  const { data: kmetija, error } = await supabase
+    .from("kmetije")
+    .insert({
+      ime: vhod.ime,
+      kratki_opis: vhod.kratki_opis || null,
+      opis: vhod.opis,
+      regija: vhod.regija,
+      naslov: vhod.naslov || null,
+      obcina: vhod.obcina || null,
+      postna_stevilka: vhod.postna_stevilka || null,
+      kontaktni_podatki: kontaktniPodatki,
+      slug,
+      lastnik_id: user.id,
+      aktivna: false,
+      premium: false,
+      naslovna_slika: "",
+      slike: [],
+      stevilo_ocen: 0,
+    })
+    .select("id, slug")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      return { uspeh: false, napaka: "Kmetija s tem imenom že obstaja." };
+    }
+    return { uspeh: false, napaka: error.message };
+  }
+
+  if (vhod.dozivetja_ids.length > 0) {
+    await supabase.from("kmetija_dozivetje").insert(
+      vhod.dozivetja_ids.map((doz_id) => ({
+        kmetija_id: kmetija.id,
+        dozivetje_id: doz_id,
+      }))
+    );
+  }
+
+  return { uspeh: true, slug: kmetija.slug };
 }
 
 // ─── Iskanje (autocomplete) ───────────────────────────────────────────────────
