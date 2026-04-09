@@ -284,6 +284,126 @@ export async function ustvariKmetijo(vhod: {
   return { uspeh: true, slug: kmetija.slug };
 }
 
+// ─── Posodobi slike kmetije (doda URL v slike array) ────────────────────────
+
+export async function posodobiSlikeKmetije(
+  kmetija_id: string,
+  nova_url: string
+): Promise<{ ok: boolean; napaka?: string }> {
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, napaka: "Niste prijavljeni." };
+
+  const { data: k } = await supabase
+    .from("kmetije")
+    .select("slike, lastnik_id")
+    .eq("id", kmetija_id)
+    .single();
+
+  const { data: profil } = await supabase
+    .from("profili")
+    .select("vloga")
+    .eq("id", user.id)
+    .single();
+
+  if (k?.lastnik_id !== user.id && profil?.vloga !== "super_admin") {
+    return { ok: false, napaka: "Nimate dovoljenja." };
+  }
+
+  const noveSlike = [...((k?.slike as string[]) ?? []), nova_url];
+  const { error } = await supabase
+    .from("kmetije")
+    .update({ slike: noveSlike })
+    .eq("id", kmetija_id);
+
+  if (error) return { ok: false, napaka: error.message };
+  return { ok: true };
+}
+
+// ─── Posodobi kmetijo (lastnik) ───────────────────────────────────────────────
+
+export async function posodobiKmetijo(
+  kmetija_id: string,
+  vhod: {
+    ime?: string;
+    kratki_opis?: string;
+    opis?: string;
+    regija?: Regija;
+    naslov?: string;
+    obcina?: string;
+    postna_stevilka?: string;
+    kontakt_telefon?: string;
+    kontakt_email?: string;
+    kontakt_spletna_stran?: string;
+    dozivetja_ids?: string[];
+  }
+): Promise<{ ok: boolean; napaka?: string }> {
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, napaka: "Niste prijavljeni." };
+
+  const { data: k } = await supabase
+    .from("kmetije")
+    .select("lastnik_id")
+    .eq("id", kmetija_id)
+    .single();
+
+  const { data: profil } = await supabase
+    .from("profili")
+    .select("vloga")
+    .eq("id", user.id)
+    .single();
+
+  if (k?.lastnik_id !== user.id && profil?.vloga !== "super_admin") {
+    return { ok: false, napaka: "Nimate dovoljenja." };
+  }
+
+  const kontaktniPodatki: import("@/types/database").KontaktniPodatki = {};
+  if (vhod.kontakt_telefon !== undefined) kontaktniPodatki.telefon = vhod.kontakt_telefon || undefined;
+  if (vhod.kontakt_email !== undefined) kontaktniPodatki.email = vhod.kontakt_email || undefined;
+  if (vhod.kontakt_spletna_stran !== undefined) kontaktniPodatki.spletna_stran = vhod.kontakt_spletna_stran || undefined;
+
+  const posodobitev: Record<string, unknown> = {};
+  if (vhod.ime !== undefined) posodobitev.ime = vhod.ime;
+  if (vhod.kratki_opis !== undefined) posodobitev.kratki_opis = vhod.kratki_opis || null;
+  if (vhod.opis !== undefined) posodobitev.opis = vhod.opis;
+  if (vhod.regija !== undefined) posodobitev.regija = vhod.regija;
+  if (vhod.naslov !== undefined) posodobitev.naslov = vhod.naslov || null;
+  if (vhod.obcina !== undefined) posodobitev.obcina = vhod.obcina || null;
+  if (vhod.postna_stevilka !== undefined) posodobitev.postna_stevilka = vhod.postna_stevilka || null;
+  if (Object.keys(kontaktniPodatki).length > 0) posodobitev.kontaktni_podatki = kontaktniPodatki;
+
+  const { error } = await supabase
+    .from("kmetije")
+    .update(posodobitev)
+    .eq("id", kmetija_id);
+
+  if (error) return { ok: false, napaka: error.message };
+
+  // Posodobi dozivetja (izbriši stare, vstavi nove)
+  if (vhod.dozivetja_ids !== undefined) {
+    await supabase.from("kmetija_dozivetje").delete().eq("kmetija_id", kmetija_id);
+    if (vhod.dozivetja_ids.length > 0) {
+      await supabase.from("kmetija_dozivetje").insert(
+        vhod.dozivetja_ids.map((doz_id) => ({ kmetija_id, dozivetje_id: doz_id }))
+      );
+    }
+  }
+
+  return { ok: true };
+}
+
+// ─── Pridobi dozivetja IDs za kmetijo ────────────────────────────────────────
+
+export async function pridobiDozivetjaKmetije(kmetija_id: string): Promise<string[]> {
+  const supabase = await createSupabaseServer();
+  const { data } = await supabase
+    .from("kmetija_dozivetje")
+    .select("dozivetje_id")
+    .eq("kmetija_id", kmetija_id);
+  return (data ?? []).map((d) => d.dozivetje_id);
+}
+
 // ─── Iskanje (autocomplete) ───────────────────────────────────────────────────
 
 export async function isciKmetije(iskanje: string, limit = 5) {

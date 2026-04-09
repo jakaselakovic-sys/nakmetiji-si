@@ -6,20 +6,31 @@ import { useRouter } from "next/navigation";
 import { TreePine, LogOut, Plus } from "lucide-react";
 import { createSupabaseBrowser } from "@/lib/supabase/client";
 import { REGIJA_LABELS } from "@/types/database";
-import type { Kmetija, Rezervacija } from "@/types/database";
+import type { Kmetija, Rezervacija, Dozivetje } from "@/types/database";
 import { PregledView } from "./views/PregledView";
 import { AnalyticsView } from "./views/AnalyticsView";
 import { SettingsView } from "./views/SettingsView";
+import { UrediKmetijoView } from "./views/UrediKmetijoView";
 
-type DashboardTab = "pregled" | "analitika" | "nastavitve";
+type DashboardTab = "pregled" | "uredi" | "analitika" | "nastavitve";
 
-const SIDEBAR_ITEMS: { key: DashboardTab; label: string; icon: React.ReactNode }[] = [
+const SIDEBAR_ITEMS: { key: DashboardTab; label: string; icon: React.ReactNode; onlyWithFarm?: boolean }[] = [
   {
     key: "pregled",
     label: "Pregled",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+    ),
+  },
+  {
+    key: "uredi",
+    label: "Uredi kmetijo",
+    onlyWithFarm: true,
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
       </svg>
     ),
   },
@@ -51,9 +62,11 @@ interface Props {
   vloga: string;
   kmetija: Kmetija | null;
   rezervacije: Rezervacija[];
+  vseDozivetja: Dozivetje[];
+  izbranaDozivetjaIds: string[];
 }
 
-export function DashboardClient({ userEmail, profilIme, vloga, kmetija, rezervacije }: Props) {
+export function DashboardClient({ userEmail, profilIme, vloga, kmetija, rezervacije, vseDozivetja, izbranaDozivetjaIds }: Props) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<DashboardTab>("pregled");
   const [isPending, startTransition] = useTransition();
@@ -71,6 +84,7 @@ export function DashboardClient({ userEmail, profilIme, vloga, kmetija, rezervac
 
   const TAB_TITLES: Record<DashboardTab, { title: string; sub: string }> = {
     pregled: { title: "Pregled", sub: "Rezervacije, status in slike" },
+    uredi: { title: "Uredi kmetijo", sub: "Uredite podatke, opis in doživetja" },
     analitika: { title: "Analitika", sub: "Pregled obiskov in statistik" },
     nastavitve: { title: "Nastavitve", sub: "Upravljajte nastavitve računa" },
   };
@@ -127,7 +141,7 @@ export function DashboardClient({ userEmail, profilIme, vloga, kmetija, rezervac
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1">
-          {SIDEBAR_ITEMS.map((item) => (
+          {SIDEBAR_ITEMS.filter((item) => !item.onlyWithFarm || kmetija).map((item) => (
             <button
               key={item.key}
               onClick={() => setActiveTab(item.key)}
@@ -183,7 +197,7 @@ export function DashboardClient({ userEmail, profilIme, vloga, kmetija, rezervac
       {/* ── MOBILE NAV BAR ─────────────────────────────────────────────── */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-earth-200 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
         <div className="flex items-center justify-around px-2 py-2">
-          {SIDEBAR_ITEMS.map((item) => (
+          {SIDEBAR_ITEMS.filter((item) => !item.onlyWithFarm || kmetija).map((item) => (
             <button
               key={item.key}
               onClick={() => setActiveTab(item.key)}
@@ -222,6 +236,13 @@ export function DashboardClient({ userEmail, profilIme, vloga, kmetija, rezervac
               kmetijaIme={kmetija?.ime ?? ""}
               rezervacije={rezervacije}
               naslovnaSlika={kmetija?.naslovna_slika ?? ""}
+            />
+          )}
+          {activeTab === "uredi" && kmetija && (
+            <UrediKmetijoView
+              kmetija={kmetija}
+              vseDozivetja={vseDozivetja}
+              izbranaDozivetjaIds={izbranaDozivetjaIds}
             />
           )}
           {activeTab === "analitika" && (

@@ -10,14 +10,19 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { MapPin, Layers, CalendarDays, Search, X } from "lucide-react";
 import { REGIJA_LABELS, type Regija } from "@/types/database";
-import { MOCK_DOZIVETJA } from "@/data/mock-data";
 
 const REGIJE_OPTIONS = Object.entries(REGIJA_LABELS).map(([value, label]) => ({
   value,
   label,
 }));
 
-export function HeroSearch() {
+interface DozivetjeOption {
+  id: string;
+  ime: string;
+  slug: string;
+}
+
+export function HeroSearch({ dozivetja = [] }: { dozivetja?: DozivetjeOption[] }) {
   const router = useRouter();
   const [kje, setKje] = useState("");
   const [kaj, setKaj] = useState("");
@@ -31,7 +36,7 @@ export function HeroSearch() {
     r.label.toLowerCase().includes(kje.toLowerCase())
   );
 
-  const filteredDozivetja = MOCK_DOZIVETJA.filter((d) =>
+  const filteredDozivetja = dozivetja.filter((d) =>
     d.ime.toLowerCase().includes(kaj.toLowerCase())
   );
 
@@ -41,7 +46,7 @@ export function HeroSearch() {
       (r) => r.label.toLowerCase() === kje.toLowerCase()
     );
     if (matchedRegija) params.set("regija", matchedRegija.value);
-    const matchedDoz = MOCK_DOZIVETJA.find(
+    const matchedDoz = dozivetja.find(
       (d) => d.ime.toLowerCase() === kaj.toLowerCase()
     );
     if (matchedDoz) params.set("dozivetje", matchedDoz.slug);

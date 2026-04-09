@@ -155,17 +155,29 @@ export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
               </AnimatePresence>
             </div>
           ) : (
-            <Link
-              href="/prijava"
-              className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-300 border ${
-                scrolled
-                  ? "border-forest-300 text-forest-800 hover:bg-forest-50"
-                  : "border-white/30 text-white hover:bg-white/10"
-              }`}
-            >
-              <User size={15} />
-              Prijava
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/prijava"
+                className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-300 border ${
+                  scrolled
+                    ? "border-forest-300 text-forest-800 hover:bg-forest-50"
+                    : "border-white/30 text-white hover:bg-white/10"
+                }`}
+              >
+                <User size={15} />
+                Prijava
+              </Link>
+              <Link
+                href="/registracija"
+                className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.03] active:scale-[0.98] ${
+                  scrolled
+                    ? "bg-forest-700 text-white hover:bg-forest-600"
+                    : "bg-white text-forest-800 hover:bg-forest-50"
+                }`}
+              >
+                Registracija
+              </Link>
+            </div>
           )}
         </div>
 
@@ -247,13 +259,22 @@ export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
                     </button>
                   </>
                 ) : (
-                  <Link
-                    href="/prijava"
-                    className="rounded-xl border border-forest-300 text-forest-800 text-center py-3 font-semibold text-sm hover:bg-forest-50 transition-colors flex items-center justify-center gap-2"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    <User size={16} /> Prijava
-                  </Link>
+                  <>
+                    <Link
+                      href="/prijava"
+                      className="rounded-xl border border-forest-300 text-forest-800 text-center py-3 font-semibold text-sm hover:bg-forest-50 transition-colors flex items-center justify-center gap-2"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <User size={16} /> Prijava
+                    </Link>
+                    <Link
+                      href="/registracija"
+                      className="rounded-xl bg-forest-700 text-white text-center py-3 font-semibold text-sm hover:bg-forest-600 transition-colors flex items-center justify-center gap-2"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Registracija
+                    </Link>
+                  </>
                 )}
               </div>
             </div>

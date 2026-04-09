@@ -127,7 +127,7 @@ export async function potrdiRezervacijo(
 
   const { error } = await supabase
     .from("rezervacije")
-    .update({ status: "potrjena", posodobljena: new Date().toISOString() })
+    .update({ status: "potrjena", posodobljeno: new Date().toISOString() })
     .eq("id", rezervacija_id);
 
   if (error?.code === "23P01") {
@@ -172,7 +172,7 @@ export async function zavrniRezervacijo(
 
   await supabase
     .from("rezervacije")
-    .update({ status: "zavrnjena", posodobljena: new Date().toISOString() })
+    .update({ status: "zavrnjena", posodobljeno: new Date().toISOString() })
     .eq("id", rezervacija_id);
 
   posljiZavrnitev({

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useCallback, useRef, useTransition } from "react";
-import { Loader2, Upload, CheckCircle, XCircle, Clock, CalendarDays, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Upload, CheckCircle, XCircle, Clock, CalendarDays, Users, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { potrdiRezervacijo, zavrniRezervacijo } from "@/lib/actions/rezervacije";
+import { posodobiSlikeKmetije } from "@/lib/actions/kmetije";
 import type { Rezervacija, RezervacijaStatus } from "@/types/database";
 import { REZERVACIJA_STATUS_LABELS } from "@/types/database";
 
@@ -31,6 +32,140 @@ const STATUS_ICONS: Record<RezervacijaStatus, React.ReactNode> = {
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("sl-SI", { day: "numeric", month: "short", year: "numeric" });
+}
+
+// ── Koledar zasedenosti ───────────────────────────────────────────────────────
+
+const SL_MONTHS = [
+  "Januar","Februar","Marec","April","Maj","Junij",
+  "Julij","Avgust","September","Oktober","November","December",
+];
+const SL_DAYS = ["Po","To","Sr","Če","Pe","So","Ne"];
+
+function OccupancyCalendar({ rezervacije }: { rezervacije: Rezervacija[] }) {
+  const today = new Date();
+  const [year, setYear] = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth()); // 0-based
+
+  function prevMonth() {
+    if (month === 0) { setMonth(11); setYear(y => y - 1); }
+    else setMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (month === 11) { setMonth(0); setYear(y => y + 1); }
+    else setMonth(m => m + 1);
+  }
+
+  // Dnevi v mesecu
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  // Kateri dan v tednu je 1. dan (0=ned → pretvorimo v 0=pon)
+  const firstDow = (new Date(year, month, 1).getDay() + 6) % 7;
+
+  // Zberi zasedene intervale (samo potrjene)
+  const zasedeni = rezervacije.filter(r => r.status === "potrjena");
+
+  function isDayBooked(day: number): boolean {
+    const d = new Date(year, month, day);
+    return zasedeni.some(r => {
+      const od = new Date(r.datum_od);
+      const do_ = new Date(r.datum_do);
+      return d >= od && d < do_;
+    });
+  }
+
+  function isDayPending(day: number): boolean {
+    const d = new Date(year, month, day);
+    return rezervacije.some(r => {
+      if (r.status !== "cakanje") return false;
+      const od = new Date(r.datum_od);
+      const do_ = new Date(r.datum_do);
+      return d >= od && d < do_;
+    });
+  }
+
+  function isToday(day: number): boolean {
+    return year === today.getFullYear() && month === today.getMonth() && day === today.getDate();
+  }
+
+  const cells: (number | null)[] = [
+    ...Array(firstDow).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  // Pad to full weeks
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  return (
+    <div className="rounded-2xl bg-white border border-earth-200/60 shadow-sm p-6">
+      {/* Glava */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-base font-bold text-forest-900">Zasedenost</h2>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={prevMonth}
+            className="p-1.5 rounded-lg hover:bg-earth-100 text-earth-500 transition-colors"
+            aria-label="Prejšnji mesec"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <span className="text-sm font-semibold text-forest-900 w-36 text-center">
+            {SL_MONTHS[month]} {year}
+          </span>
+          <button
+            onClick={nextMonth}
+            className="p-1.5 rounded-lg hover:bg-earth-100 text-earth-500 transition-colors"
+            aria-label="Naslednji mesec"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Dnevi v tednu */}
+      <div className="grid grid-cols-7 mb-1">
+        {SL_DAYS.map(d => (
+          <div key={d} className="text-center text-[11px] font-semibold text-earth-400 py-1">{d}</div>
+        ))}
+      </div>
+
+      {/* Celice */}
+      <div className="grid grid-cols-7 gap-y-1">
+        {cells.map((day, i) => {
+          if (!day) return <div key={i} />;
+          const booked = isDayBooked(day);
+          const pending = isDayPending(day);
+          const todayCell = isToday(day);
+          return (
+            <div
+              key={i}
+              className={`
+                relative flex items-center justify-center h-8 rounded-lg text-xs font-medium transition-colors
+                ${booked ? "bg-forest-500 text-white" : ""}
+                ${pending && !booked ? "bg-amber-100 text-amber-800" : ""}
+                ${!booked && !pending ? "text-earth-700 hover:bg-earth-50" : ""}
+                ${todayCell && !booked && !pending ? "ring-2 ring-forest-400 ring-offset-1" : ""}
+                ${todayCell && (booked || pending) ? "ring-2 ring-forest-800 ring-offset-1" : ""}
+              `}
+            >
+              {day}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Legenda */}
+      <div className="flex items-center gap-4 mt-4 text-xs text-earth-500">
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded bg-forest-500 flex-shrink-0" /> Zasedeno
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded bg-amber-100 border border-amber-300 flex-shrink-0" /> Čaka potrditev
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded ring-2 ring-forest-400 flex-shrink-0" /> Danes
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika }: Props) {
@@ -99,6 +234,11 @@ export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika 
         const json = await res.json() as { url?: string; error?: string };
         if (json.url) {
           setUploadedImages((prev) => [...prev, json.url!]);
+          // Persistiraj URL v bazo (slike array kmetije)
+          const rezultat = await posodobiSlikeKmetije(kmetijaId, json.url);
+          if (!rezultat.ok) {
+            setUploadError(rezultat.napaka ?? "Slika je naložena, a ni shranjena v bazi.");
+          }
         } else {
           setUploadError(json.error ?? "Napaka pri nalaganju.");
         }
@@ -273,6 +413,9 @@ export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika 
           </div>
         )}
       </div>
+
+      {/* ── Koledar zasedenosti ───────────────────────────────────── */}
+      <OccupancyCalendar rezervacije={rezervacije} />
 
       {/* ── Upload slik ───────────────────────────────────────────── */}
       {kmetijaId && (

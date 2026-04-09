@@ -10,7 +10,7 @@
 //   5. SEO Schema.org (handled in page.tsx)
 // =============================================================================
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,10 +35,13 @@ import {
   ExternalLink,
   Camera,
 } from "lucide-react";
+// Note: Globe, Loader2, Check kept for possible future use; AnimatePresence kept for lightbox
 import { REGIJA_LABELS, IZDELEK_KATEGORIJA_LABELS } from "@/types/database";
 import type { Kmetija, Dozivetje, Mnenje, Izdelek } from "@/types/database";
 import { EXPERIENCE_LABELS } from "@/types/farm";
 import type { ExperienceTag } from "@/types/farm";
+import { oddajRezervacijo } from "@/lib/actions/rezervacije";
+import { createSupabaseBrowser } from "@/lib/supabase/client";
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -78,10 +81,13 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
   const [bookingName, setBookingName] = useState("");
   const [bookingEmail, setBookingEmail] = useState("");
   const [bookingSubmitted, setBookingSubmitted] = useState(false);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [bookingPhone, setBookingPhone] = useState("");
+  const [bookingOpombe, setBookingOpombe] = useState("");
+  const [zasedeniDatumi, setZasedeniDatumi] = useState<{ od: string; do: string }[]>([]);
+  const bookingFormRef = useRef<HTMLDivElement>(null);
 
-  // ── Comment translation state ──
-  const [translatedComments, setTranslatedComments] = useState<Record<string, string>>({});
-  const [translatingId, setTranslatingId] = useState<string | null>(null);
 
   const allImages = [kmetija.naslovna_slika, ...kmetija.slike];
 
@@ -99,22 +105,54 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
   };
   const inquiryCount = Object.values(inquiryItems).reduce((a, b) => a + b, 0);
 
-  // ── Mock AI translation ──
-  const handleTranslate = async (mnenje: Mnenje) => {
-    setTranslatingId(mnenje.id);
-    // Simulate DeepL API call
-    await new Promise((r) => setTimeout(r, 1200));
-    // Simple mock translation (in production: call DeepL API)
-    const mockTranslation = `[EN] ${mnenje.komentar}`;
-    setTranslatedComments((prev) => ({ ...prev, [mnenje.id]: mockTranslation }));
-    setTranslatingId(null);
+
+  // ── Fetch zasedenih datumov ob mount ──
+  useMemo(() => {
+    const supabase = createSupabaseBrowser();
+    supabase
+      .from("rezervacije")
+      .select("datum_od, datum_do")
+      .eq("kmetija_id", kmetija.id)
+      .in("status", ["cakanje", "potrjena"])
+      .then(({ data }) => {
+        if (data) setZasedeniDatumi(data.map((r) => ({ od: r.datum_od, do: r.datum_do })));
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kmetija.id]);
+
+  // Helper: ali je datum zaseden
+  function isDatumZaseden(datum: string): boolean {
+    return zasedeniDatumi.some((r) => datum >= r.od && datum < r.do);
+  }
+
+  // ── Product inquiry → scroll to booking form ──
+  const handleIzdelekInquiry = (izdelek: { ime: string; cena: number; enota: string }) => {
+    const opomba = `Povpraševanje za izdelek: ${izdelek.ime} (${izdelek.cena.toFixed(2)} € / ${izdelek.enota})`;
+    setBookingOpombe(opomba);
+    bookingFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   // ── Booking submit ──
-  const handleBookingSubmit = (e: React.FormEvent) => {
+  const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setBookingSubmitted(true);
-    setTimeout(() => setBookingSubmitted(false), 4000);
+    setBookingError(null);
+    setBookingLoading(true);
+    const result = await oddajRezervacijo({
+      kmetija_id: kmetija.id,
+      datum_od: bookingFrom,
+      datum_do: bookingTo,
+      gost_ime: bookingName,
+      gost_email: bookingEmail,
+      gost_telefon: bookingPhone || undefined,
+      stevilo_oseb: bookingGuests,
+      opombe: bookingOpombe || undefined,
+    });
+    setBookingLoading(false);
+    if (result.ok) {
+      setBookingSubmitted(true);
+    } else {
+      setBookingError(result.napaka ?? "Napaka pri oddaji rezervacije.");
+    }
   };
 
   // ── Lightbox keyboard nav ──
@@ -345,7 +383,7 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
                             {/* Add/remove buttons */}
                             {qty === 0 ? (
                               <button
-                                onClick={() => addToInquiry(izdelek.id)}
+                                onClick={() => { addToInquiry(izdelek.id); handleIzdelekInquiry(izdelek); }}
                                 className="flex items-center gap-1.5 rounded-lg bg-forest-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-forest-500 active:scale-95 transition-all"
                               >
                                 <Plus size={14} />
@@ -404,7 +442,20 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
                         }, 0).toFixed(2)} €
                       </span>
                     </div>
-                    <button className="mt-4 w-full flex items-center justify-center gap-2 rounded-xl bg-forest-700 text-white font-semibold py-3 text-sm hover:bg-forest-600 transition-colors">
+                    <button
+                      onClick={() => {
+                        const items = Object.entries(inquiryItems)
+                          .map(([id, qty]) => {
+                            const item = kmetija.izdelki.find((i) => i.id === id);
+                            return item ? `${qty}× ${item.ime}` : null;
+                          })
+                          .filter(Boolean)
+                          .join(", ");
+                        setBookingOpombe(`Povpraševanje za izdelke: ${items}`);
+                        bookingFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }}
+                      className="mt-4 w-full flex items-center justify-center gap-2 rounded-xl bg-forest-700 text-white font-semibold py-3 text-sm hover:bg-forest-600 transition-colors"
+                    >
                       <Send size={16} />
                       Pošlji povpraševanje kmetiji
                     </button>
@@ -444,48 +495,16 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
                           </div>
                         </div>
 
-                        {/* Translate button */}
-                        <button
-                          onClick={() => handleTranslate(mnenje)}
-                          disabled={translatingId === mnenje.id || !!translatedComments[mnenje.id]}
-                          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                            translatedComments[mnenje.id]
-                              ? "bg-forest-50 text-forest-600 cursor-default"
-                              : "bg-earth-100 text-earth-600 hover:bg-forest-100 hover:text-forest-700"
-                          }`}
-                        >
-                          {translatingId === mnenje.id ? (
-                            <><Loader2 size={12} className="animate-spin" /> Prevajam...</>
-                          ) : translatedComments[mnenje.id] ? (
-                            <><Check size={12} /> Prevedeno</>
-                          ) : (
-                            <><Globe size={12} /> Prevedi</>
-                          )}
-                        </button>
+                        {/* Jezik badge */}
+                        <span className="flex items-center gap-1 rounded-lg bg-earth-50 border border-earth-200 px-2.5 py-1 text-[11px] font-medium text-earth-500">
+                          <Globe size={11} />
+                          Slovenščina
+                        </span>
                       </div>
 
                       {/* Comment text */}
                       <p className="text-sm text-earth-700 leading-relaxed">{mnenje.komentar}</p>
 
-                      {/* Translated text */}
-                      <AnimatePresence>
-                        {translatedComments[mnenje.id] && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="mt-3 pt-3 border-t border-earth-100"
-                          >
-                            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-forest-600 uppercase tracking-wider mb-1.5">
-                              <Globe size={10} />
-                              English (AI translation)
-                            </div>
-                            <p className="text-sm text-earth-600 leading-relaxed italic">
-                              {translatedComments[mnenje.id]}
-                            </p>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
                     </div>
                   ))}
                 </div>
@@ -538,7 +557,7 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
 
           {/* ── Right: Sticky sidebar ── */}
           <aside className="w-full lg:w-[380px] lg:flex-shrink-0">
-            <div className="sticky top-24 flex flex-col gap-6">
+            <div ref={bookingFormRef} className="sticky top-24 flex flex-col gap-6">
 
               {/* ═════════════════════════════════════════════════════════
                   4. BOOKING CALENDAR
@@ -548,7 +567,13 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
                   <CalendarDays size={20} className="text-forest-600" />
                   Rezervacija
                 </h3>
-                <p className="text-xs text-earth-500 mb-5">Izberite datume in pošljite povpraševanje</p>
+                <p className="text-xs text-earth-500 mb-3">Izberite datume in pošljite povpraševanje</p>
+                {zasedeniDatumi.length > 0 && (
+                  <div className="mb-4 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-700">
+                    <CalendarDays size={13} className="flex-shrink-0 mt-0.5" />
+                    <span>Nekateri termini so že zasedeni. Preverite razpoložljivost pred rezervacijo.</span>
+                  </div>
+                )}
 
                 <form onSubmit={handleBookingSubmit} className="space-y-4">
                   {/* Date range */}
@@ -561,8 +586,15 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
                         min={today}
                         onChange={(e) => setBookingFrom(e.target.value)}
                         required
-                        className="w-full rounded-lg border border-earth-200 px-3 py-2.5 text-sm text-forest-900 focus:border-forest-400 focus:ring-1 focus:ring-forest-400 transition-colors"
+                        className={`w-full rounded-lg border px-3 py-2.5 text-sm text-forest-900 focus:ring-1 transition-colors ${
+                          bookingFrom && isDatumZaseden(bookingFrom)
+                            ? "border-red-300 bg-red-50 focus:border-red-400 focus:ring-red-400"
+                            : "border-earth-200 focus:border-forest-400 focus:ring-forest-400"
+                        }`}
                       />
+                      {bookingFrom && isDatumZaseden(bookingFrom) && (
+                        <p className="text-[11px] text-red-600 mt-1">Ta datum je zaseden.</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold uppercase tracking-wider text-earth-500 mb-1.5">Odhod</label>
@@ -625,6 +657,16 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
                       className="w-full rounded-lg border border-earth-200 px-3 py-2.5 text-sm text-forest-900 placeholder:text-earth-400 focus:border-forest-400 focus:ring-1 focus:ring-forest-400 transition-colors"
                     />
                   </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-earth-500 mb-1.5">Telefon (neobvezno)</label>
+                    <input
+                      type="tel"
+                      value={bookingPhone}
+                      onChange={(e) => setBookingPhone(e.target.value)}
+                      placeholder="+386 40 123 456"
+                      className="w-full rounded-lg border border-earth-200 px-3 py-2.5 text-sm text-forest-900 placeholder:text-earth-400 focus:border-forest-400 focus:ring-1 focus:ring-forest-400 transition-colors"
+                    />
+                  </div>
 
                   {/* Night count info */}
                   {bookingFrom && bookingTo && (
@@ -642,18 +684,37 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
                     </div>
                   )}
 
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-earth-500 mb-1.5">Opombe (neobvezno)</label>
+                    <textarea
+                      value={bookingOpombe}
+                      onChange={(e) => setBookingOpombe(e.target.value)}
+                      rows={2}
+                      placeholder="Posebne želje, alergije, povpraševanje za izdelke..."
+                      className="w-full rounded-lg border border-earth-200 px-3 py-2.5 text-sm text-forest-900 placeholder:text-earth-400 focus:border-forest-400 focus:ring-1 focus:ring-forest-400 transition-colors resize-none"
+                    />
+                  </div>
+
+                  {bookingError && (
+                    <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                      {bookingError}
+                    </div>
+                  )}
+
                   {/* Submit */}
                   <button
                     type="submit"
-                    disabled={bookingSubmitted}
+                    disabled={bookingLoading || bookingSubmitted}
                     className={`w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold transition-all duration-300 ${
                       bookingSubmitted
                         ? "bg-forest-100 text-forest-700 cursor-default"
-                        : "bg-forest-700 text-white hover:bg-forest-600 hover:shadow-lg active:scale-[0.98]"
+                        : "bg-forest-700 text-white hover:bg-forest-600 hover:shadow-lg active:scale-[0.98] disabled:opacity-60"
                     }`}
                   >
-                    {bookingSubmitted ? (
-                      <><Check size={18} /> Povpraševanje poslano!</>
+                    {bookingLoading ? (
+                      <><Loader2 size={16} className="animate-spin" /> Pošiljanje...</>
+                    ) : bookingSubmitted ? (
+                      <><Check size={18} /> Rezervacija oddana!</>
                     ) : (
                       <><Send size={16} /> Pošlji povpraševanje</>
                     )}
@@ -802,6 +863,20 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
           </motion.div>
         )}
       </AnimatePresence>
+      {/* ═══════════════════════════════════════════════════════════════════
+          MOBILE FAB — Rezerviraj (samo na mobilnih napravah)
+          ═══════════════════════════════════════════════════════════════════ */}
+      {!bookingSubmitted && (
+        <div className="lg:hidden fixed bottom-6 inset-x-0 z-40 flex justify-center px-4 pointer-events-none">
+          <button
+            onClick={() => bookingFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="pointer-events-auto flex items-center gap-2.5 rounded-full bg-forest-700 text-white font-bold px-7 py-4 text-sm shadow-2xl shadow-forest-900/30 hover:bg-forest-600 active:scale-95 transition-all duration-200"
+          >
+            <CalendarDays size={18} />
+            Rezerviraj
+          </button>
+        </div>
+      )}
     </>
   );
 }

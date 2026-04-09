@@ -6,6 +6,7 @@
 // =============================================================================
 
 import { useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutGrid,
@@ -48,15 +49,24 @@ export function KmetijeClient({ initialKmetije, dozivetja }: Props) {
   const vseKmetije = initialKmetije;
   const vseDozivetja = dozivetja;
 
+  // ── URL query params → začetno stanje filtrov ──
+  const searchParams = useSearchParams();
+
   // ── View state ──
   const [view, setView] = useState<"grid" | "list">("grid");
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [showAllRegions, setShowAllRegions] = useState(false);
 
-  // ── Filter state ──
-  const [search, setSearch] = useState("");
-  const [selectedRegions, setSelectedRegions] = useState<Regija[]>([]);
-  const [selectedExperiences, setSelectedExperiences] = useState<string[]>([]);
+  // ── Filter state — inicializirano iz URL parametrov ──
+  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
+  const [selectedRegions, setSelectedRegions] = useState<Regija[]>(() => {
+    const reg = searchParams.get("regija");
+    return reg && reg in REGIJA_LABELS ? [reg as Regija] : [];
+  });
+  const [selectedExperiences, setSelectedExperiences] = useState<string[]>(() => {
+    const doz = searchParams.get("dozivetje");
+    return doz ? [doz] : [];
+  });
   const [minRating, setMinRating] = useState<number>(0);
   const [sortMethod, setSortMethod] = useState("ocena-desc");
 

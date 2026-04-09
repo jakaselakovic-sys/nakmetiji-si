@@ -3,6 +3,7 @@
 // Server component: fetch Supabase → KmetijeClient
 // =============================================================================
 
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import type { Dozivetje, KmetijaSDozivetji } from "@/types/database";
@@ -64,7 +65,13 @@ export default async function KmetijePage() {
         </div>
       </div>
 
-      <KmetijeClient initialKmetije={kmetije} dozivetja={dozivetja} />
+      <Suspense fallback={
+        <div className="flex justify-center py-24">
+          <div className="w-8 h-8 border-4 border-forest-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }>
+        <KmetijeClient initialKmetije={kmetije} dozivetja={dozivetja} />
+      </Suspense>
     </div>
   );
 }

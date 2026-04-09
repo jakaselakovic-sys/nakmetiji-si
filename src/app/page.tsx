@@ -6,6 +6,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, TreePine } from "lucide-react";
+import { createSupabaseServer } from "@/lib/supabase/server";
 import { HeroSearch } from "@/components/HeroSearch";
 import { QuickFilters } from "@/components/QuickFilters";
 import { CategoryScroll } from "@/components/CategoryScroll";
@@ -15,7 +16,13 @@ import { FloatingCards } from "@/components/FloatingCards";
 import { AnimatedClouds } from "@/components/AnimatedClouds";
 import { FarmOfMonth } from "@/components/FarmOfMonth";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createSupabaseServer();
+  const { data: dozivetja } = await supabase
+    .from("dozivetja")
+    .select("id, ime, slug")
+    .order("vrstni_red");
+
   return (
     <>
       {/* ════════════════════════════════════════════════════════════════════
@@ -70,7 +77,7 @@ export default function HomePage() {
 
           {/* ── Search bar — 60%+ width on desktop ── */}
           <div className="w-full max-w-6xl">
-            <HeroSearch />
+            <HeroSearch dozivetja={dozivetja ?? []} />
           </div>
 
           {/* ── Quick filters — expanded ── */}

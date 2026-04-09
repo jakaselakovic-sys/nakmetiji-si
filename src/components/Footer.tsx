@@ -4,28 +4,22 @@
 // =============================================================================
 
 import Link from "next/link";
-import { Leaf, Mail, Phone, MapPin, Camera, Globe, Video } from "lucide-react";
+import { Leaf, Mail, Phone, MapPin } from "lucide-react";
 
 const FOOTER_LINKS = {
   razisci: [
     { label: "Vse kmetije", href: "/kmetije" },
     { label: "Po regijah", href: "/regije" },
-    { label: "Kulinarika", href: "/kmetije?tip=kulinarika" },
-    { label: "Prenočišča", href: "/kmetije?tip=prenocisce" },
-    { label: "Vinski turizem", href: "/kmetije?tip=vino" },
+    { label: "Kulinarika", href: "/kmetije?dozivetje=kulinarika" },
+    { label: "Prenočišča", href: "/kmetije?dozivetje=prenocisce" },
+    { label: "Vinski turizem", href: "/kmetije?dozivetje=vino" },
+    { label: "Blog", href: "/blog" },
   ],
   zaKmetije: [
     { label: "Dodajte svojo kmetijo", href: "/dodaj-kmetijo" },
-    { label: "Premium oglasi", href: "/premium" },
-    { label: "Pogoji uporabe", href: "/pogoji" },
+    { label: "O nas", href: "/o-nas" },
   ],
 } as const;
-
-const SOCIAL_LINKS = [
-  { icon: Camera, label: "Instagram", href: "#" },
-  { icon: Globe, label: "Facebook", href: "#" },
-  { icon: Video, label: "YouTube", href: "#" },
-] as const;
 
 export function Footer() {
   return (
@@ -95,28 +89,23 @@ export function Footer() {
             <ul className="space-y-3 text-sm text-white/70">
               <li className="flex items-center gap-2.5">
                 <Mail size={14} className="text-white/35 flex-shrink-0" />
-                info@nakmetiji.si
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Phone size={14} className="text-white/35 flex-shrink-0" />
-                +386 1 234 5678
+                <a href="mailto:info@nakmetiji.si" className="hover:text-white transition-colors">
+                  info@nakmetiji.si
+                </a>
               </li>
               <li className="flex items-center gap-2.5">
                 <MapPin size={14} className="text-white/35 flex-shrink-0" />
                 Ljubljana, Slovenija
               </li>
             </ul>
-            <div className="mt-6 flex gap-3">
-              {SOCIAL_LINKS.map(({ icon: Icon, label, href }) => (
-                <a
-                  key={label}
-                  href={href}
-                  aria-label={label}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 text-white/40 hover:bg-white/10 hover:text-white transition-all duration-200"
-                >
-                  <Icon size={16} />
-                </a>
-              ))}
+            <div className="mt-6">
+              <Link
+                href="/o-nas"
+                className="inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white transition-colors"
+              >
+                <Phone size={13} className="text-white/30" />
+                Kontaktirajte nas
+              </Link>
             </div>
           </div>
         </div>

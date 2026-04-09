@@ -63,11 +63,17 @@
       "Bash(curl -s -o /dev/null -w '%{http_code}' -L --max-redirs 3 https://nakmetiji.vercel.app__TRACKED_VAR__)",
       "Bash(curl -s -o /dev/null -w '%{http_code} → %{redirect_url}' https://nakmetiji.vercel.app__TRACKED_VAR__)",
       "Bash(curl -s -o /dev/null -w '%{http_code}' https://nakmetiji.vercel.app/kmetije/__TRACKED_VAR__)",
-      "Bash(curl -s 'https://nbopongqlewdlqxrfqsu.supabase.co/rest/v1/kmetije?select=ime,slug,aktivna' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ib3BvbmdxbGV3ZGxxeHJmcXN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODY0NDgsImV4cCI6MjA5MTI2MjQ0OH0.hmQ8OdZVYJIBS4h_ubZ1qJ2XihLk2KjkI32q_Am3eSs')"
+      "Bash(curl -s 'https://nbopongqlewdlqxrfqsu.supabase.co/rest/v1/kmetije?select=ime,slug,aktivna' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ib3BvbmdxbGV3ZGxxeHJmcXN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODY0NDgsImV4cCI6MjA5MTI2MjQ0OH0.hmQ8OdZVYJIBS4h_ubZ1qJ2XihLk2KjkI32q_Am3eSs')",
+      "Read(//c/Users/jakas/Desktop/nakmetiji/**)",
+      "Bash(git rm:*)",
+      "Bash(node scripts/create-admin.mjs)",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' https://nakmetiji.vercel.app__TRACKED_VAR__)"
     ],
     "additionalDirectories": [
       "C:\\Users\\jakas\\Desktop\\nakmetiji\\src\\app",
-      "C:\\Users\\jakas\\Desktop\\nakmetiji\\src\\data"
+      "C:\\Users\\jakas\\Desktop\\nakmetiji\\src\\data",
+      "C:\\Users\\jakas\\Desktop\\nakmetiji\\src",
+      "C:\\Users\\jakas\\Desktop\\nakmetiji\\src\\types"
     ]
   }
 }

@@ -60,6 +60,15 @@ export default function RegistracijaPage() {
           ime,
           vloga,
         });
+
+        // Obvesti admin ob novi registraciji lastnika
+        if (vloga === "lastnik") {
+          fetch("/api/admin/nova-registracija", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ime, email: email.trim() }),
+          }).catch(console.error);
+        }
       }
 
       setUspeh(true);
