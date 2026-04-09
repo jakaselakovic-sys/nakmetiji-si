@@ -121,14 +121,17 @@ export interface KmetijaDozivetje {
 
 // ─── Mnenje (Review) ────────────────────────────────────────────────────────
 
+export type MnenjeStatus = "cakanje" | "odobreno" | "zavrnjeno";
+
 export interface Mnenje {
   id: string;
   kmetija_id: string;
+  uporabnik_id?: string | null;
   uporabnik_ime: string;
   uporabnik_email: string | null;
   ocena: number; // 1–5
   komentar: string | null;
-  odobreno: boolean;
+  status: MnenjeStatus;
   datum: string;
 }
 

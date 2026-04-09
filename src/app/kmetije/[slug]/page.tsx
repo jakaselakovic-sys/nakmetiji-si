@@ -1,14 +1,15 @@
+// =============================================================================
+// NaKmetiji.si — Profil kmetije
+// Server component: Supabase → FarmProfileClient
+// =============================================================================
+
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
-import { MOCK_KMETIJE, pridobiMockKmetijo } from "@/data/mock-data";
+import { pridobiKmetijo } from "@/lib/actions/kmetije";
 import { REGIJA_LABELS } from "@/types/database";
 import { FarmProfileClient } from "./FarmProfileClient";
 
-// ─── Static params for build ────────────────────────────────────────────────
-
-export async function generateStaticParams() {
-  return MOCK_KMETIJE.map((k) => ({ slug: k.slug }));
-}
+export const dynamic = "force-dynamic";
 
 // ─── Dynamic metadata ───────────────────────────────────────────────────────
 
@@ -16,7 +17,7 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const data = pridobiMockKmetijo(slug);
+  const data = await pridobiKmetijo(slug);
   if (!data) return { title: "Kmetija ni najdena — NaKmetiji" };
 
   const regionLabel = REGIJA_LABELS[data.regija] ?? data.regija;
@@ -30,6 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "website",
       locale: "sl_SI",
       siteName: "NaKmetiji",
+      images: data.naslovna_slika ? [{ url: data.naslovna_slika }] : undefined,
     },
   };
 }
@@ -38,10 +40,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function FarmProfilePage({ params }: Props) {
   const { slug } = await params;
-  const data = pridobiMockKmetijo(slug);
+  const data = await pridobiKmetijo(slug);
   if (!data) notFound();
 
   const regionLabel = REGIJA_LABELS[data.regija] ?? data.regija;
+
+  // Samo odobrena mnenja prikažemo obiskovalcem
+  const odobrena_mnenja = (data.mnenja ?? []).filter((m) => m.status === "odobreno");
+
+  const kmetijaZaMnenja = {
+    ...data,
+    mnenja: odobrena_mnenja,
+    izdelki: data.izdelki ?? [],
+  };
 
   // ── JSON-LD Schema.org LodgingBusiness ──
   const jsonLd = {
@@ -49,8 +60,8 @@ export default async function FarmProfilePage({ params }: Props) {
     "@type": "LodgingBusiness",
     name: data.ime,
     description: data.kratki_opis ?? data.opis.slice(0, 300),
-    url: `https://nakmetiji.si/kmetije/${data.slug}`,
-    image: data.naslovna_slika,
+    url: `https://nakmetiji.vercel.app/kmetije/${data.slug}`,
+    image: data.naslovna_slika || undefined,
     address: {
       "@type": "PostalAddress",
       streetAddress: data.naslov ?? undefined,
@@ -88,7 +99,7 @@ export default async function FarmProfilePage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <FarmProfileClient
-        kmetija={data}
+        kmetija={kmetijaZaMnenja}
         regionLabel={regionLabel}
       />
     </>

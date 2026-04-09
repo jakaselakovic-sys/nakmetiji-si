@@ -4,8 +4,7 @@
 // =============================================================================
 
 import { ImageResponse } from "next/og";
-import { pridobiMockKmetijo } from "@/data/mock-data";
-import { REGIJA_LABELS } from "@/types/database";
+import { REGIJA_LABELS, type Regija } from "@/types/database";
 
 export const runtime = "edge";
 export const contentType = "image/png";
@@ -16,13 +15,27 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
-  const kmetija = pridobiMockKmetijo(slug);
+  // Edge runtime — direktni REST klic (brez cookie auth)
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const res = await fetch(
+    `${url}/rest/v1/kmetije?select=*,kmetija_dozivetje(dozivetja(*))&slug=eq.${slug}&limit=1`,
+    { headers: { apikey: key, Authorization: `Bearer ${key}` } }
+  );
+  const rows = await res.json() as Record<string, unknown>[];
+  const raw = rows[0];
 
-  if (!kmetija) {
+  if (!raw) {
     return new Response("Not found", { status: 404 });
   }
 
-  const regionLabel = REGIJA_LABELS[kmetija.regija] ?? kmetija.regija;
+  const kdRaw = raw.kmetija_dozivetje as { dozivetja: { ime: string } }[] | undefined;
+  const kmetija = {
+    ...(raw as { ime: string; kratki_opis: string | null; obcina: string | null; regija: string; ocena: number | null; stevilo_ocen: number; premium: boolean; naslovna_slika: string }),
+    dozivetja: (kdRaw ?? []).filter(kd => kd.dozivetja).map(kd => kd.dozivetja),
+  };
+
+  const regionLabel = REGIJA_LABELS[kmetija.regija as Regija] ?? kmetija.regija;
   const rating = kmetija.ocena ? kmetija.ocena.toFixed(1) : null;
   const tags = kmetija.dozivetja?.slice(0, 3).map((d) => d.ime) ?? [];
 

@@ -20,17 +20,12 @@ import {
 import { Input, Button, Badge } from "@/components/ui";
 import { FarmCard } from "@/components/FarmCard";
 import {
-  pridobiMockKmetijeSDozivetji,
-  MOCK_DOZIVETJA,
-} from "@/data/mock-data";
-import {
   REGIJE,
   REGIJA_LABELS,
   type Regija,
   type KmetijaSDozivetji,
   type Dozivetje,
 } from "@/types/database";
-import type { ExperienceTag } from "@/types/farm";
 
 // ─── Konstante ──────────────────────────────────────────────────────────────
 
@@ -43,10 +38,15 @@ const SORT_OPTIONS = [
 
 // ─── Komponenta ─────────────────────────────────────────────────────────────
 
-export function KmetijeClient() {
-  // ── Vsi mock podatki ──
-  const vseKmetije = useMemo(() => pridobiMockKmetijeSDozivetji(), []);
-  const vseDozivetja = MOCK_DOZIVETJA;
+interface Props {
+  initialKmetije: KmetijaSDozivetji[];
+  dozivetja: Dozivetje[];
+}
+
+export function KmetijeClient({ initialKmetije, dozivetja }: Props) {
+  // ── Vsi podatki iz Supabase (preneseni iz server component) ──
+  const vseKmetije = initialKmetije;
+  const vseDozivetja = dozivetja;
 
   // ── View state ──
   const [view, setView] = useState<"grid" | "list">("grid");
@@ -547,7 +547,7 @@ export function KmetijeClient() {
                       coverImageUrl: kmetija.naslovna_slika,
                       experiencesOffered: kmetija.dozivetja.map(
                         (d) => d.slug
-                      ) as ExperienceTag[],
+                      ) as unknown as import("@/types/farm").ExperienceTag[],
                       rating: kmetija.ocena,
                       reviewCount: kmetija.stevilo_ocen,
                       isPremium: kmetija.premium,

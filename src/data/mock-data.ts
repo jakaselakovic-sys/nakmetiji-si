@@ -405,16 +405,16 @@ export const MOCK_IZDELKI: Izdelek[] = [
 // ─── Mnenja ─────────────────────────────────────────────────────────────────
 
 export const MOCK_MNENJA: Mnenje[] = [
-  { id: "mn-01", kmetija_id: "km-01", uporabnik_ime: "Ana Kovač", uporabnik_email: null, ocena: 5, komentar: "Čudovit razgled in najboljši sir, kar sem ga kdaj jedla! Otroci so bili navdušeni nad živalmi.", odobreno: true, datum: "2024-11-15" },
-  { id: "mn-02", kmetija_id: "km-01", uporabnik_ime: "Marko Zupan", uporabnik_email: null, ocena: 5, komentar: "Izjemna kmetija. Gostoljubna družina, čudovita narava. Se bomo zagotovo vrnili!", odobreno: true, datum: "2024-10-20" },
-  { id: "mn-03", kmetija_id: "km-02", uporabnik_ime: "Petra Novak", uporabnik_email: null, ocena: 5, komentar: "Najboljša vinska degustacija v Sloveniji! Šipon je fantastičen.", odobreno: true, datum: "2024-09-28" },
-  { id: "mn-04", kmetija_id: "km-04", uporabnik_ime: "Luka Horvat", uporabnik_email: null, ocena: 5, komentar: "Pršut se topi na jeziku! Osmica s pogledom... noro.", odobreno: true, datum: "2024-11-01" },
-  { id: "mn-05", kmetija_id: "km-07", uporabnik_ime: "Maja Kranjc", uporabnik_email: null, ocena: 5, komentar: "Wellness na kmetiji — kdo bi si mislil, da je to mogoče! Popolnoma sproščena.", odobreno: true, datum: "2024-08-15" },
-  { id: "mn-06", kmetija_id: "km-09", uporabnik_ime: "Tomaž Vidmar", uporabnik_email: null, ocena: 5, komentar: "Logarska dolina je eno najlepših mest, kar sem jih videl. Kmetija Logar je biser.", odobreno: true, datum: "2024-07-22" },
-  { id: "mn-07", kmetija_id: "km-09", uporabnik_ime: "Nina Šuštar", uporabnik_email: null, ocena: 5, komentar: "Zajtrk iz lastnih pridelkov! Sir, kruh, marmelada — vse sveže in domače.", odobreno: true, datum: "2024-08-30" },
-  { id: "mn-08", kmetija_id: "km-10", uporabnik_ime: "Žan Potočnik", uporabnik_email: null, ocena: 4, komentar: "Super jahanje v gozdovih! Edino treba vnaprej rezervirat ker je veliko povpraševanje.", odobreno: true, datum: "2024-09-10" },
-  { id: "mn-09", kmetija_id: "km-03", uporabnik_ime: "Eva Medved", uporabnik_email: null, ocena: 5, komentar: "Kozji sir iz eko kmetije je res nekaj posebnega. Čudovita izkušnja za otroke.", odobreno: true, datum: "2024-10-05" },
-  { id: "mn-10", kmetija_id: "km-06", uporabnik_ime: "Rok Petrič", uporabnik_email: null, ocena: 4, komentar: "Zelo zanimiva delavnica o apiterapiji. Med je vrhunski, priporočam lipovega.", odobreno: true, datum: "2024-11-20" },
+  { id: "mn-01", kmetija_id: "km-01", uporabnik_ime: "Ana Kovač", uporabnik_email: null, ocena: 5, komentar: "Čudovit razgled in najboljši sir, kar sem ga kdaj jedla! Otroci so bili navdušeni nad živalmi.", status: "odobreno" as const, datum: "2024-11-15" },
+  { id: "mn-02", kmetija_id: "km-01", uporabnik_ime: "Marko Zupan", uporabnik_email: null, ocena: 5, komentar: "Izjemna kmetija. Gostoljubna družina, čudovita narava. Se bomo zagotovo vrnili!", status: "odobreno" as const, datum: "2024-10-20" },
+  { id: "mn-03", kmetija_id: "km-02", uporabnik_ime: "Petra Novak", uporabnik_email: null, ocena: 5, komentar: "Najboljša vinska degustacija v Sloveniji! Šipon je fantastičen.", status: "odobreno" as const, datum: "2024-09-28" },
+  { id: "mn-04", kmetija_id: "km-04", uporabnik_ime: "Luka Horvat", uporabnik_email: null, ocena: 5, komentar: "Pršut se topi na jeziku! Osmica s pogledom... noro.", status: "odobreno" as const, datum: "2024-11-01" },
+  { id: "mn-05", kmetija_id: "km-07", uporabnik_ime: "Maja Kranjc", uporabnik_email: null, ocena: 5, komentar: "Wellness na kmetiji — kdo bi si mislil, da je to mogoče! Popolnoma sproščena.", status: "odobreno" as const, datum: "2024-08-15" },
+  { id: "mn-06", kmetija_id: "km-09", uporabnik_ime: "Tomaž Vidmar", uporabnik_email: null, ocena: 5, komentar: "Logarska dolina je eno najlepših mest, kar sem jih videl. Kmetija Logar je biser.", status: "odobreno" as const, datum: "2024-07-22" },
+  { id: "mn-07", kmetija_id: "km-09", uporabnik_ime: "Nina Šuštar", uporabnik_email: null, ocena: 5, komentar: "Zajtrk iz lastnih pridelkov! Sir, kruh, marmelada — vse sveže in domače.", status: "odobreno" as const, datum: "2024-08-30" },
+  { id: "mn-08", kmetija_id: "km-10", uporabnik_ime: "Žan Potočnik", uporabnik_email: null, ocena: 4, komentar: "Super jahanje v gozdovih! Edino treba vnaprej rezervirat ker je veliko povpraševanje.", status: "odobreno" as const, datum: "2024-09-10" },
+  { id: "mn-09", kmetija_id: "km-03", uporabnik_ime: "Eva Medved", uporabnik_email: null, ocena: 5, komentar: "Kozji sir iz eko kmetije je res nekaj posebnega. Čudovita izkušnja za otroke.", status: "odobreno" as const, datum: "2024-10-05" },
+  { id: "mn-10", kmetija_id: "km-06", uporabnik_ime: "Rok Petrič", uporabnik_email: null, ocena: 4, komentar: "Zelo zanimiva delavnica o apiterapiji. Med je vrhunski, priporočam lipovega.", status: "odobreno" as const, datum: "2024-11-20" },
 ];
 
 // ─── Rezervacije (Mock Bookings) ────────────────────────────────────────────

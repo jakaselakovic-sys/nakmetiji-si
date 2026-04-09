@@ -66,7 +66,7 @@ export async function oddajMnenje(
     uporabnik_email: input.uporabnik_email?.trim() || null,
     ocena: input.ocena,
     komentar: input.komentar?.trim() || null,
-    odobreno: false, // čaka na moderacijo
+    status: "cakanje", // čaka na moderacijo
   });
 
   if (error) {
