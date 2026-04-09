@@ -37,7 +37,7 @@ async function checkSupabase(): Promise<CheckResult> {
 
   const t0 = Date.now();
   try {
-    const res = await fetch(`${url}/rest/v1/`, {
+    const res = await fetch(`${url}/rest/v1/kmetije?select=id&limit=1`, {
       headers: { apikey: key, Authorization: `Bearer ${key}` },
       signal: AbortSignal.timeout(5000),
     });
