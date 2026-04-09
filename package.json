@@ -10,6 +10,7 @@
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
+    "db:seed": "node scripts/seed.mjs",
     "db:export": "node scripts/db-export.mjs",
     "prepare": "husky",
     "check:all": "node scripts/check-all.mjs"

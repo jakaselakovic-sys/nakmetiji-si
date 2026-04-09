@@ -8,7 +8,26 @@
       "Bash(grep -E \"404|notFound|error.tsx\" /c/Users/jakas/Desktop/nakmetiji/src/app/*.tsx)",
       "Bash(xargs wc:*)",
       "Bash(curl -s \"https://nakmetiji.vercel.app\" -o /dev/null -w \"%{http_code}\")",
-      "Bash(node -e \"const d=[];process.stdin.on\\('data',c=>d.push\\(c\\)\\);process.stdin.on\\('end',\\(\\)=>{const r=JSON.parse\\(d.join\\(''\\)\\);console.log\\('Status:',r.status\\);r.checks.forEach\\(c=>console.log\\(c.name+':',c.status,c.message||''\\)\\)}\\)\")"
+      "Bash(node -e \"const d=[];process.stdin.on\\('data',c=>d.push\\(c\\)\\);process.stdin.on\\('end',\\(\\)=>{const r=JSON.parse\\(d.join\\(''\\)\\);console.log\\('Status:',r.status\\);r.checks.forEach\\(c=>console.log\\(c.name+':',c.status,c.message||''\\)\\)}\\)\")",
+      "Bash(curl -s -X GET -H 'Authorization: Bearer sbp_a09b6b32bf2b74553f79a11b10901854badbfea5' https://api.supabase.com/v1/projects)",
+      "Bash(node -e \"const d=[];process.stdin.on\\('data',c=>d.push\\(c\\)\\);process.stdin.on\\('end',\\(\\)=>{const r=JSON.parse\\(d.join\\(''\\)\\);r.forEach\\(p=>console.log\\(p.id, p.name\\)\\)}\\)\")",
+      "Bash(curl -s -X POST -H 'Authorization: Bearer sbp_a09b6b32bf2b74553f79a11b10901854badbfea5' -H 'Content-Type: application/json' https://api.supabase.com/v1/projects/nbopongqlewdlqxrfqsu/database/query -d '{\"query\": \"SELECT table_name FROM information_schema.tables WHERE table_schema = '\\\\''public'\\\\'' ORDER BY table_name;\"}')",
+      "Bash(curl -s -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ib3BvbmdxbGV3ZGxxeHJmcXN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODY0NDgsImV4cCI6MjA5MTI2MjQ0OH0.hmQ8OdZVYJIBS4h_ubZ1qJ2XihLk2KjkI32q_Am3eSs' 'https://nbopongqlewdlqxrfqsu.supabase.co/rest/v1/kmetije?select=count')",
+      "Bash(curl -s -X POST -H 'Authorization: Bearer sbp_a09b6b32bf2b74553f79a11b10901854badbfea5' -H 'Content-Type: application/json' https://api.supabase.com/v1/projects/nbopongqlewdlqxrfqsu/database/query -d '{\"query\": \"DROP POLICY IF EXISTS \\\\\"profil_admin\\\\\" ON public.profili; DROP POLICY IF EXISTS \\\\\"profil_lasten\\\\\" ON public.profili; CREATE POLICY \\\\\"profili_select\\\\\" ON public.profili FOR SELECT USING \\(true\\); CREATE POLICY \\\\\"profili_update\\\\\" ON public.profili FOR UPDATE USING \\(id = auth.uid\\(\\)\\); \"}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://nakmetiji.vercel.app/dashboard\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://nakmetiji.vercel.app/blog\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://nakmetiji.vercel.app/robots.txt\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://nakmetiji.vercel.app/sitemap.xml\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://nakmetiji.vercel.app/api/admin/mnenja\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://nakmetiji.vercel.app/api/upload\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://nakmetiji.vercel.app/kmetije/kmetija-pr-janezu\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://nakmetiji.vercel.app/kmetije/neobstojeca-kmetija\")",
+      "Bash(curl -s -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ib3BvbmdxbGV3ZGxxeHJmcXN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODY0NDgsImV4cCI6MjA5MTI2MjQ0OH0.hmQ8OdZVYJIBS4h_ubZ1qJ2XihLk2KjkI32q_Am3eSs' 'https://nbopongqlewdlqxrfqsu.supabase.co/rest/v1/dozivetja?select=count')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{redirect_url}\" \"https://nakmetiji.vercel.app/dashboard\")",
+      "Bash(curl -s \"https://nakmetiji.vercel.app/robots.txt\")",
+      "Bash(curl -s \"https://nakmetiji.vercel.app/sitemap.xml\")",
+      "Bash(curl -s -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ib3BvbmdxbGV3ZGxxeHJmcXN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODY0NDgsImV4cCI6MjA5MTI2MjQ0OH0.hmQ8OdZVYJIBS4h_ubZ1qJ2XihLk2KjkI32q_Am3eSs' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ib3BvbmdxbGV3ZGxxeHJmcXN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODY0NDgsImV4cCI6MjA5MTI2MjQ0OH0.hmQ8OdZVYJIBS4h_ubZ1qJ2XihLk2KjkI32q_Am3eSs' -o /dev/null -w '%{http_code}' 'https://nbopongqlewdlqxrfqsu.supabase.co/rest/v1/kmetije?select=id&limit=1')",
+      "Bash(node scripts/seed.mjs)"
     ]
   }
 }
