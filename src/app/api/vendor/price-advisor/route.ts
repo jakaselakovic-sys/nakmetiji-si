@@ -7,6 +7,8 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
+import { createSupabaseServer } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -98,13 +100,26 @@ function getWeatherSignal(month: number): { icon: string; label: string; factor:
 }
 
 export async function POST(req: NextRequest) {
+  // Auth guard — vendor-only endpoint
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Nimate dostopa." }, { status: 401 });
+
+  const rl = checkRateLimit(user.id, "price-advisor", 60, 3_600);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: `Presegli ste omejitev. Poskusite čez ${rl.retryAfter}s.` },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+    );
+  }
+
   const body = await req.json() as {
     currentPrice?: number;
     regija?: string;
   };
   const { currentPrice, regija = "gorenjska" } = body;
 
-  if (!currentPrice || currentPrice < 10) {
+  if (!currentPrice || currentPrice < 10 || currentPrice > 9_999) {
     return NextResponse.json({ error: "Vnesite veljavno ceno (min. 10 €)." }, { status: 400 });
   }
 

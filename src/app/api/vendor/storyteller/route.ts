@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Groq from "groq-sdk";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { logNapako } from "@/lib/logNapako";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -19,6 +20,15 @@ export async function POST(req: NextRequest) {
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Nimate dostopa." }, { status: 401 });
+
+  // 20 generations per hour per user
+  const rl = checkRateLimit(user.id, "storyteller", 20, 3_600);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: `Presegli ste omejitev generiranj. Poskusite čez ${rl.retryAfter}s.` },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+    );
+  }
 
   const body = await req.json() as {
     bullets?: string[];
@@ -33,6 +43,10 @@ export async function POST(req: NextRequest) {
   }
   if (!kmetijaIme.trim()) {
     return NextResponse.json({ error: "Ime kmetije je obvezno." }, { status: 400 });
+  }
+
+  if (!kmetijaIme.trim() || kmetijaIme.length > 200) {
+    return NextResponse.json({ error: "Ime kmetije je obvezno (max 200 znakov)." }, { status: 400 });
   }
 
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! });
@@ -61,12 +75,26 @@ Languages and tone:
 Respond with ONLY raw JSON, no markdown fences:
 {"sl":"...","en":"...","de":"...","it":"...","seo_keywords":{"sl":["kw1","kw2","kw3"],"en":["kw1","kw2","kw3"]}}`;
 
-  const completion = await groq.chat.completions.create({
-    model: MODEL,
-    max_tokens: 1600,
-    temperature: 0.75,
-    messages: [{ role: "user", content: prompt }],
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 28_000);
+
+  let completion: Awaited<ReturnType<typeof groq.chat.completions.create>>;
+  try {
+    completion = await groq.chat.completions.create({
+      model: MODEL,
+      max_tokens: 1600,
+      temperature: 0.75,
+      messages: [{ role: "user", content: prompt }],
+    });
+  } catch (err) {
+    clearTimeout(timeoutId);
+    const isTimeout = err instanceof Error && err.name === "AbortError";
+    return NextResponse.json(
+      { ok: false, error: isTimeout ? "Generiranje je poteklo. Skrajšajte vnos in poskusite znova." : "Napaka pri generiranju besedila." },
+      { status: isTimeout ? 504 : 502 }
+    );
+  }
+  clearTimeout(timeoutId);
 
   const raw = (completion.choices[0]?.message?.content ?? "{}")
     .replace(/```json\n?|```\n?/g, "")
@@ -77,7 +105,10 @@ Respond with ONLY raw JSON, no markdown fences:
       sl: string; en: string; de: string; it: string;
       seo_keywords?: { sl?: string[]; en?: string[] };
     };
-    if (!result.sl || !result.en) throw new Error("Manjkajoči jeziki");
+    // Validate all 4 required languages — partial response is unusable
+    if (!result.sl?.trim() || !result.en?.trim() || !result.de?.trim() || !result.it?.trim()) {
+      throw new Error("Manjkajoči jeziki v odgovoru");
+    }
     return NextResponse.json({ ok: true, ...result });
   } catch {
     logNapako({

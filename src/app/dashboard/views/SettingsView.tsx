@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { Loader2, CheckCircle } from "lucide-react";
 import { createSupabaseBrowser } from "@/lib/supabase/client";
 import { gesloSchema, profilSchema } from "@/lib/schemas/vendor";
@@ -25,6 +25,11 @@ const inputCls = (hasError: boolean) =>
   ].join(" ");
 
 export function SettingsView({ userEmail, profilIme }: Props) {
+  // Timeout refs — cleared on unmount to prevent setState on unmounted component
+  const gesloTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const imeTimerRef   = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => { clearTimeout(gesloTimerRef.current); clearTimeout(imeTimerRef.current); }, []);
+
   // ── Password change ────────────────────────────────────────────────────────
   const [novoGeslo, setNovoGeslo]       = useState("");
   const [potrdiGeslo, setPotrdiGeslo]   = useState("");
@@ -57,7 +62,8 @@ export function SettingsView({ userEmail, profilIme }: Props) {
         setGesloUspeh(true);
         setNovoGeslo("");
         setPotrdiGeslo("");
-        setTimeout(() => setGesloUspeh(false), 4_000);
+        clearTimeout(gesloTimerRef.current);
+        gesloTimerRef.current = setTimeout(() => setGesloUspeh(false), 4_000);
       }
     });
   }
@@ -92,7 +98,8 @@ export function SettingsView({ userEmail, profilIme }: Props) {
         setImeErrors({ ime: error.message });
       } else {
         setImeUspeh(true);
-        setTimeout(() => setImeUspeh(false), 4_000);
+        clearTimeout(imeTimerRef.current);
+        imeTimerRef.current = setTimeout(() => setImeUspeh(false), 4_000);
       }
     });
   }

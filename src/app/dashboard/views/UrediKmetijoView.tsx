@@ -131,8 +131,8 @@ export function UrediKmetijoView({ kmetija, vseDozivetja, izbranaDozivetjaIds }:
       kontakt_spletna_stran:  kontakt_spletna_stran.trim(),
       cena_noc:               cena_noc_str !== "" ? Number(cena_noc_str) : null,
       max_gostov:             max_gostov_str !== "" ? Number(max_gostov_str) : null,
-      iban:                   iban.trim().replace(/\s/g, ""),
-      bic:                    bic.trim().toUpperCase(),
+      iban:                   iban.trim().replace(/\s/g, "") || undefined,
+      bic:                    bic.trim().toUpperCase() || undefined,
       dozivetja_ids,
     };
 

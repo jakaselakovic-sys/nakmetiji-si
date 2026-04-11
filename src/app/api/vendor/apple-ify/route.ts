@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Groq from "groq-sdk";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { logNapako } from "@/lib/logNapako";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -20,16 +21,32 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Nimate dostopa." }, { status: 401 });
 
+  // 10 analyses per hour per user — Groq vision is expensive
+  const rl = checkRateLimit(user.id, "apple-ify", 10, 3_600);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: `Presegli ste dnevno omejitev analiz. Poskusite čez ${rl.retryAfter}s.` },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+    );
+  }
+
   const body = await req.json() as { imageUrl?: string };
   const { imageUrl } = body;
 
-  if (!imageUrl?.startsWith("http")) {
-    return NextResponse.json({ error: "Neveljaven URL slike." }, { status: 400 });
+  // Require HTTPS to prevent unencrypted fetches and SSRF via http://
+  if (!imageUrl || !/^https:\/\/.+\..+/i.test(imageUrl)) {
+    return NextResponse.json({ error: "Neveljaven URL slike (zahteva HTTPS)." }, { status: 400 });
   }
 
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! });
 
-  const completion = await groq.chat.completions.create({
+  // 25-second hard timeout — Groq vision model can be slow on large images
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25_000);
+
+  let completion: Awaited<ReturnType<typeof groq.chat.completions.create>>;
+  try {
+    completion = await groq.chat.completions.create({
     model: VISION_MODEL,
     max_tokens: 700,
     messages: [
@@ -57,6 +74,15 @@ Fields:
       },
     ],
   });
+  } catch (err) {
+    clearTimeout(timeoutId);
+    const isTimeout = err instanceof Error && err.name === "AbortError";
+    return NextResponse.json(
+      { ok: false, error: isTimeout ? "Analiza je potekla (timeout). Preverite velikost slike." : "Napaka pri analizi slike." },
+      { status: isTimeout ? 504 : 502 }
+    );
+  }
+  clearTimeout(timeoutId);
 
   const raw = (completion.choices[0]?.message?.content ?? "{}")
     .replace(/```json\n?|```\n?/g, "")
