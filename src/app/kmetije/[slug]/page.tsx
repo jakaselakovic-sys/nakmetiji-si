@@ -72,7 +72,7 @@ export default async function FarmProfilePage({ params }: Props) {
     "@type": "LodgingBusiness",
     name: data.ime,
     description: data.kratki_opis ?? data.opis.slice(0, 300),
-    url: `https://nakmetiji.vercel.app/kmetije/${data.slug}`,
+    url: `https://nakmetiji.si/kmetije/${data.slug}`,
     image: data.naslovna_slika || undefined,
     address: {
       "@type": "PostalAddress",

@@ -10,7 +10,7 @@
 //   5. SEO Schema.org (handled in page.tsx)
 // =============================================================================
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -42,6 +42,53 @@ import { IZDELEK_KATEGORIJA_LABELS } from "@/types/database";
 import type { Kmetija, Dozivetje, Mnenje, Izdelek } from "@/types/database";
 import { oddajRezervacijo } from "@/lib/actions/rezervacije";
 import { createSupabaseBrowser } from "@/lib/supabase/client";
+
+// ─── Share buttons ──────────────────────────────────────────────────────────
+
+function ShareButtons({ kmetijaIme }: { kmetijaIme: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const share = (platform: string) => {
+    const url = encodeURIComponent(window.location.href);
+    const text = encodeURIComponent(`Odkrijte kmetijo ${kmetijaIme} na NaKmetiji.si!`);
+    const links: Record<string, string> = {
+      Facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
+      Twitter:  `https://twitter.com/intent/tweet?url=${url}&text=${text}`,
+      WhatsApp: `https://api.whatsapp.com/send?text=${text}%20${url}`,
+    };
+    if (links[platform]) window.open(links[platform], "_blank", "noopener,noreferrer,width=600,height=400");
+    if (platform === "Kopiraj") {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    }
+  };
+
+  return (
+    <div className="rounded-2xl bg-white border border-earth-200/60 shadow-sm p-5">
+      <h4 className="text-sm font-bold text-forest-900 mb-3">Delite to kmetijo</h4>
+      <div className="flex gap-2">
+        {[
+          { label: "Facebook", icon: "f",  bg: "bg-[#1877F2]" },
+          { label: "Twitter",  icon: "𝕏",  bg: "bg-black" },
+          { label: "WhatsApp", icon: "💬", bg: "bg-[#25D366]" },
+          { label: "Kopiraj",  icon: copied ? "✓" : "🔗", bg: copied ? "bg-forest-600" : "bg-earth-500" },
+        ].map((s) => (
+          <button
+            key={s.label}
+            aria-label={s.label}
+            title={s.label}
+            onClick={() => share(s.label)}
+            className={`flex h-10 w-10 items-center justify-center rounded-xl ${s.bg} text-white text-sm font-bold hover:opacity-80 hover:scale-105 active:scale-95 transition-all duration-200`}
+          >
+            {s.icon}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -107,16 +154,20 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
 
 
   // ── Fetch zasedenih datumov ob mount ──
-  useMemo(() => {
+  useEffect(() => {
     const supabase = createSupabaseBrowser();
-    supabase
-      .from("rezervacije")
-      .select("datum_od, datum_do")
-      .eq("kmetija_id", kmetija.id)
-      .in("status", ["cakanje", "potrjena"])
-      .then(({ data }) => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("rezervacije")
+          .select("datum_od, datum_do")
+          .eq("kmetija_id", kmetija.id)
+          .in("status", ["cakanje", "potrjena"]);
         if (data) setZasedeniDatumi(data.map((r) => ({ od: r.datum_od, do: r.datum_do })));
-      });
+      } catch (err) {
+        console.error("[booking] failed to load occupied dates:", err);
+      }
+    })();
   }, [kmetija.id]);
 
   // Helper: ali je datum zaseden
@@ -768,25 +819,7 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
               </div>
 
               {/* Share */}
-              <div className="rounded-2xl bg-white border border-earth-200/60 shadow-sm p-5">
-                <h4 className="text-sm font-bold text-forest-900 mb-3">Delite to kmetijo</h4>
-                <div className="flex gap-2">
-                  {[
-                    { label: "Facebook", icon: "f", bg: "bg-[#1877F2]" },
-                    { label: "Twitter", icon: "𝕏", bg: "bg-black" },
-                    { label: "WhatsApp", icon: "💬", bg: "bg-[#25D366]" },
-                    { label: "Kopiraj", icon: "🔗", bg: "bg-earth-500" },
-                  ].map((social) => (
-                    <button
-                      key={social.label}
-                      title={social.label}
-                      className={`flex h-10 w-10 items-center justify-center rounded-xl ${social.bg} text-white text-sm font-bold hover:opacity-80 hover:scale-105 active:scale-95 transition-all duration-200`}
-                    >
-                      {social.icon}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <ShareButtons kmetijaIme={kmetija.ime} />
             </div>
           </aside>
         </div>
@@ -808,6 +841,7 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
           >
             {/* Close */}
             <button
+              aria-label="Zapri galerijo"
               className="absolute top-6 right-6 z-10 text-white/60 hover:text-white transition-colors"
               onClick={() => setLightboxOpen(false)}
             >
@@ -838,6 +872,7 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
             {/* Prev */}
             {lightboxIndex > 0 && (
               <button
+                aria-label="Prejšnja slika"
                 className="absolute left-4 top-1/2 -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
                 onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => i - 1); }}
               >
@@ -848,6 +883,7 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
             {/* Next */}
             {lightboxIndex < allImages.length - 1 && (
               <button
+                aria-label="Naslednja slika"
                 className="absolute right-4 top-1/2 -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
                 onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => i + 1); }}
               >

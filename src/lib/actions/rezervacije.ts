@@ -93,6 +93,13 @@ export async function oddajRezervacijo(input: {
   const lastnikIme   = (lastnikData as { ime?: string } | null)?.ime ?? "Lastnik";
 
   // Email to owner
+  const logEmailError = (vir: string) => (err: unknown) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    void import("@/lib/logNapako").then(({ logNapako }) =>
+      logNapako({ tip: "email", vir, sporocilo: msg, kontekst: { rezervacija_id } })
+    );
+  };
+
   if (lastnikEmail) {
     posljiEmailLastniku({
       lastnik_email: lastnikEmail,
@@ -107,7 +114,7 @@ export async function oddajRezervacijo(input: {
       opombe:        input.opombe ?? null,
       rezervacija_id,
       skupaj_cena,
-    }).catch(console.error);
+    }).catch(logEmailError("rezervacije/oddaj/owner-email"));
   }
 
   // "Awaiting confirmation" email to guest
@@ -122,7 +129,7 @@ export async function oddajRezervacijo(input: {
     stevilo_oseb:  input.stevilo_oseb,
     skupaj_cena:   skupaj_cena || null,
     rezervacija_id,
-  }).catch(console.error);
+  }).catch(logEmailError("rezervacije/oddaj/guest-awaiting"));
 
   return { ok: true, id: rezervacija_id };
 }
@@ -188,6 +195,7 @@ export async function potrdiRezervacijo(
     kmetija_slug:    kmetija.slug,
     datum_od:        rez.datum_od,
     datum_do:        rez.datum_do,
+    stevilo_oseb:    rez.stevilo_oseb,
     skupaj_cena:     rez.skupaj_cena,
     rezervacija_id,
     kmetija_iban:    kmetija.iban ?? null,

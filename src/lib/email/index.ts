@@ -145,6 +145,7 @@ export async function posljiPotrditev(params: {
   kmetija_slug?: string;
   datum_od: string;
   datum_do: string;
+  stevilo_oseb?: number;
   skupaj_cena: number | null;
   rezervacija_id: string;
   // Optional: per-farm IBAN (falls back to platform IBAN)
@@ -187,7 +188,7 @@ export async function posljiPotrditev(params: {
         datum_od: params.datum_od,
         datum_do: params.datum_do,
         nocitve,
-        stevilo_oseb: 1, // not available here, acceptable default
+        stevilo_oseb: params.stevilo_oseb ?? 1,
         skupaj_cena: cena,
         rezervacija_id: params.rezervacija_id,
         upn_referenca: upnResult.referenca,

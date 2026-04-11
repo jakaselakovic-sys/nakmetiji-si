@@ -26,7 +26,7 @@ export function FarmCard({ farm }: { farm: FarmCardData }) {
       {/* Image container */}
       <div className="relative aspect-[4/3] overflow-hidden">
         <Image
-          src={farm.coverImageUrl}
+          src={farm.coverImageUrl || "/images/bg-vineyards.webp"}
           alt={farm.name}
           fill
           className="object-cover transition-transform duration-700 group-hover:scale-110"
