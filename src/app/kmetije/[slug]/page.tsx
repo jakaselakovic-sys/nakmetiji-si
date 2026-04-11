@@ -31,7 +31,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "website",
       locale: "sl_SI",
       siteName: "NaKmetiji",
-      images: data.naslovna_slika ? [{ url: data.naslovna_slika }] : undefined,
+      images: [{
+        url: `https://nakmetiji.si/api/og/kmetije/${slug}`,
+        width: 1200,
+        height: 630,
+        alt: `${data.ime} — ${regionLabel}`,
+      }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      images: [`https://nakmetiji.si/api/og/kmetije/${slug}`],
+    },
+    alternates: {
+      canonical: `https://nakmetiji.si/kmetije/${slug}`,
     },
   };
 }

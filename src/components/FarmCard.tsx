@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { EXPERIENCE_LABELS, REGION_LABELS, type ExperienceTag } from "@/types";
+import { EXPERIENCE_LABELS, type ExperienceTag } from "@/types";
+
+import { BLUR_DATA_URL } from "@/lib/blur";
 
 interface FarmCardData {
   slug: string;
@@ -29,6 +31,8 @@ export function FarmCard({ farm }: { farm: FarmCardData }) {
           fill
           className="object-cover transition-transform duration-700 group-hover:scale-110"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          placeholder="blur"
+          blurDataURL={BLUR_DATA_URL}
         />
 
         {/* Gradient overlay */}

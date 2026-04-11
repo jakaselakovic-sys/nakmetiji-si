@@ -51,6 +51,14 @@ export const MOCK_KMETIJE: Kmetija[] = [
     stevilo_ocen: 47,
     premium: true,
     aktivna: true,
+    cena_noc: null,
+
+    max_gostov: null,
+
+    iban: null,
+
+    bic: null,
+
     lastnik_id: null,
     ustvarjeno: "2024-01-15",
     posodobljeno: "2024-12-01",
@@ -75,6 +83,14 @@ export const MOCK_KMETIJE: Kmetija[] = [
     stevilo_ocen: 83,
     premium: true,
     aktivna: true,
+    cena_noc: null,
+
+    max_gostov: null,
+
+    iban: null,
+
+    bic: null,
+
     lastnik_id: null,
     ustvarjeno: "2024-02-10",
     posodobljeno: "2024-11-15",
@@ -99,6 +115,14 @@ export const MOCK_KMETIJE: Kmetija[] = [
     stevilo_ocen: 34,
     premium: false,
     aktivna: true,
+    cena_noc: null,
+
+    max_gostov: null,
+
+    iban: null,
+
+    bic: null,
+
     lastnik_id: null,
     ustvarjeno: "2024-03-05",
     posodobljeno: "2024-10-20",
@@ -123,6 +147,14 @@ export const MOCK_KMETIJE: Kmetija[] = [
     stevilo_ocen: 62,
     premium: true,
     aktivna: true,
+    cena_noc: null,
+
+    max_gostov: null,
+
+    iban: null,
+
+    bic: null,
+
     lastnik_id: null,
     ustvarjeno: "2024-01-20",
     posodobljeno: "2024-12-10",
@@ -147,6 +179,14 @@ export const MOCK_KMETIJE: Kmetija[] = [
     stevilo_ocen: 29,
     premium: false,
     aktivna: true,
+    cena_noc: null,
+
+    max_gostov: null,
+
+    iban: null,
+
+    bic: null,
+
     lastnik_id: null,
     ustvarjeno: "2024-04-12",
     posodobljeno: "2024-11-30",
@@ -171,6 +211,14 @@ export const MOCK_KMETIJE: Kmetija[] = [
     stevilo_ocen: 18,
     premium: false,
     aktivna: true,
+    cena_noc: null,
+
+    max_gostov: null,
+
+    iban: null,
+
+    bic: null,
+
     lastnik_id: null,
     ustvarjeno: "2024-05-01",
     posodobljeno: "2024-09-15",
@@ -195,6 +243,14 @@ export const MOCK_KMETIJE: Kmetija[] = [
     stevilo_ocen: 41,
     premium: true,
     aktivna: true,
+    cena_noc: null,
+
+    max_gostov: null,
+
+    iban: null,
+
+    bic: null,
+
     lastnik_id: null,
     ustvarjeno: "2024-02-28",
     posodobljeno: "2024-12-05",
@@ -219,6 +275,14 @@ export const MOCK_KMETIJE: Kmetija[] = [
     stevilo_ocen: 22,
     premium: false,
     aktivna: true,
+    cena_noc: null,
+
+    max_gostov: null,
+
+    iban: null,
+
+    bic: null,
+
     lastnik_id: null,
     ustvarjeno: "2024-06-10",
     posodobljeno: "2024-10-01",
@@ -243,6 +307,14 @@ export const MOCK_KMETIJE: Kmetija[] = [
     stevilo_ocen: 91,
     premium: true,
     aktivna: true,
+    cena_noc: null,
+
+    max_gostov: null,
+
+    iban: null,
+
+    bic: null,
+
     lastnik_id: null,
     ustvarjeno: "2024-01-05",
     posodobljeno: "2024-12-12",
@@ -267,6 +339,14 @@ export const MOCK_KMETIJE: Kmetija[] = [
     stevilo_ocen: 55,
     premium: false,
     aktivna: true,
+    cena_noc: null,
+
+    max_gostov: null,
+
+    iban: null,
+
+    bic: null,
+
     lastnik_id: null,
     ustvarjeno: "2024-03-18",
     posodobljeno: "2024-11-20",
@@ -421,41 +501,41 @@ export const MOCK_MNENJA: Mnenje[] = [
 
 export const MOCK_REZERVACIJE: Rezervacija[] = [
   // ── Kmetija pr' Janežu (km-01) ──
-  { id: "rez-01-01", kmetija_id: "km-01", gost_ime: "Družina Kovač", gost_email: "ana.kovac@gmail.com", gost_telefon: "+386 41 555 100", stevilo_oseb: 4, datum_od: "2025-07-10", datum_do: "2025-07-14", opombe: "Dva otroka (5 in 8 let), prosim sobo s pogledom na gore.", status: "potrjena", ustvarjeno: "2025-03-15", posodobljeno: "2025-03-17" },
-  { id: "rez-01-02", kmetija_id: "km-01", gost_ime: "Peter Zore", gost_email: "peter.zore@yahoo.com", gost_telefon: null, stevilo_oseb: 2, datum_od: "2025-08-01", datum_do: "2025-08-03", opombe: null, status: "cakanje", ustvarjeno: "2025-04-01", posodobljeno: "2025-04-01" },
+  { id: "rez-01-01", kmetija_id: "km-01", gost_ime: "Družina Kovač", gost_email: "ana.kovac@gmail.com", gost_telefon: "+386 41 555 100", stevilo_oseb: 4, datum_od: "2025-07-10", datum_do: "2025-07-14", opombe: "Dva otroka (5 in 8 let), prosim sobo s pogledom na gore.", skupaj_cena: null, status: "potrjena", ustvarjeno: "2025-03-15", posodobljeno: "2025-03-17" },
+  { id: "rez-01-02", kmetija_id: "km-01", gost_ime: "Peter Zore", gost_email: "peter.zore@yahoo.com", gost_telefon: null, stevilo_oseb: 2, datum_od: "2025-08-01", datum_do: "2025-08-03", opombe: null, skupaj_cena: null, status: "cakanje", ustvarjeno: "2025-04-01", posodobljeno: "2025-04-01" },
 
   // ── Vinska klet Šteyer (km-02) ──
-  { id: "rez-02-01", kmetija_id: "km-02", gost_ime: "Maja in Tomaž Vidmar", gost_email: "vidmar.maja@gmail.com", gost_telefon: "+386 31 222 333", stevilo_oseb: 6, datum_od: "2025-06-20", datum_do: "2025-06-21", opombe: "Degustacija za 6 oseb, skupina prijateljev. Vegetarijanska opcija za 2.", status: "potrjena", ustvarjeno: "2025-02-10", posodobljeno: "2025-02-12" },
+  { id: "rez-02-01", kmetija_id: "km-02", gost_ime: "Maja in Tomaž Vidmar", gost_email: "vidmar.maja@gmail.com", gost_telefon: "+386 31 222 333", stevilo_oseb: 6, datum_od: "2025-06-20", datum_do: "2025-06-21", opombe: "Degustacija za 6 oseb, skupina prijateljev. Vegetarijanska opcija za 2.", skupaj_cena: null, status: "potrjena", ustvarjeno: "2025-02-10", posodobljeno: "2025-02-12" },
 
   // ── Eko kmetija Zlatorog (km-03) ──
-  { id: "rez-03-01", kmetija_id: "km-03", gost_ime: "Eva Medved", gost_email: "eva.medved@outlook.com", gost_telefon: "+386 40 111 222", stevilo_oseb: 3, datum_od: "2025-05-15", datum_do: "2025-05-18", opombe: "Zanima nas delavnica izdelave sira.", status: "zakljucena", ustvarjeno: "2025-01-20", posodobljeno: "2025-05-19" },
-  { id: "rez-03-02", kmetija_id: "km-03", gost_ime: "Rok Petrič", gost_email: "rok.petric@gmail.com", gost_telefon: null, stevilo_oseb: 2, datum_od: "2025-09-01", datum_do: "2025-09-04", opombe: null, status: "cakanje", ustvarjeno: "2025-04-02", posodobljeno: "2025-04-02" },
+  { id: "rez-03-01", kmetija_id: "km-03", gost_ime: "Eva Medved", gost_email: "eva.medved@outlook.com", gost_telefon: "+386 40 111 222", stevilo_oseb: 3, datum_od: "2025-05-15", datum_do: "2025-05-18", opombe: "Zanima nas delavnica izdelave sira.", skupaj_cena: null, status: "zakljucena", ustvarjeno: "2025-01-20", posodobljeno: "2025-05-19" },
+  { id: "rez-03-02", kmetija_id: "km-03", gost_ime: "Rok Petrič", gost_email: "rok.petric@gmail.com", gost_telefon: null, stevilo_oseb: 2, datum_od: "2025-09-01", datum_do: "2025-09-04", opombe: null, skupaj_cena: null, status: "cakanje", ustvarjeno: "2025-04-02", posodobljeno: "2025-04-02" },
 
   // ── Turistična kmetija Klinec (km-04) ──
-  { id: "rez-04-01", kmetija_id: "km-04", gost_ime: "Luka Horvat", gost_email: "luka.horvat@proton.me", gost_telefon: "+386 51 444 555", stevilo_oseb: 2, datum_od: "2025-06-05", datum_do: "2025-06-07", opombe: "Ali je mogoča zasebna osmica za dva?", status: "potrjena", ustvarjeno: "2025-03-01", posodobljeno: "2025-03-03" },
-  { id: "rez-04-02", kmetija_id: "km-04", gost_ime: "Skupina Triglav d.o.o.", gost_email: "events@triglav.si", gost_telefon: "+386 1 234 5678", stevilo_oseb: 12, datum_od: "2025-10-10", datum_do: "2025-10-11", opombe: "Teambuilding za 12 zaposlenih. Potrebujemo račun na firmo.", status: "zavrnjena", ustvarjeno: "2025-04-05", posodobljeno: "2025-04-06" },
+  { id: "rez-04-01", kmetija_id: "km-04", gost_ime: "Luka Horvat", gost_email: "luka.horvat@proton.me", gost_telefon: "+386 51 444 555", stevilo_oseb: 2, datum_od: "2025-06-05", datum_do: "2025-06-07", opombe: "Ali je mogoča zasebna osmica za dva?", skupaj_cena: null, status: "potrjena", ustvarjeno: "2025-03-01", posodobljeno: "2025-03-03" },
+  { id: "rez-04-02", kmetija_id: "km-04", gost_ime: "Skupina Triglav d.o.o.", gost_email: "events@triglav.si", gost_telefon: "+386 1 234 5678", stevilo_oseb: 12, datum_od: "2025-10-10", datum_do: "2025-10-11", opombe: "Teambuilding za 12 zaposlenih. Potrebujemo račun na firmo.", skupaj_cena: null, status: "zavrnjena", ustvarjeno: "2025-04-05", posodobljeno: "2025-04-06" },
 
   // ── Kmetija Bregar (km-05) ──
-  { id: "rez-05-01", kmetija_id: "km-05", gost_ime: "Neža Kralj", gost_email: "neza.kralj@gmail.com", gost_telefon: "+386 30 777 888", stevilo_oseb: 5, datum_od: "2025-07-20", datum_do: "2025-07-23", opombe: "Družina s 3 otroki. Zanima nas kolesarjenje po vinskih cestah.", status: "potrjena", ustvarjeno: "2025-02-28", posodobljeno: "2025-03-02" },
+  { id: "rez-05-01", kmetija_id: "km-05", gost_ime: "Neža Kralj", gost_email: "neza.kralj@gmail.com", gost_telefon: "+386 30 777 888", stevilo_oseb: 5, datum_od: "2025-07-20", datum_do: "2025-07-23", opombe: "Družina s 3 otroki. Zanima nas kolesarjenje po vinskih cestah.", skupaj_cena: null, status: "potrjena", ustvarjeno: "2025-02-28", posodobljeno: "2025-03-02" },
 
   // ── Čebelarska kmetija Ambrožič (km-06) ──
-  { id: "rez-06-01", kmetija_id: "km-06", gost_ime: "OŠ Naklo - 4.a razred", gost_email: "uciteljica.nina@os-naklo.si", gost_telefon: "+386 4 277 60 10", stevilo_oseb: 25, datum_od: "2025-05-22", datum_do: "2025-05-22", opombe: "Šolska ekskurzija, 23 učencev + 2 spremljevalki. Prosimo ogled čebelnjaka in delavnico.", status: "potrjena", ustvarjeno: "2025-01-15", posodobljeno: "2025-01-17" },
-  { id: "rez-06-02", kmetija_id: "km-06", gost_ime: "Martin Šiftar", gost_email: "martin.siftar@gmail.com", gost_telefon: null, stevilo_oseb: 1, datum_od: "2025-08-15", datum_do: "2025-08-15", opombe: "Zanima me apiterapija. Ali ponujate individualne termine?", status: "cakanje", ustvarjeno: "2025-04-03", posodobljeno: "2025-04-03" },
+  { id: "rez-06-01", kmetija_id: "km-06", gost_ime: "OŠ Naklo - 4.a razred", gost_email: "uciteljica.nina@os-naklo.si", gost_telefon: "+386 4 277 60 10", stevilo_oseb: 25, datum_od: "2025-05-22", datum_do: "2025-05-22", opombe: "Šolska ekskurzija, 23 učencev + 2 spremljevalki. Prosimo ogled čebelnjaka in delavnico.", skupaj_cena: null, status: "potrjena", ustvarjeno: "2025-01-15", posodobljeno: "2025-01-17" },
+  { id: "rez-06-02", kmetija_id: "km-06", gost_ime: "Martin Šiftar", gost_email: "martin.siftar@gmail.com", gost_telefon: null, stevilo_oseb: 1, datum_od: "2025-08-15", datum_do: "2025-08-15", opombe: "Zanima me apiterapija. Ali ponujate individualne termine?", skupaj_cena: null, status: "cakanje", ustvarjeno: "2025-04-03", posodobljeno: "2025-04-03" },
 
   // ── Kmetija pri Mariji (km-07) ──
-  { id: "rez-07-01", kmetija_id: "km-07", gost_ime: "Irena in Jože Košir", gost_email: "kosir.irena@siol.net", gost_telefon: "+386 41 333 444", stevilo_oseb: 2, datum_od: "2025-06-01", datum_do: "2025-06-05", opombe: "Zanima naju wellness paket z zeliščnimi kopelmi.", status: "zakljucena", ustvarjeno: "2025-01-10", posodobljeno: "2025-06-06" },
-  { id: "rez-07-02", kmetija_id: "km-07", gost_ime: "Sara Oman", gost_email: "sara.oman@gmail.com", gost_telefon: null, stevilo_oseb: 1, datum_od: "2025-09-10", datum_do: "2025-09-14", opombe: "Terapevtsko jahanje — ali je primerno za popolne začetnike?", status: "cakanje", ustvarjeno: "2025-04-04", posodobljeno: "2025-04-04" },
+  { id: "rez-07-01", kmetija_id: "km-07", gost_ime: "Irena in Jože Košir", gost_email: "kosir.irena@siol.net", gost_telefon: "+386 41 333 444", stevilo_oseb: 2, datum_od: "2025-06-01", datum_do: "2025-06-05", opombe: "Zanima naju wellness paket z zeliščnimi kopelmi.", skupaj_cena: null, status: "zakljucena", ustvarjeno: "2025-01-10", posodobljeno: "2025-06-06" },
+  { id: "rez-07-02", kmetija_id: "km-07", gost_ime: "Sara Oman", gost_email: "sara.oman@gmail.com", gost_telefon: null, stevilo_oseb: 1, datum_od: "2025-09-10", datum_do: "2025-09-14", opombe: "Terapevtsko jahanje — ali je primerno za popolne začetnike?", skupaj_cena: null, status: "cakanje", ustvarjeno: "2025-04-04", posodobljeno: "2025-04-04" },
 
   // ── Sadjarski vrt Kobal (km-08) ──
-  { id: "rez-08-01", kmetija_id: "km-08", gost_ime: "Alenka Bizjak", gost_email: "alenka.b@gmail.com", gost_telefon: "+386 40 999 000", stevilo_oseb: 8, datum_od: "2025-10-05", datum_do: "2025-10-05", opombe: "Skupina 8 prijateljic — želimo vodeni ogled sadovnjaka in pokušnjo sokov.", status: "potrjena", ustvarjeno: "2025-03-20", posodobljeno: "2025-03-22" },
+  { id: "rez-08-01", kmetija_id: "km-08", gost_ime: "Alenka Bizjak", gost_email: "alenka.b@gmail.com", gost_telefon: "+386 40 999 000", stevilo_oseb: 8, datum_od: "2025-10-05", datum_do: "2025-10-05", opombe: "Skupina 8 prijateljic — želimo vodeni ogled sadovnjaka in pokušnjo sokov.", skupaj_cena: null, status: "potrjena", ustvarjeno: "2025-03-20", posodobljeno: "2025-03-22" },
 
   // ── Kmetija Logar (km-09) ──
-  { id: "rez-09-01", kmetija_id: "km-09", gost_ime: "Thomas Müller", gost_email: "thomas.m@web.de", gost_telefon: "+49 170 1234567", stevilo_oseb: 2, datum_od: "2025-07-01", datum_do: "2025-07-07", opombe: "We are from Germany. Do you speak English? We would love to hike to Okrešelj.", status: "potrjena", ustvarjeno: "2025-02-05", posodobljeno: "2025-02-07" },
-  { id: "rez-09-02", kmetija_id: "km-09", gost_ime: "Družina Novak", gost_email: "novak.peter@gmail.com", gost_telefon: "+386 31 555 666", stevilo_oseb: 4, datum_od: "2025-08-10", datum_do: "2025-08-15", opombe: "2 otroka (3 in 6 let). Ali imate otroško posteljo?", status: "preklicana", ustvarjeno: "2025-03-10", posodobljeno: "2025-04-01" },
+  { id: "rez-09-01", kmetija_id: "km-09", gost_ime: "Thomas Müller", gost_email: "thomas.m@web.de", gost_telefon: "+49 170 1234567", stevilo_oseb: 2, datum_od: "2025-07-01", datum_do: "2025-07-07", opombe: "We are from Germany. Do you speak English? We would love to hike to Okrešelj.", skupaj_cena: null, status: "potrjena", ustvarjeno: "2025-02-05", posodobljeno: "2025-02-07" },
+  { id: "rez-09-02", kmetija_id: "km-09", gost_ime: "Družina Novak", gost_email: "novak.peter@gmail.com", gost_telefon: "+386 31 555 666", stevilo_oseb: 4, datum_od: "2025-08-10", datum_do: "2025-08-15", opombe: "2 otroka (3 in 6 let). Ali imate otroško posteljo?", skupaj_cena: null, status: "preklicana", ustvarjeno: "2025-03-10", posodobljeno: "2025-04-01" },
 
   // ── Ranč na Pohorju (km-10) ──
-  { id: "rez-10-01", kmetija_id: "km-10", gost_ime: "Žan Potočnik", gost_email: "zan.potocnik@gmail.com", gost_telefon: "+386 41 888 999", stevilo_oseb: 3, datum_od: "2025-06-15", datum_do: "2025-06-17", opombe: "Zanima nas vikend jahanje — imam 10 let izkušenj. Partnerica je začetnica.", status: "potrjena", ustvarjeno: "2025-02-20", posodobljeno: "2025-02-22" },
-  { id: "rez-10-02", kmetija_id: "km-10", gost_ime: "Podjetje Vizija d.o.o.", gost_email: "hr@vizija.si", gost_telefon: "+386 2 620 4000", stevilo_oseb: 15, datum_od: "2025-09-19", datum_do: "2025-09-20", opombe: "Teambuilding za 15 oseb. Želimo jahanje + izlet s konjsko vprego + bungalove.", status: "cakanje", ustvarjeno: "2025-04-05", posodobljeno: "2025-04-05" },
+  { id: "rez-10-01", kmetija_id: "km-10", gost_ime: "Žan Potočnik", gost_email: "zan.potocnik@gmail.com", gost_telefon: "+386 41 888 999", stevilo_oseb: 3, datum_od: "2025-06-15", datum_do: "2025-06-17", opombe: "Zanima nas vikend jahanje — imam 10 let izkušenj. Partnerica je začetnica.", skupaj_cena: null, status: "potrjena", ustvarjeno: "2025-02-20", posodobljeno: "2025-02-22" },
+  { id: "rez-10-02", kmetija_id: "km-10", gost_ime: "Podjetje Vizija d.o.o.", gost_email: "hr@vizija.si", gost_telefon: "+386 2 620 4000", stevilo_oseb: 15, datum_od: "2025-09-19", datum_do: "2025-09-20", opombe: "Teambuilding za 15 oseb. Želimo jahanje + izlet s konjsko vprego + bungalove.", skupaj_cena: null, status: "cakanje", ustvarjeno: "2025-04-05", posodobljeno: "2025-04-05" },
 ];
 
 // ─── Helper: Kmetije z doživetji ────────────────────────────────────────────

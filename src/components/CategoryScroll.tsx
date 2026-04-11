@@ -14,11 +14,6 @@ import {
   Users,
   ChefHat,
   Sparkles,
-  Mountain,
-  PawPrint,
-  Hammer,
-  Leaf,
-  PartyPopper,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -29,11 +24,6 @@ const CATEGORIES = [
   { slug: "druzine", label: "Za družine", icon: Users, color: "from-orange-500/20 to-orange-600/20" },
   { slug: "kulinarika", label: "Kulinarika", icon: ChefHat, color: "from-amber-500/20 to-amber-600/20" },
   { slug: "wellness", label: "Wellness", icon: Sparkles, color: "from-pink-500/20 to-pink-600/20" },
-  { slug: "sport", label: "Šport & Avantura", icon: Mountain, color: "from-emerald-500/20 to-emerald-600/20" },
-  { slug: "zivali", label: "Živali", icon: PawPrint, color: "from-yellow-500/20 to-yellow-600/20" },
-  { slug: "delavnice", label: "Delavnice", icon: Hammer, color: "from-stone-500/20 to-stone-600/20" },
-  { slug: "ekologija", label: "Ekološko", icon: Leaf, color: "from-lime-500/20 to-lime-600/20" },
-  { slug: "prireditve", label: "Prireditve", icon: PartyPopper, color: "from-rose-500/20 to-rose-600/20" },
 ] as const;
 
 export function CategoryScroll() {

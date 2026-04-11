@@ -1,20 +1,57 @@
 // =============================================================================
 // NaKmetiji.si — Home Page
-// Hero z ilustriranim ozadjem, iskalnikom, floating karticami in animacijami
+//
+// ARCHITECTURE: Three independent sections, each independently swappable.
+//
+// ┌─────────────────────────────────────────────────────────────────────────┐
+// │  SECTION 1 — Scrollytelling Hero (Day-to-Night, 800vh, sticky)          │
+// │    ScrollytellingWrapper: Framer Motion useScroll + useSpring            │
+// │    4-layer image cross-fade: Mountains → Vineyards → River → Night       │
+// │    Apple-style progress bar, dynamic subtitle, spring-smoothed scroll    │
+// ├─────────────────────────────────────────────────────────────────────────┤
+// │  SECTION 2 — Discovery Engine                                            │
+// │    HeroSearch + QuickFilters + CategoryScroll (real Supabase data)       │
+// │    FeaturedFarms (ISR-cached, revalidate: 60s)                           │
+// │    FarmOfMonth (curated pick)                                            │
+// ├─────────────────────────────────────────────────────────────────────────┤
+// │  SECTION 3 — Mock Booking Demo CTA                                       │
+// │    When MOCK_BOOKING=true  → MockBookingForm (no DB writes)              │
+// │    When MOCK_BOOKING=false → Real RezervacijaForm (commercial mode)      │
+// └─────────────────────────────────────────────────────────────────────────┘
+//
+// OracleConcierge (AI chat FAB) is mounted globally in layout.tsx.
+// DemoBanner + DemoFooterStrip are also in layout.tsx.
+//
+// TO GO LIVE (commercial mode):
+//   Set in .env.local or Vercel:
+//     NEXT_PUBLIC_DEMO_MODE=false
+//     NEXT_PUBLIC_MOCK_BOOKING=false
+//     NEXT_PUBLIC_PAYMENTS_ENABLED=true
+//   No code changes needed here.
 // =============================================================================
 
-import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, TreePine } from "lucide-react";
+import { Suspense } from "react";
+import { ArrowRight, Leaf } from "lucide-react";
 import { createSupabaseServer } from "@/lib/supabase/server";
+
+// UI components
 import { HeroSearch } from "@/components/HeroSearch";
 import { QuickFilters } from "@/components/QuickFilters";
 import { CategoryScroll } from "@/components/CategoryScroll";
-import { FeaturedFarms } from "@/components/FeaturedFarms";
-import { StatsBar } from "@/components/StatsBar";
-import { FloatingCards } from "@/components/FloatingCards";
-import { AnimatedClouds } from "@/components/AnimatedClouds";
 import { FarmOfMonth } from "@/components/FarmOfMonth";
+import { StatsBar } from "@/components/StatsBar";
+import { FeaturedFarms } from "@/components/FeaturedFarms";
+import { SkeletonCard } from "@/components/ui/Skeleton";
+
+// Scrollytelling hero
+import { ScrollytellingWrapper } from "@/components/ScrollytellingWrapper";
+
+// Demo / booking — swap MockBookingForm for real RezervacijaForm in production
+import { MockBookingForm } from "@/components/MockBookingForm";
+
+// Feature flags
+import { MOCK_BOOKING, DEMO_MODE } from "@/lib/config/demo";
 
 export default async function HomePage() {
   const supabase = await createSupabaseServer();
@@ -26,112 +63,147 @@ export default async function HomePage() {
   return (
     <>
       {/* ════════════════════════════════════════════════════════════════════
-          HERO SECTION — Illustrated style with animated clouds & fog
+          SECTION 1 — LIQUID SCROLLYTELLING HERO
+          800vh sticky container. 4 background layers cross-fade as user
+          scrolls through. Spring-smoothed with stiffness:50, damping:20.
+          Images: bg-mountains → bg-vineyards → bg-river → bg-sheep-night
           ════════════════════════════════════════════════════════════════════ */}
-      <section className="relative min-h-[105vh] flex flex-col overflow-hidden">
-        {/* ── Illustrated background (cartoon style) ── */}
-        <div className="absolute inset-0 z-0">
-          {/* HD illustrated landscape — 3840x2160 WebP */}
-          <Image
-            src="/images/hero-illustrated-hd.webp"
-            alt="Slovensko podeželje — ilustracija z gorami in kmetijami"
-            fill
-            priority
-            className="object-cover"
-            style={{ objectPosition: "center 45%" }}
-            sizes="100vw"
-            quality={92}
-          />
-          {/* Soft gradient overlays for depth and text readability */}
-          <div className="absolute inset-x-0 top-0 h-[40%] bg-gradient-to-b from-sky-100/25 via-transparent to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-forest-950/15 to-forest-950/45" style={{ top: "35%" }} />
-        </div>
+      <ScrollytellingWrapper />
 
-        {/* ── Animated clouds & fog (Layer 2) ── */}
-        <AnimatedClouds />
-
-        {/* ── Content (Layer 3) ── */}
+      {/* ════════════════════════════════════════════════════════════════════
+          SECTION 2 — DISCOVERY ENGINE
+          Search, filters, categories, featured farms (ISR-cached 60s).
+          ════════════════════════════════════════════════════════════════════ */}
+      <div className="relative z-10 w-full overflow-hidden bg-cream">
+        {/* Subtle wood-grain texture overlay */}
         <div
-          className="relative z-10 w-full px-6 lg:px-10 flex flex-col items-center text-center mt-auto"
-          style={{ paddingTop: "25vh" }}
-        >
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/15 backdrop-blur-md border border-white/20 px-5 py-2 text-xs font-semibold text-white mb-8 animate-fade-in shadow-lg">
-            <TreePine size={14} />
-            Odkrijte čar slovenskega podeželja
+          className="absolute inset-0 z-0 opacity-40 mix-blend-multiply bg-[url('/images/wood-texture.webp')] bg-repeat"
+          style={{ backgroundSize: "400px" }}
+          aria-hidden="true"
+        />
+        {/* Shadow transition from hero */}
+        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-forest-950/20 to-transparent z-10 pointer-events-none" />
+
+        <div className="relative z-20">
+          {/* Search + filters */}
+          <div className="py-20 flex flex-col items-center gap-8 px-6 lg:px-8 max-w-7xl mx-auto">
+            <div className="w-full max-w-5xl group/main">
+              <HeroSearch dozivetja={dozivetja ?? []} />
+              <div className="relative z-10 mt-6 hover:opacity-100 w-full transition-all duration-300 group-focus-within/main:opacity-40">
+                <QuickFilters />
+              </div>
+            </div>
+            <div className="w-full mt-4">
+              <CategoryScroll />
+            </div>
           </div>
 
-          {/* ── Display title — large serif, commanding presence ── */}
-          <div className="mb-10 max-w-6xl">
-            <h1 className="font-display text-6xl sm:text-7xl md:text-8xl lg:text-[7rem] xl:text-[8rem] font-black text-white tracking-tight leading-[1.02] mb-6 animate-fade-in-up text-shadow-hero">
-              Najdite svojo
-              <span className="block bg-gradient-to-r from-forest-200 via-lime-200 to-forest-300 bg-clip-text text-transparent mt-1" style={{ textShadow: "none" }}>
-                popolno kmetijo
+          {/* Stats bar */}
+          <StatsBar />
+
+          {/* Featured farms — ISR cached, Suspense skeleton */}
+          <Suspense
+            fallback={
+              <section className="py-20 px-6 lg:px-8 bg-cream">
+                <div className="mx-auto max-w-7xl">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+                    {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+                  </div>
+                </div>
+              </section>
+            }
+          >
+            <FeaturedFarms />
+          </Suspense>
+
+          <FarmOfMonth />
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          SECTION 3 — MOCK BOOKING DEMO
+          Shows the booking UX in demo mode. In production this section would
+          either be removed or replaced with a real booking entry point.
+
+          MOCK_BOOKING=true  → MockBookingForm (zero DB writes, zero emails)
+          MOCK_BOOKING=false → Replace MockBookingForm with real form
+          ════════════════════════════════════════════════════════════════════ */}
+      {MOCK_BOOKING && (
+        <section className="bg-earth-100 border-t border-earth-200 py-20 px-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-10">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 border border-amber-200 text-amber-800 text-xs font-bold mb-4">
+                ⚗️ Demo rezervacijski sistem
               </span>
-            </h1>
-            <p className="text-lg sm:text-xl lg:text-2xl text-white/85 max-w-3xl mx-auto leading-relaxed animate-fade-in-up delay-200 text-shadow-subtle">
-              Turistične kmetije, vinska doživetja, kulinarika in nepozabne
-              počitnice na najlepših kotičkih Slovenije.
-            </p>
+              <h2 className="text-2xl sm:text-3xl font-black text-forest-900 mb-3">
+                Preizkusite rezervacijski tok
+              </h2>
+              <p className="text-earth-600 max-w-lg mx-auto text-sm">
+                Vnesite testne podatke in doživite celoten UX — od izbire datuma do lažne potrditve.
+                Noben email ni poslan, nič ni shranjeno.
+              </p>
+            </div>
+
+            <div className="max-w-sm mx-auto">
+              {/* ── Commercial switch point ──────────────────────────────
+                  In production, replace <MockBookingForm> with the real
+                  <RezervacijaForm> component from the farm detail page.
+                  Props are identical (kmetijaId, kmetijaIme, cenaNoc, maxGostov).
+                  ──────────────────────────────────────────────────────── */}
+              <MockBookingForm
+                kmetijaId="demo-farm-homepage"
+                kmetijaIme="Kmetija Pr' Planšar (Demo)"
+                cenaNoc={75}
+                maxGostov={6}
+              />
+            </div>
           </div>
-
-          {/* ── Search bar — 60%+ width on desktop ── */}
-          <div className="w-full max-w-6xl">
-            <HeroSearch dozivetja={dozivetja ?? []} />
-          </div>
-
-          {/* ── Quick filters — expanded ── */}
-          <QuickFilters />
-        </div>
-
-        {/* ── Floating social proof cards (desktop only) ── */}
-        <FloatingCards />
-
-        {/* ── Kmetija Meseca (desktop only) ── */}
-        <FarmOfMonth />
-
-        {/* ── Category dock ── */}
-        <div className="relative z-20 mt-auto">
-          <div className="absolute inset-0 bg-gradient-to-t from-cream/95 via-cream/70 to-transparent" />
-          <div className="relative z-10 pb-6 pt-8">
-            <CategoryScroll />
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ════════════════════════════════════════════════════════════════════
-          STATS BAR
-          ════════════════════════════════════════════════════════════════════ */}
-      <StatsBar />
-
-      {/* ════════════════════════════════════════════════════════════════════
-          FEATURED FARMS
-          ════════════════════════════════════════════════════════════════════ */}
-      <FeaturedFarms />
-
-      {/* ════════════════════════════════════════════════════════════════════
-          CTA SECTION
+          SECTION 4 — GREEN PASSPORT CTA
           ════════════════════════════════════════════════════════════════════ */}
       <section className="bg-forest-900 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0 opacity-10 pointer-events-none" aria-hidden="true">
           <div className="absolute top-10 left-10 w-64 h-64 rounded-full bg-forest-400 blur-3xl" />
-          <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-forest-300 blur-3xl" />
+          <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-emerald-300 blur-3xl" />
         </div>
         <div className="relative z-10 mx-auto max-w-4xl px-6 py-20 lg:px-8 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold mb-6">
+            <Leaf size={12} /> Green Passport
+          </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-4 font-display">
-            Imate kmetijo?
+            Zbiraj spomine po celi Sloveniji
           </h2>
           <p className="text-base text-white/60 max-w-lg mx-auto mb-8">
-            Pridružite se stotinam kmetij, ki že promovirajo svoje doživetja na
-            NaKmetiji. Registracija je brezplačna.
+            Obiščite 12 regij, pridobite štampiljke in odklenite nagrade. Vsak obisk šteje.
           </p>
-          <Link
-            href="/dodaj-kmetijo"
-            className="inline-flex items-center gap-2.5 rounded-xl bg-white text-forest-800 font-semibold px-8 py-4 text-sm shadow-lg hover:shadow-xl hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
-          >
-            Dodajte svojo kmetijo
-            <ArrowRight size={18} />
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/green-passport"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold px-8 py-4 text-sm shadow-lg hover:shadow-xl hover:scale-[1.03] active:scale-[0.98] transition-all"
+            >
+              <Leaf size={18} /> Zeleni Potni List
+            </Link>
+            <Link
+              href="/dodaj-kmetijo"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold px-8 py-4 text-sm border border-white/20 transition-all"
+            >
+              Dodajte svojo kmetijo
+              <ArrowRight size={18} />
+            </Link>
+          </div>
+
+          {/* Demo mode note */}
+          {DEMO_MODE && (
+            <p className="mt-8 text-xs text-white/30">
+              ⚗️ Tehnološki demo — nobene storitve se ne zaračunavajo ·{" "}
+              <Link href="/pogoji-demo" className="underline hover:text-white/50 transition-colors">
+                Pogoji
+              </Link>
+            </p>
+          )}
         </div>
       </section>
     </>

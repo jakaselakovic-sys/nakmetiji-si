@@ -7,6 +7,8 @@ import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { OracleConcierge } from "@/components/OracleConcierge";
+import { DemoBanner, DemoFooterStrip } from "@/components/DemoDisclaimer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -61,6 +63,29 @@ export const metadata: Metadata = {
     title: "NaKmetiji — Odkrijte turistične kmetije v Sloveniji",
     description:
       "Najdite popolno turistično kmetijo za nepozaben oddih. Prenočišča, kulinarika, vinski turizem in doživetja za vso družino.",
+    images: [{ url: "/og-default.png", width: 1200, height: 630, alt: "NaKmetiji" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@nakmetiji",
+    creator: "@nakmetiji",
+    title: "NaKmetiji — Odkrijte turistične kmetije v Sloveniji",
+    description:
+      "Najdite popolno turistično kmetijo za nepozaben oddih. Prenočišča, kulinarika, vinski turizem in doživetja za vso družino.",
+    images: ["/og-default.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  alternates: {
+    canonical: "https://nakmetiji.si",
   },
 };
 
@@ -83,9 +108,14 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
       <body className="min-h-full flex flex-col bg-cream text-forest-900">
+        {/* Demo mode banner — auto-hides in production (NEXT_PUBLIC_DEMO_MODE=false) */}
+        <DemoBanner />
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />
+        {/* Demo mode footer strip */}
+        <DemoFooterStrip />
+        <OracleConcierge locale="sl" />
         <script
           dangerouslySetInnerHTML={{
             __html: `

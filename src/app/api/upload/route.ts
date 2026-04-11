@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
   const kmetija_id = form.get("kmetija_id") as string | null;
 
   if (!file) return NextResponse.json({ napaka: "Datoteka manjka." }, { status: 400 });
+  if (!kmetija_id) return NextResponse.json({ napaka: "kmetija_id je obvezen." }, { status: 400 });
   if (!ALLOWED.includes(file.type)) {
     return NextResponse.json({ napaka: "Tip datoteke ni podprt. Dovoljeni: JPG, PNG, WebP." }, { status: 400 });
   }
@@ -29,20 +30,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ napaka: `Datoteka je prevelika. Max ${MAX_MB}MB.` }, { status: 400 });
   }
 
-  // Preveri da je user lastnik kmetije
-  if (kmetija_id) {
-    const { data: kmetija } = await supabase
-      .from("kmetije")
-      .select("lastnik_id")
-      .eq("id", kmetija_id)
-      .single();
+  // Preveri lastništvo — fetch iz DB, ne zaupamo client podatkom
+  const { data: kmetija } = await supabase
+    .from("kmetije")
+    .select("lastnik_id")
+    .eq("id", kmetija_id)
+    .single();
 
-    const { data: profil } = await supabase.from("profili").select("vloga").eq("id", user.id).single();
-    const isAdmin = profil?.vloga === "super_admin";
+  if (!kmetija) return NextResponse.json({ napaka: "Kmetija ne obstaja." }, { status: 404 });
 
-    if (!isAdmin && kmetija?.lastnik_id !== user.id) {
-      return NextResponse.json({ napaka: "Nimate dovoljenja." }, { status: 403 });
-    }
+  const { data: profil } = await supabase.from("profili").select("vloga").eq("id", user.id).single();
+  const isAdmin = profil?.vloga === "super_admin";
+
+  if (!isAdmin && kmetija.lastnik_id !== user.id) {
+    return NextResponse.json({ napaka: "Nimate dovoljenja." }, { status: 403 });
   }
 
   // Generiraj unikaten path

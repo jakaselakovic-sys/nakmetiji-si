@@ -41,7 +41,7 @@ export async function FeaturedFarms() {
   );
 
   return (
-    <section className="py-20 px-6 lg:px-8 bg-cream">
+    <section className="py-20 px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <SectionHeader
           overline="Izbrano za vas"

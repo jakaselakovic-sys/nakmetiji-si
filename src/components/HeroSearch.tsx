@@ -5,11 +5,11 @@
 // Iskalnik v Hero sekciji: Kje + Kaj + Kdaj + Išči
 // =============================================================================
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { MapPin, Layers, CalendarDays, Search, X } from "lucide-react";
-import { REGIJA_LABELS, type Regija } from "@/types/database";
+import { REGIJA_LABELS } from "@/types/database";
 
 const REGIJE_OPTIONS = Object.entries(REGIJA_LABELS).map(([value, label]) => ({
   value,
@@ -31,6 +31,20 @@ export function HeroSearch({ dozivetja = [] }: { dozivetja?: DozivetjeOption[] }
   const [showKajDropdown, setShowKajDropdown] = useState(false);
   const kjeRef = useRef<HTMLDivElement>(null);
   const kajRef = useRef<HTMLDivElement>(null);
+
+  // Click-away logika
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (kjeRef.current && !kjeRef.current.contains(event.target as Node)) {
+        setShowKjeDropdown(false);
+      }
+      if (kajRef.current && !kajRef.current.contains(event.target as Node)) {
+        setShowKajDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const filteredRegije = REGIJE_OPTIONS.filter((r) =>
     r.label.toLowerCase().includes(kje.toLowerCase())
@@ -63,10 +77,11 @@ export function HeroSearch({ dozivetja = [] }: { dozivetja?: DozivetjeOption[] }
       transition={{ duration: 0.7, delay: 0.4, ease: "easeOut" }}
       className="w-full mx-auto"
     >
-      <div className="glass rounded-2xl p-3 shadow-2xl shadow-black/15 transition-all duration-500 hover:shadow-[0_20px_60px_rgba(0,0,0,0.18)] hover:scale-[1.01]">
-        <div className="flex flex-col md:flex-row">
+      {/* Dodan relative z-20 za Hero container in skupina za dimming */}
+      <div className="glass relative z-20 rounded-2xl p-3 shadow-2xl shadow-black/15 transition-all duration-500 hover:shadow-[0_20px_60px_rgba(0,0,0,0.18)] hover:scale-[1.01]">
+        <div className="flex flex-col md:flex-row group/search">
           {/* ── Kje ── */}
-          <div ref={kjeRef} className="relative flex-1 group">
+          <div ref={kjeRef} className="relative flex-1 opacity-100 transition-opacity duration-300 group-focus-within/search:opacity-40 focus-within:!opacity-100">
             <div className="flex items-center gap-3 px-5 py-4">
               <MapPin
                 size={20}
@@ -86,9 +101,6 @@ export function HeroSearch({ dozivetja = [] }: { dozivetja?: DozivetjeOption[] }
                     setShowKjeDropdown(true);
                   }}
                   onFocus={() => setShowKjeDropdown(true)}
-                  onBlur={() =>
-                    setTimeout(() => setShowKjeDropdown(false), 200)
-                  }
                   className="w-full bg-transparent text-sm text-forest-900 placeholder:text-earth-400 focus:outline-none"
                 />
               </div>
@@ -104,17 +116,18 @@ export function HeroSearch({ dozivetja = [] }: { dozivetja?: DozivetjeOption[] }
             </div>
 
             {showKjeDropdown && filteredRegije.length > 0 && (
-              <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white rounded-xl shadow-xl border border-earth-200 max-h-48 overflow-y-auto">
+              <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-forest-50/95 backdrop-blur-md rounded-xl shadow-2xl border border-forest-200/60 max-h-48 overflow-y-auto">
                 {filteredRegije.map((r) => (
                   <button
                     key={r.value}
-                    className="w-full text-left px-5 py-2.5 text-sm text-forest-800 hover:bg-forest-50 transition-colors flex items-center gap-2"
-                    onMouseDown={() => {
+                    className="w-full text-left px-5 py-2.5 text-sm text-forest-800 hover:bg-forest-100 transition-colors flex items-center gap-2"
+                    onMouseDown={(e) => {
+                      e.preventDefault(); 
                       setKje(r.label);
                       setShowKjeDropdown(false);
                     }}
                   >
-                    <MapPin size={14} className="text-forest-400" />
+                    <MapPin size={14} className="text-forest-500" />
                     {r.label}
                   </button>
                 ))}
@@ -126,7 +139,7 @@ export function HeroSearch({ dozivetja = [] }: { dozivetja?: DozivetjeOption[] }
           </div>
 
           {/* ── Kaj ── */}
-          <div ref={kajRef} className="relative flex-1 group">
+          <div ref={kajRef} className="relative flex-1 opacity-100 transition-opacity duration-300 group-focus-within/search:opacity-40 focus-within:!opacity-100">
             <div className="flex items-center gap-3 px-5 py-4">
               <Layers
                 size={20}
@@ -146,9 +159,6 @@ export function HeroSearch({ dozivetja = [] }: { dozivetja?: DozivetjeOption[] }
                     setShowKajDropdown(true);
                   }}
                   onFocus={() => setShowKajDropdown(true)}
-                  onBlur={() =>
-                    setTimeout(() => setShowKajDropdown(false), 200)
-                  }
                   className="w-full bg-transparent text-sm text-forest-900 placeholder:text-earth-400 focus:outline-none"
                 />
               </div>
@@ -164,17 +174,18 @@ export function HeroSearch({ dozivetja = [] }: { dozivetja?: DozivetjeOption[] }
             </div>
 
             {showKajDropdown && filteredDozivetja.length > 0 && (
-              <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white rounded-xl shadow-xl border border-earth-200 max-h-48 overflow-y-auto">
+              <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-forest-50/95 backdrop-blur-md rounded-xl shadow-2xl border border-forest-200/60 max-h-48 overflow-y-auto">
                 {filteredDozivetja.map((d) => (
                   <button
                     key={d.id}
-                    className="w-full text-left px-5 py-2.5 text-sm text-forest-800 hover:bg-forest-50 transition-colors flex items-center gap-2"
-                    onMouseDown={() => {
+                    className="w-full text-left px-5 py-2.5 text-sm text-forest-800 hover:bg-forest-100 transition-colors flex items-center gap-2"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
                       setKaj(d.ime);
                       setShowKajDropdown(false);
                     }}
                   >
-                    <Layers size={14} className="text-forest-400" />
+                    <Layers size={14} className="text-forest-500" />
                     {d.ime}
                   </button>
                 ))}
@@ -185,7 +196,7 @@ export function HeroSearch({ dozivetja = [] }: { dozivetja?: DozivetjeOption[] }
           </div>
 
           {/* ── Kdaj ── */}
-          <div className="relative flex-1 group">
+          <div className="relative flex-1 opacity-100 transition-opacity duration-300 group-focus-within/search:opacity-40 focus-within:!opacity-100">
             <div className="flex items-center gap-3 px-5 py-4">
               <CalendarDays
                 size={20}
@@ -216,7 +227,7 @@ export function HeroSearch({ dozivetja = [] }: { dozivetja?: DozivetjeOption[] }
           </div>
 
           {/* ── Išči gumb ── */}
-          <div className="p-2 md:pl-0">
+          <div className="p-2 md:pl-0 transition-opacity duration-300 group-focus-within/search:opacity-80">
             <button
               onClick={handleSearch}
               className="w-full md:w-auto flex items-center justify-center gap-2.5 rounded-2xl bg-forest-700 px-10 py-5 text-white font-bold text-base shadow-lg hover:bg-forest-600 hover:shadow-xl hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"

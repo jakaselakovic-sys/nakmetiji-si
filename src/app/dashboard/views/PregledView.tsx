@@ -1,9 +1,15 @@
 "use client";
 
-import { useState, useCallback, useRef, useTransition } from "react";
-import { Loader2, Upload, CheckCircle, XCircle, Clock, CalendarDays, Users, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useCallback, useRef, useTransition, useOptimistic } from "react";
+import {
+  Loader2, Upload, CheckCircle, XCircle, Clock,
+  CalendarDays, Users, ChevronDown, ChevronUp,
+  ChevronLeft, ChevronRight, Euro,
+} from "lucide-react";
 import { potrdiRezervacijo, zavrniRezervacijo } from "@/lib/actions/rezervacije";
+import { GreenPassportShare } from "@/components/vendor/GreenPassportShare";
 import { posodobiSlikeKmetije } from "@/lib/actions/kmetije";
+import { compressImage, formatBytes } from "@/lib/compress";
 import type { Rezervacija, RezervacijaStatus } from "@/types/database";
 import { REZERVACIJA_STATUS_LABELS } from "@/types/database";
 
@@ -15,17 +21,17 @@ interface Props {
 }
 
 const STATUS_COLORS: Record<RezervacijaStatus, string> = {
-  cakanje: "bg-amber-50 text-amber-700 border-amber-200",
-  potrjena: "bg-green-50 text-green-700 border-green-200",
-  zavrnjena: "bg-red-50 text-red-700 border-red-200",
+  cakanje:    "bg-amber-50 text-amber-700 border-amber-200",
+  potrjena:   "bg-green-50 text-green-700 border-green-200",
+  zavrnjena:  "bg-red-50 text-red-700 border-red-200",
   preklicana: "bg-earth-100 text-earth-600 border-earth-200",
   zakljucena: "bg-blue-50 text-blue-700 border-blue-200",
 };
 
 const STATUS_ICONS: Record<RezervacijaStatus, React.ReactNode> = {
-  cakanje: <Clock size={12} />,
-  potrjena: <CheckCircle size={12} />,
-  zavrnjena: <XCircle size={12} />,
+  cakanje:    <Clock size={12} />,
+  potrjena:   <CheckCircle size={12} />,
+  zavrnjena:  <XCircle size={12} />,
   preklicana: <XCircle size={12} />,
   zakljucena: <CheckCircle size={12} />,
 };
@@ -34,211 +40,191 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("sl-SI", { day: "numeric", month: "short", year: "numeric" });
 }
 
-// ── Koledar zasedenosti ───────────────────────────────────────────────────────
+// ── Occupancy calendar ────────────────────────────────────────────────────────
 
-const SL_MONTHS = [
-  "Januar","Februar","Marec","April","Maj","Junij",
-  "Julij","Avgust","September","Oktober","November","December",
-];
-const SL_DAYS = ["Po","To","Sr","Če","Pe","So","Ne"];
+const SL_MONTHS = ["Januar","Februar","Marec","April","Maj","Junij","Julij","Avgust","September","Oktober","November","December"];
+const SL_DAYS   = ["Po","To","Sr","Če","Pe","So","Ne"];
 
 function OccupancyCalendar({ rezervacije }: { rezervacije: Rezervacija[] }) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth()); // 0-based
+  const [month, setMonth] = useState(today.getMonth());
 
-  function prevMonth() {
-    if (month === 0) { setMonth(11); setYear(y => y - 1); }
-    else setMonth(m => m - 1);
-  }
-  function nextMonth() {
-    if (month === 11) { setMonth(0); setYear(y => y + 1); }
-    else setMonth(m => m + 1);
-  }
+  function prevMonth() { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); }
+  function nextMonth() { if (month === 11) { setMonth(0);  setYear(y => y + 1); } else setMonth(m => m + 1); }
 
-  // Dnevi v mesecu
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  // Kateri dan v tednu je 1. dan (0=ned → pretvorimo v 0=pon)
-  const firstDow = (new Date(year, month, 1).getDay() + 6) % 7;
+  const firstDow    = (new Date(year, month, 1).getDay() + 6) % 7;
+  const zasedeni    = rezervacije.filter(r => r.status === "potrjena");
 
-  // Zberi zasedene intervale (samo potrjene)
-  const zasedeni = rezervacije.filter(r => r.status === "potrjena");
-
-  function isDayBooked(day: number): boolean {
+  function isDayBooked(day: number) {
     const d = new Date(year, month, day);
-    return zasedeni.some(r => {
-      const od = new Date(r.datum_od);
-      const do_ = new Date(r.datum_do);
-      return d >= od && d < do_;
-    });
+    return zasedeni.some(r => d >= new Date(r.datum_od) && d < new Date(r.datum_do));
   }
-
-  function isDayPending(day: number): boolean {
+  function isDayPending(day: number) {
     const d = new Date(year, month, day);
-    return rezervacije.some(r => {
-      if (r.status !== "cakanje") return false;
-      const od = new Date(r.datum_od);
-      const do_ = new Date(r.datum_do);
-      return d >= od && d < do_;
-    });
+    return rezervacije.some(r => r.status === "cakanje" && d >= new Date(r.datum_od) && d < new Date(r.datum_do));
   }
-
-  function isToday(day: number): boolean {
+  function isToday(day: number) {
     return year === today.getFullYear() && month === today.getMonth() && day === today.getDate();
   }
 
-  const cells: (number | null)[] = [
-    ...Array(firstDow).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-  // Pad to full weeks
+  const cells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
   while (cells.length % 7 !== 0) cells.push(null);
 
   return (
     <div className="rounded-2xl bg-white border border-earth-200/60 shadow-sm p-6">
-      {/* Glava */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-bold text-forest-900">Zasedenost</h2>
         <div className="flex items-center gap-2">
-          <button
-            onClick={prevMonth}
-            className="p-1.5 rounded-lg hover:bg-earth-100 text-earth-500 transition-colors"
-            aria-label="Prejšnji mesec"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <span className="text-sm font-semibold text-forest-900 w-36 text-center">
-            {SL_MONTHS[month]} {year}
-          </span>
-          <button
-            onClick={nextMonth}
-            className="p-1.5 rounded-lg hover:bg-earth-100 text-earth-500 transition-colors"
-            aria-label="Naslednji mesec"
-          >
-            <ChevronRight size={16} />
-          </button>
+          <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-earth-100 text-earth-500 transition-colors" aria-label="Prejšnji mesec"><ChevronLeft size={16} /></button>
+          <span className="text-sm font-semibold text-forest-900 w-36 text-center">{SL_MONTHS[month]} {year}</span>
+          <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-earth-100 text-earth-500 transition-colors" aria-label="Naslednji mesec"><ChevronRight size={16} /></button>
         </div>
       </div>
-
-      {/* Dnevi v tednu */}
       <div className="grid grid-cols-7 mb-1">
-        {SL_DAYS.map(d => (
-          <div key={d} className="text-center text-[11px] font-semibold text-earth-400 py-1">{d}</div>
-        ))}
+        {SL_DAYS.map(d => <div key={d} className="text-center text-[11px] font-semibold text-earth-400 py-1">{d}</div>)}
       </div>
-
-      {/* Celice */}
       <div className="grid grid-cols-7 gap-y-1">
         {cells.map((day, i) => {
           if (!day) return <div key={i} />;
-          const booked = isDayBooked(day);
+          const booked  = isDayBooked(day);
           const pending = isDayPending(day);
-          const todayCell = isToday(day);
+          const today_  = isToday(day);
           return (
-            <div
-              key={i}
-              className={`
-                relative flex items-center justify-center h-8 rounded-lg text-xs font-medium transition-colors
-                ${booked ? "bg-forest-500 text-white" : ""}
-                ${pending && !booked ? "bg-amber-100 text-amber-800" : ""}
-                ${!booked && !pending ? "text-earth-700 hover:bg-earth-50" : ""}
-                ${todayCell && !booked && !pending ? "ring-2 ring-forest-400 ring-offset-1" : ""}
-                ${todayCell && (booked || pending) ? "ring-2 ring-forest-800 ring-offset-1" : ""}
-              `}
-            >
-              {day}
-            </div>
+            <div key={i} className={`relative flex items-center justify-center h-8 rounded-lg text-xs font-medium transition-colors
+              ${booked ? "bg-forest-500 text-white" : ""}
+              ${pending && !booked ? "bg-amber-100 text-amber-800" : ""}
+              ${!booked && !pending ? "text-earth-700 hover:bg-earth-50" : ""}
+              ${today_ && !booked && !pending ? "ring-2 ring-forest-400 ring-offset-1" : ""}
+              ${today_ && (booked || pending) ? "ring-2 ring-forest-800 ring-offset-1" : ""}
+            `}>{day}</div>
           );
         })}
       </div>
-
-      {/* Legenda */}
       <div className="flex items-center gap-4 mt-4 text-xs text-earth-500">
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-forest-500 flex-shrink-0" /> Zasedeno
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-amber-100 border border-amber-300 flex-shrink-0" /> Čaka potrditev
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded ring-2 ring-forest-400 flex-shrink-0" /> Danes
-        </span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-forest-500 flex-shrink-0" /> Zasedeno</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-300 flex-shrink-0" /> Čaka potrditev</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded ring-2 ring-forest-400 flex-shrink-0" /> Danes</span>
       </div>
     </div>
   );
 }
 
+// ── Main component ────────────────────────────────────────────────────────────
+
 export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika }: Props) {
+  // Real state — source of truth between re-renders
   const [rezervacije, setRezervacije] = useState(initialRez);
   const [activeFilter, setActiveFilter] = useState<RezervacijaStatus | "vse">("vse");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // ── Booking action state ───────────────────────────────────────────────────
+  // actionLoading tracks WHICH booking is pending (for the spinner icon).
+  // Buttons are disabled when actionLoading !== null — preventing ALL double-clicks.
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionError, setActionError]     = useState<string | null>(null);
 
-  // Image upload
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadedImages, setUploadedImages] = useState<string[]>(
-    naslovnaSlika ? [naslovnaSlika] : []
+  // ── useTransition required for useOptimistic ──────────────────────────────
+  const [, startBookingTransition] = useTransition();
+
+  // ── useOptimistic: booking status changes appear instantly ────────────────
+  // The optimistic state reverts automatically if setRezervacije is never called
+  // (i.e. on server error), giving automatic rollback.
+  const [optimisticRez, updateOptimisticRez] = useOptimistic(
+    rezervacije,
+    (state, update: { id: string; status: RezervacijaStatus }) =>
+      state.map(r => r.id === update.id ? { ...r, status: update.status } : r)
   );
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [dragActive, setDragActive] = useState(false);
 
-  const [, startTransition] = useTransition();
-
-  // ── Akcije rezervacij ──────────────────────────────────────────────────────
-  async function handlePotrditev(id: string) {
+  function handlePotrditev(id: string) {
+    if (actionLoading) return; // guard: reject if another action is in flight
     setActionLoading(id);
     setActionError(null);
-    const rezultat = await potrdiRezervacijo(id);
-    if (rezultat.ok) {
-      setRezervacije((prev) =>
-        prev.map((r) => r.id === id ? { ...r, status: "potrjena" as RezervacijaStatus } : r)
-      );
-    } else {
-      setActionError(rezultat.napaka ?? "Napaka pri potrditvi.");
-    }
-    setActionLoading(null);
+
+    startBookingTransition(async () => {
+      updateOptimisticRez({ id, status: "potrjena" });
+      const result = await potrdiRezervacijo(id);
+      if (result.ok) {
+        setRezervacije(prev => prev.map(r => r.id === id ? { ...r, status: "potrjena" } : r));
+      } else {
+        setActionError(result.napaka ?? "Napaka pri potrditvi.");
+        // optimistic state automatically reverts since setRezervacije was NOT called
+      }
+      setActionLoading(null);
+    });
   }
 
-  async function handleZavrnitev(id: string) {
+  function handleZavrnitev(id: string) {
+    if (actionLoading) return;
     setActionLoading(id);
     setActionError(null);
-    const rezultat = await zavrniRezervacijo(id);
-    if (rezultat.ok) {
-      setRezervacije((prev) =>
-        prev.map((r) => r.id === id ? { ...r, status: "zavrnjena" as RezervacijaStatus } : r)
-      );
-    } else {
-      setActionError(rezultat.napaka ?? "Napaka pri zavrnitvi.");
-    }
-    setActionLoading(null);
+
+    startBookingTransition(async () => {
+      updateOptimisticRez({ id, status: "zavrnjena" });
+      const result = await zavrniRezervacijo(id);
+      if (result.ok) {
+        setRezervacije(prev => prev.map(r => r.id === id ? { ...r, status: "zavrnjena" } : r));
+      } else {
+        setActionError(result.napaka ?? "Napaka pri zavrnitvi.");
+      }
+      setActionLoading(null);
+    });
   }
 
-  // ── Upload slik ─────────────────────────────────────────────────────────────
+  // ── Image upload with client-side compression ─────────────────────────────
+  const fileInputRef   = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading]           = useState(false);
+  const [uploadedImages, setUploadedImages] = useState<string[]>(naslovnaSlika ? [naslovnaSlika] : []);
+  const [uploadError, setUploadError]       = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const [dragActive, setDragActive]         = useState(false);
+
   const handleFileUpload = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0 || !kmetijaId) return;
     setUploadError(null);
+    setUploadProgress(null);
     setUploading(true);
 
-    for (const file of Array.from(files)) {
-      if (!file.type.startsWith("image/")) { setUploadError("Samo slikovne datoteke."); continue; }
-      if (file.size > 5 * 1024 * 1024) { setUploadError("Max 5 MB na datoteko."); continue; }
+    for (const rawFile of Array.from(files)) {
+      if (!rawFile.type.startsWith("image/")) {
+        setUploadError("Samo slikovne datoteke (JPG, PNG, WebP).");
+        continue;
+      }
 
+      // ── Client-side compression ─────────────────────────────────────────
+      setUploadProgress("Stiskanje slike...");
+      let file = rawFile;
+      try {
+        const result = await compressImage(rawFile, { maxWidth: 1920, quality: 0.82 });
+        file = result.file;
+        if (result.savedPct > 5) {
+          setUploadProgress(
+            `Stisnjeno: ${formatBytes(result.originalSize)} → ${formatBytes(result.compressedSize)} (−${result.savedPct}%)`
+          );
+          // Let the user briefly see the compression stat before upload starts
+          await new Promise(r => setTimeout(r, 600));
+        }
+      } catch {
+        // compression failed — proceed with original
+      }
+
+      if (file.size > 15 * 1024 * 1024) {
+        setUploadError(`Datoteka je prevelika (${formatBytes(file.size)}). Max 15 MB.`);
+        continue;
+      }
+
+      setUploadProgress("Nalaganje...");
       const form = new FormData();
       form.append("file", file);
       form.append("kmetija_id", kmetijaId);
 
       try {
-        const res = await fetch("/api/upload", { method: "POST", body: form });
+        const res  = await fetch("/api/upload", { method: "POST", body: form });
         const json = await res.json() as { url?: string; error?: string };
         if (json.url) {
-          setUploadedImages((prev) => [...prev, json.url!]);
-          // Persistiraj URL v bazo (slike array kmetije)
-          const rezultat = await posodobiSlikeKmetije(kmetijaId, json.url);
-          if (!rezultat.ok) {
-            setUploadError(rezultat.napaka ?? "Slika je naložena, a ni shranjena v bazi.");
-          }
+          setUploadedImages(prev => [...prev, json.url!]);
+          posodobiSlikeKmetije(kmetijaId, json.url).catch(console.error);
         } else {
           setUploadError(json.error ?? "Napaka pri nalaganju.");
         }
@@ -246,34 +232,36 @@ export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika 
         setUploadError("Napaka pri nalaganju.");
       }
     }
+
     setUploading(false);
+    setUploadProgress(null);
   }, [kmetijaId]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
-    startTransition(() => { handleFileUpload(e.dataTransfer.files); });
+    handleFileUpload(e.dataTransfer.files);
   }, [handleFileUpload]);
 
-  // ── Filtri ─────────────────────────────────────────────────────────────────
-  const filteredRez = activeFilter === "vse"
-    ? rezervacije
-    : rezervacije.filter((r) => r.status === activeFilter);
-
-  const pendingCount = rezervacije.filter((r) => r.status === "cakanje").length;
+  // ── Filters ───────────────────────────────────────────────────────────────
+  const filteredRez   = activeFilter === "vse" ? optimisticRez : optimisticRez.filter(r => r.status === activeFilter);
+  const pendingCount  = optimisticRez.filter(r => r.status === "cakanje").length;
   const filters: (RezervacijaStatus | "vse")[] = ["vse", "cakanje", "potrjena", "zavrnjena", "zakljucena"];
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
 
-      {/* ── Statistike ────────────────────────────────────────────── */}
+      {/* ── Green Passport Share ────────────────────────────────────── */}
+      <GreenPassportShare />
+
+      {/* ── Statistike ──────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Skupaj rezervacij", value: rezervacije.length, icon: "📋" },
-          { label: "Čaka potrditev", value: pendingCount, icon: "⏳", urgent: pendingCount > 0 },
-          { label: "Potrjenih", value: rezervacije.filter(r => r.status === "potrjena").length, icon: "✅" },
-          { label: "Zaključenih", value: rezervacije.filter(r => r.status === "zakljucena").length, icon: "🏁" },
+          { label: "Skupaj rezervacij", value: optimisticRez.length, icon: "📋" },
+          { label: "Čaka potrditev",    value: pendingCount, icon: "⏳", urgent: pendingCount > 0 },
+          { label: "Potrjenih",         value: optimisticRez.filter(r => r.status === "potrjena").length, icon: "✅" },
+          { label: "Zaključenih",       value: optimisticRez.filter(r => r.status === "zakljucena").length, icon: "🏁" },
         ].map((s) => (
           <div key={s.label} className={`rounded-2xl bg-white border p-4 shadow-sm ${s.urgent ? "border-amber-300 bg-amber-50" : "border-earth-200/60"}`}>
             <div className="text-2xl mb-1">{s.icon}</div>
@@ -283,8 +271,9 @@ export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika 
         ))}
       </div>
 
-      {/* ── Rezervacije ───────────────────────────────────────────── */}
+      {/* ── Rezervacije ─────────────────────────────────────────────── */}
       <div className="rounded-2xl bg-white border border-earth-200/60 shadow-sm overflow-hidden">
+        {/* Header + filter */}
         <div className="px-6 py-4 border-b border-earth-200/60 flex items-center justify-between flex-wrap gap-3">
           <div>
             <h2 className="text-base font-bold text-forest-900">Rezervacije</h2>
@@ -292,7 +281,6 @@ export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika 
               <p className="text-xs text-amber-600 font-medium">{pendingCount} čaka na vašo potrditev</p>
             )}
           </div>
-          {/* Filter */}
           <div className="flex gap-1.5 flex-wrap">
             {filters.map((f) => (
               <button
@@ -324,7 +312,6 @@ export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika 
           <div className="divide-y divide-earth-100">
             {filteredRez.map((rez) => (
               <div key={rez.id} className="px-6 py-4">
-                {/* Glava vrstice */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -333,6 +320,12 @@ export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika 
                         {STATUS_ICONS[rez.status]}
                         {REZERVACIJA_STATUS_LABELS[rez.status]}
                       </span>
+                      {/* Optimistic pending indicator */}
+                      {actionLoading === rez.id && (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-earth-400">
+                          <Loader2 size={10} className="animate-spin" /> posodabljanje...
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-earth-500 flex-wrap">
                       <span className="flex items-center gap-1">
@@ -343,25 +336,35 @@ export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika 
                         <Users size={12} />
                         {rez.stevilo_oseb} {rez.stevilo_oseb === 1 ? "oseba" : "oseb"}
                       </span>
+                      {rez.skupaj_cena != null && (
+                        <span className="flex items-center gap-1 font-medium text-forest-700">
+                          <Euro size={12} />
+                          {rez.skupaj_cena.toFixed(2)} €
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Gumbi za cakanje */}
+                  {/* Approve / Reject — BOTH disabled while any action is in flight */}
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {rez.status === "cakanje" && (
                       <>
                         <button
                           onClick={() => handlePotrditev(rez.id)}
-                          disabled={actionLoading === rez.id}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-forest-600 hover:bg-forest-500 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
+                          disabled={actionLoading !== null}
+                          title={actionLoading ? "Počakajte na dokončanje prejšnje akcije" : "Potrdi rezervacijo"}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-forest-600 hover:bg-forest-500 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                          {actionLoading === rez.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                          {actionLoading === rez.id
+                            ? <Loader2 size={12} className="animate-spin" />
+                            : <CheckCircle size={12} />}
                           Potrdi
                         </button>
                         <button
                           onClick={() => handleZavrnitev(rez.id)}
-                          disabled={actionLoading === rez.id}
-                          className="flex items-center gap-1 px-3 py-1.5 border border-red-300 text-red-600 text-xs font-semibold rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                          disabled={actionLoading !== null}
+                          title={actionLoading ? "Počakajte na dokončanje prejšnje akcije" : "Zavrni rezervacijo"}
+                          className="flex items-center gap-1 px-3 py-1.5 border border-red-300 text-red-600 text-xs font-semibold rounded-lg hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           <XCircle size={12} />
                           Zavrni
@@ -371,34 +374,37 @@ export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika 
                     <button
                       onClick={() => setExpandedId(expandedId === rez.id ? null : rez.id)}
                       className="p-1.5 text-earth-400 hover:text-earth-600 transition-colors"
+                      aria-label={expandedId === rez.id ? "Skrij podrobnosti" : "Pokaži podrobnosti"}
                     >
                       {expandedId === rez.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </button>
                   </div>
                 </div>
 
-                {/* Razširjeni podrobnosti */}
+                {/* Expanded details */}
                 {expandedId === rez.id && (
                   <div className="mt-3 pt-3 border-t border-earth-100 space-y-2 text-sm">
                     <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
                       <div>
                         <span className="text-earth-400">E-pošta:</span>{" "}
-                        <a href={`mailto:${rez.gost_email}`} className="text-forest-700 hover:underline font-medium">
-                          {rez.gost_email}
-                        </a>
+                        <a href={`mailto:${rez.gost_email}`} className="text-forest-700 hover:underline font-medium">{rez.gost_email}</a>
                       </div>
                       {rez.gost_telefon && (
                         <div>
                           <span className="text-earth-400">Telefon:</span>{" "}
-                          <a href={`tel:${rez.gost_telefon}`} className="text-forest-700 hover:underline font-medium">
-                            {rez.gost_telefon}
-                          </a>
+                          <a href={`tel:${rez.gost_telefon}`} className="text-forest-700 hover:underline font-medium">{rez.gost_telefon}</a>
                         </div>
                       )}
                       <div>
                         <span className="text-earth-400">Oddano:</span>{" "}
                         <span className="text-earth-600">{formatDate(rez.ustvarjeno)}</span>
                       </div>
+                      {rez.skupaj_cena != null && (
+                        <div>
+                          <span className="text-earth-400">Skupna cena:</span>{" "}
+                          <span className="text-forest-700 font-semibold">{rez.skupaj_cena.toFixed(2)} €</span>
+                        </div>
+                      )}
                     </div>
                     {rez.opombe && (
                       <div className="bg-earth-50 rounded-xl px-4 py-3 text-xs text-earth-700">
@@ -414,13 +420,16 @@ export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika 
         )}
       </div>
 
-      {/* ── Koledar zasedenosti ───────────────────────────────────── */}
-      <OccupancyCalendar rezervacije={rezervacije} />
+      {/* ── Occupancy calendar ──────────────────────────────────────── */}
+      <OccupancyCalendar rezervacije={optimisticRez} />
 
-      {/* ── Upload slik ───────────────────────────────────────────── */}
+      {/* ── Upload slik ─────────────────────────────────────────────── */}
       {kmetijaId && (
         <div className="rounded-2xl bg-white border border-earth-200/60 shadow-sm p-6">
-          <h2 className="text-base font-bold text-forest-900 mb-4">Slike kmetije</h2>
+          <h2 className="text-base font-bold text-forest-900 mb-1">Slike kmetije</h2>
+          <p className="text-xs text-earth-500 mb-4">
+            Slike se samodejno stisnejo v brskalniku pred nalaganjem — prihranek prostora do 80%.
+          </p>
 
           {/* Dropzone */}
           <div
@@ -445,22 +454,20 @@ export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika 
             {uploading ? (
               <div className="flex flex-col items-center gap-2 text-forest-600">
                 <Loader2 size={28} className="animate-spin" />
-                <p className="text-sm font-medium">Nalaganje...</p>
+                <p className="text-sm font-medium">{uploadProgress ?? "Nalaganje..."}</p>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2 text-earth-400">
                 <Upload size={28} />
                 <p className="text-sm font-medium text-earth-600">Povlecite slike sem ali kliknite</p>
-                <p className="text-xs">JPG, PNG, WebP — max 5 MB</p>
+                <p className="text-xs">JPG, PNG, WebP — stiskanje poteka samodejno</p>
               </div>
             )}
           </div>
 
-          {uploadError && (
-            <p className="mt-2 text-xs text-red-600">{uploadError}</p>
-          )}
+          {uploadError && <p className="mt-2 text-xs text-red-600">{uploadError}</p>}
 
-          {/* Galerija */}
+          {/* Gallery */}
           {uploadedImages.length > 0 && (
             <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 gap-2">
               {uploadedImages.map((url, i) => (
@@ -468,8 +475,9 @@ export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika 
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={url} alt="" className="w-full h-full object-cover" />
                   <button
-                    onClick={() => setUploadedImages((prev) => prev.filter((_, idx) => idx !== i))}
+                    onClick={(e) => { e.stopPropagation(); setUploadedImages(prev => prev.filter((_, idx) => idx !== i)); }}
                     className="absolute top-1 right-1 h-6 w-6 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                    aria-label="Odstrani sliko"
                   >
                     ×
                   </button>
@@ -480,15 +488,12 @@ export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika 
         </div>
       )}
 
-      {/* ── Ni kmetije ────────────────────────────────────────────── */}
+      {/* ── No farm yet ─────────────────────────────────────────────── */}
       {!kmetijaId && (
         <div className="rounded-2xl bg-amber-50 border border-amber-200 p-6 text-center">
           <p className="text-amber-800 font-semibold mb-2">Nimate registrirane kmetije</p>
           <p className="text-amber-700 text-sm mb-4">Dodajte svojo kmetijo in začnite sprejemati rezervacije.</p>
-          <a
-            href="/dodaj-kmetijo"
-            className="inline-block px-5 py-2.5 bg-forest-600 hover:bg-forest-500 text-white font-semibold rounded-xl text-sm transition-colors"
-          >
+          <a href="/dodaj-kmetijo" className="inline-block px-5 py-2.5 bg-forest-600 hover:bg-forest-500 text-white font-semibold rounded-xl text-sm transition-colors">
             Dodaj kmetijo
           </a>
         </div>

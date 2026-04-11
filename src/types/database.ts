@@ -89,6 +89,14 @@ export interface Kmetija {
   // Kontakt
   kontaktni_podatki: KontaktniPodatki;
 
+  // Cene & zmogljivost
+  cena_noc: number | null;
+  max_gostov: number | null;
+
+  // Bančni podatki (za UPN plačilni nalog)
+  iban: string | null;
+  bic: string | null;
+
   // Ocene & Status
   ocena: number | null;
   stevilo_ocen: number;
@@ -202,6 +210,7 @@ export interface Rezervacija {
   datum_od: string;       // ISO date
   datum_do: string;       // ISO date
   opombe: string | null;  // posebne želje
+  skupaj_cena: number | null;
   status: RezervacijaStatus;
   ustvarjeno: string;
   posodobljeno: string;
@@ -271,6 +280,160 @@ export interface PaginiraniRezultat<T> {
   skupajStrani: number;
 }
 
+// =============================================================================
+// AI SEMANTIC LAYER — pgvector extensions to Kmetija
+// =============================================================================
+
+/** Vibe labels used for pgvector pre-filtering */
+export type VibeTip =
+  | "rusticna"
+  | "moderna"
+  | "tiha"
+  | "druzinska"
+  | "romanticna"
+  | "pustolovska"
+  | "eko"
+  | "luksuzna";
+
+/** Extended Kmetija with AI fields (returned after embedding generation) */
+export interface KmetijaZAI extends Kmetija {
+  vibe_tags: VibeTip[];
+  ai_opis: string | null;
+  embedding_updated_at: string | null;
+  // Note: embedding (vector) column not typed here — handled server-side only
+}
+
+// =============================================================================
+// GREEN PASSPORT SYSTEM
+// =============================================================================
+
+export interface PotniListRegija {
+  id: string;
+  slug: string;
+  ime: string;
+  opis: string | null;
+  emoji: string | null;
+  barva_hex: string;
+  zahteva_regija: Regija;
+  xp_nagrada: number;
+  ustvarjeno: string;
+}
+
+export type ZnackaTip = "regija" | "dosezek" | "sezonska" | "posebna";
+
+export interface ZnackaPogoj {
+  min_obiskov?: number;
+  vse_regije?: boolean;
+  regija?: Regija;
+}
+
+export interface Znacka {
+  id: string;
+  slug: string;
+  ime: string;
+  opis: string | null;
+  ikona_url: string | null;
+  tip: ZnackaTip;
+  pogoj_json: ZnackaPogoj;
+  xp_vrednost: number;
+  ustvarjeno: string;
+}
+
+export interface PotniListZig {
+  id: string;
+  profil_id: string;
+  regija_id: string;
+  kmetija_id: string;
+  rezervacija_id: string | null;
+  datum_prisluzeno: string;
+  // Joined
+  regija?: PotniListRegija;
+  kmetija?: Pick<Kmetija, "id" | "ime" | "slug" | "naslovna_slika">;
+}
+
+export interface UporabnikDosezek {
+  id: string;
+  profil_id: string;
+  znacka_id: string;
+  rezervacija_id: string | null;
+  prisluzeno: string;
+  // Joined
+  znacka?: Znacka;
+}
+
+export interface PotniList {
+  zigi: PotniListZig[];
+  dosezki: UporabnikDosezek[];
+  xp_tocke: number;
+  nivo: number;
+  skupaj_obiskov: number;
+}
+
+// =============================================================================
+// MULTILINGUAL TRANSLATIONS
+// =============================================================================
+
+export type Jezik = "sl" | "en" | "de" | "it";
+
+export interface Prevod {
+  id: string;
+  tabela: "kmetije" | "dozivetja" | "izdelki";
+  vrstica_id: string;
+  jezik: Jezik;
+  polje: string;
+  vsebina: string;
+  ai_prevod: boolean;
+  ustvarjeno: string;
+  posodobljeno: string;
+}
+
+// =============================================================================
+// REVENUE TRACKING
+// =============================================================================
+
+export type TransakcijaTip =
+  | "komisija"
+  | "izplacilo"
+  | "ai_agencija"
+  | "vracilo"
+  | "premium_narocnina";
+
+export type TransakcijaStatus = "cakanje" | "obdelana" | "neuspesna" | "vrnjena";
+
+export interface Transakcija {
+  id: string;
+  rezervacija_id: string | null;
+  lastnik_id: string | null;
+  tip: TransakcijaTip;
+  bruto_znesek: number;
+  komisija_odstotek: number;
+  komisija_znesek: number;
+  neto_znesek: number;
+  status: TransakcijaStatus;
+  stripe_payment_id: string | null;
+  stripe_transfer_id: string | null;
+  opombe: string | null;
+  ustvarjeno: string;
+  obdelano: string | null;
+}
+
+export interface TransakcijaFilter {
+  lastnik_id?: string;
+  status?: TransakcijaStatus;
+  tip?: TransakcijaTip;
+  od?: string;
+  do?: string;
+}
+
+// Convenience: revenue summary for vendor dashboard
+export interface PrihodkiPovzetek {
+  bruto_skupaj: number;
+  komisija_skupaj: number;
+  neto_skupaj: number;
+  stevilo_transakcij: number;
+  cakajocih_izplacil: number;
+}
+
 // ─── Supabase generated types helper ────────────────────────────────────────
 
 /** Database schema mapping for Supabase type generation */
@@ -312,11 +475,45 @@ export interface Database {
         Insert: Omit<import("./landmarks").Znamenitost, "id">;
         Update: Partial<Omit<import("./landmarks").Znamenitost, "id">>;
       };
+      potni_list_regije: {
+        Row: PotniListRegija;
+        Insert: Omit<PotniListRegija, "id" | "ustvarjeno">;
+        Update: Partial<Omit<PotniListRegija, "id" | "ustvarjeno">>;
+      };
+      znacke: {
+        Row: Znacka;
+        Insert: Omit<Znacka, "id" | "ustvarjeno">;
+        Update: Partial<Omit<Znacka, "id" | "ustvarjeno">>;
+      };
+      potni_list_zigi: {
+        Row: PotniListZig;
+        Insert: Omit<PotniListZig, "id" | "datum_prisluzeno">;
+        Update: never;
+      };
+      uporabnik_dosezki: {
+        Row: UporabnikDosezek;
+        Insert: Omit<UporabnikDosezek, "id" | "prisluzeno">;
+        Update: never;
+      };
+      prevodi: {
+        Row: Prevod;
+        Insert: Omit<Prevod, "id" | "ustvarjeno" | "posodobljeno">;
+        Update: Partial<Pick<Prevod, "vsebina" | "ai_prevod">>;
+      };
+      transakcije: {
+        Row: Transakcija;
+        Insert: Omit<Transakcija, "id" | "ustvarjeno">;
+        Update: Pick<Transakcija, "status" | "stripe_payment_id" | "stripe_transfer_id" | "obdelano" | "opombe">;
+      };
     };
     Enums: {
       regija_enum: Regija;
       izdelek_kategorija_enum: IzdelekKategorija;
       rezervacija_status_enum: RezervacijaStatus;
+      znacka_tip: ZnackaTip;
+      jezik_enum: Jezik;
+      transakcija_tip: TransakcijaTip;
+      transakcija_status: TransakcijaStatus;
     };
   };
 }

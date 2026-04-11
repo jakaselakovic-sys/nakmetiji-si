@@ -13,6 +13,8 @@
 import { useState, useMemo, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+
+import { BLUR_DATA_URL } from "@/lib/blur";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -36,10 +38,8 @@ import {
   Camera,
 } from "lucide-react";
 // Note: Globe, Loader2, Check kept for possible future use; AnimatePresence kept for lightbox
-import { REGIJA_LABELS, IZDELEK_KATEGORIJA_LABELS } from "@/types/database";
+import { IZDELEK_KATEGORIJA_LABELS } from "@/types/database";
 import type { Kmetija, Dozivetje, Mnenje, Izdelek } from "@/types/database";
-import { EXPERIENCE_LABELS } from "@/types/farm";
-import type { ExperienceTag } from "@/types/farm";
 import { oddajRezervacijo } from "@/lib/actions/rezervacije";
 import { createSupabaseBrowser } from "@/lib/supabase/client";
 
@@ -117,7 +117,6 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
       .then(({ data }) => {
         if (data) setZasedeniDatumi(data.map((r) => ({ od: r.datum_od, do: r.datum_do })));
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kmetija.id]);
 
   // Helper: ali je datum zaseden
@@ -179,6 +178,8 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
           className="object-cover"
           priority
           quality={90}
+          placeholder="blur"
+          blurDataURL={BLUR_DATA_URL}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/10" />
 
@@ -258,6 +259,8 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
                     fill
                     className="object-cover group-hover:scale-110 transition-transform duration-500"
                     sizes="144px"
+                    placeholder="blur"
+                    blurDataURL={BLUR_DATA_URL}
                   />
                 </button>
               ))}
@@ -356,6 +359,8 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
                               fill
                               className="object-cover group-hover:scale-105 transition-transform duration-500"
                               sizes="(max-width: 640px) 100vw, 33vw"
+                              placeholder="blur"
+                              blurDataURL={BLUR_DATA_URL}
                             />
                           ) : (
                             <div className="flex items-center justify-center h-full text-4xl text-earth-300">
@@ -825,6 +830,8 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
                 className="object-contain"
                 sizes="90vw"
                 quality={95}
+                placeholder="blur"
+                blurDataURL={BLUR_DATA_URL}
               />
             </motion.div>
 

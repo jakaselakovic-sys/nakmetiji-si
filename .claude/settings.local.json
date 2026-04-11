@@ -67,13 +67,21 @@
       "Read(//c/Users/jakas/Desktop/nakmetiji/**)",
       "Bash(git rm:*)",
       "Bash(node scripts/create-admin.mjs)",
-      "Bash(curl -s -o /dev/null -w '%{http_code}' https://nakmetiji.vercel.app__TRACKED_VAR__)"
+      "Bash(curl -s -o /dev/null -w '%{http_code}' https://nakmetiji.vercel.app__TRACKED_VAR__)",
+      "Bash(npx tsc:*)",
+      "Bash(node -e ':*)",
+      "Bash(node -e \"const z = require\\('zod'\\); console.log\\(z.version || require\\('./node_modules/zod/package.json'\\).version\\)\")",
+      "WebFetch(domain:www.turisticnekmetije.si)",
+      "WebFetch(domain:www.farmstays-slovenia.si)"
     ],
     "additionalDirectories": [
       "C:\\Users\\jakas\\Desktop\\nakmetiji\\src\\app",
       "C:\\Users\\jakas\\Desktop\\nakmetiji\\src\\data",
       "C:\\Users\\jakas\\Desktop\\nakmetiji\\src",
-      "C:\\Users\\jakas\\Desktop\\nakmetiji\\src\\types"
+      "C:\\Users\\jakas\\Desktop\\nakmetiji\\src\\types",
+      "c:\\Users\\jakas\\Desktop\\nakmetiji\\src\\app\\api\\ical",
+      "c:\\Users\\jakas\\Desktop\\nakmetiji\\src\\app\\kmetije\\[slug]",
+      "c:\\Users\\jakas\\Desktop\\nakmetiji\\src\\app\\api\\og\\kmetije"
     ]
   }
 }

@@ -1,18 +1,41 @@
 // =============================================================================
-// NaKmetiji.si — Server Actions: Rezervacije
-// Booking flow: submit → pending → approve/reject
+// NaKmetiji.si — Server Actions: Rezervacije (Booking Engine)
+//
+// Atomic booking flow using PostgreSQL advisory locking:
+//   submit  → atomic_rezerviraj() RPC (farm-row lock + overlap check)
+//   approve → status update + UPN generation + guest email with payment slip
+//   reject  → status update + guest notification
+//
+// All DB writes go through atomic_rezerviraj() to guarantee:
+//   1. No double-bookings (exclusion constraint + row lock)
+//   2. No race conditions (farm row locked for duration of transaction)
+//   3. Accurate error codes for UX (DATE_CONFLICT, OVER_CAPACITY, etc.)
 // =============================================================================
 
 "use server";
 
 import { createSupabaseServer } from "@/lib/supabase/server";
-import { posljiEmailLastniku, posljiPotrditev, posljiZavrnitev } from "@/lib/email";
+import {
+  posljiEmailLastniku,
+  posljiCakanjeGostu,
+  posljiPotrditev,
+  posljiZavrnitev,
+} from "@/lib/email";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface AtomicRpcResult {
+  ok: boolean;
+  id?: string;
+  napaka?: string;
+  code?: "DATE_CONFLICT" | "OVER_CAPACITY" | "RACE_CONDITION" | "NOT_FOUND" | "FARM_INACTIVE" | "INVALID_DATES" | "PAST_DATES" | "INTERNAL";
+}
 
 // ─── Oddaj rezervacijo (gost) ─────────────────────────────────────────────────
 
 export async function oddajRezervacijo(input: {
   kmetija_id: string;
-  datum_od: string;
+  datum_od: string;         // "YYYY-MM-DD"
   datum_do: string;
   gost_ime: string;
   gost_email: string;
@@ -22,82 +45,86 @@ export async function oddajRezervacijo(input: {
 }): Promise<{ ok: boolean; napaka?: string; id?: string }> {
   const supabase = await createSupabaseServer();
 
-  // Pridobi kmetijo (za ceno, email lastnika, max gostov)
+  // ── Fetch farm metadata for price calculation and emails ──────────────────
   const { data: kmetija } = await supabase
     .from("kmetije")
-    .select("id, ime, naslov, cena_noc, max_gostov, lastnik_id, profili(email)")
+    .select("id, slug, ime, naslov, cena_noc, max_gostov, lastnik_id, profili(email, ime)")
     .eq("id", input.kmetija_id)
     .single();
 
   if (!kmetija) return { ok: false, napaka: "Kmetija ne obstaja." };
 
-  if (input.stevilo_oseb > (kmetija.max_gostov ?? 99)) {
-    return { ok: false, napaka: `Največje število gostov je ${kmetija.max_gostov}.` };
-  }
-
-  // Preveri dostopnost
-  const { data: konflikt } = await supabase
-    .from("rezervacije")
-    .select("id")
-    .eq("kmetija_id", input.kmetija_id)
-    .in("status", ["cakanje", "potrjena"])
-    .lt("datum_od", input.datum_do)
-    .gt("datum_do", input.datum_od)
-    .limit(1);
-
-  if (konflikt?.length) {
-    return { ok: false, napaka: "Izbrani termini so zasedeni. Prosimo izberite druge datume." };
-  }
-
-  // Izračunaj ceno
-  const od = new Date(input.datum_od);
+  // Calculate nightly cost
+  const od  = new Date(input.datum_od);
   const do_ = new Date(input.datum_do);
-  const nocitve = Math.round((do_.getTime() - od.getTime()) / 86400000);
+  const nocitve    = Math.max(1, Math.round((do_.getTime() - od.getTime()) / 86_400_000));
   const skupaj_cena = nocitve * (kmetija.cena_noc ?? 0);
 
-  // Vstavi rezervacijo
-  const { data: rez, error } = await supabase
-    .from("rezervacije")
-    .insert({
-      ...input,
-      skupaj_cena,
-      status: "cakanje",
-    })
-    .select()
-    .single();
+  // ── Atomic booking via PL/pgSQL (single serialized transaction) ───────────
+  const { data: rpc, error: rpcError } = await supabase.rpc("atomic_rezerviraj", {
+    p_kmetija_id:   input.kmetija_id,
+    p_datum_od:     input.datum_od,
+    p_datum_do:     input.datum_do,
+    p_gost_ime:     input.gost_ime,
+    p_gost_email:   input.gost_email,
+    p_gost_telefon: input.gost_telefon ?? null,
+    p_stevilo_oseb: input.stevilo_oseb,
+    p_opombe:       input.opombe ?? null,
+    p_skupaj_cena:  skupaj_cena,
+  });
 
-  if (error) {
-    // 23P01 = exclusion constraint violation (race condition)
-    if (error.code === "23P01") {
-      return { ok: false, napaka: "Termini so bili ravnokar zasedeni. Poskusite znova." };
-    }
-    console.error("Rezervacija napaka:", error);
-    return { ok: false, napaka: "Napaka pri oddaji. Poskusite znova." };
+  if (rpcError) {
+    console.error("[booking] atomic_rezerviraj RPC error:", rpcError);
+    return { ok: false, napaka: "Napaka pri rezervaciji. Prosimo poskusite znova." };
   }
 
-  // Pošlji email lastniku (fire-and-forget)
-  const profiliRaw = kmetija.profili as unknown;
-  const lastnikEmail = profiliRaw && !Array.isArray(profiliRaw)
-    ? (profiliRaw as { email: string }).email
-    : Array.isArray(profiliRaw) && profiliRaw.length > 0
-    ? (profiliRaw[0] as { email: string }).email
-    : null;
+  const result = rpc as AtomicRpcResult;
+
+  if (!result.ok) {
+    return { ok: false, napaka: result.napaka ?? "Rezervacija ni uspela." };
+  }
+
+  const rezervacija_id = result.id!;
+
+  // ── Emails — fire-and-forget (never block the response) ───────────────────
+  const profiliRaw  = kmetija.profili as unknown;
+  const lastnikData = Array.isArray(profiliRaw) ? profiliRaw[0] : profiliRaw;
+  const lastnikEmail = (lastnikData as { email?: string } | null)?.email ?? null;
+  const lastnikIme   = (lastnikData as { ime?: string } | null)?.ime ?? "Lastnik";
+
+  // Email to owner
   if (lastnikEmail) {
     posljiEmailLastniku({
       lastnik_email: lastnikEmail,
-      kmetija_ime: kmetija.ime,
-      gost_ime: input.gost_ime,
-      gost_email: input.gost_email,
-      gost_telefon: input.gost_telefon ?? null,
-      datum_od: input.datum_od,
-      datum_do: input.datum_do,
-      stevilo_oseb: input.stevilo_oseb,
-      opombe: input.opombe ?? null,
-      rezervacija_id: rez.id,
+      lastnik_ime:   lastnikIme,
+      kmetija_ime:   kmetija.ime,
+      gost_ime:      input.gost_ime,
+      gost_email:    input.gost_email,
+      gost_telefon:  input.gost_telefon ?? null,
+      datum_od:      input.datum_od,
+      datum_do:      input.datum_do,
+      stevilo_oseb:  input.stevilo_oseb,
+      opombe:        input.opombe ?? null,
+      rezervacija_id,
+      skupaj_cena,
     }).catch(console.error);
   }
 
-  return { ok: true, id: rez.id };
+  // "Awaiting confirmation" email to guest
+  posljiCakanjeGostu({
+    gost_email:    input.gost_email,
+    gost_ime:      input.gost_ime,
+    kmetija_ime:   kmetija.ime,
+    kmetija_naslov: kmetija.naslov,
+    kmetija_slug:  kmetija.slug,
+    datum_od:      input.datum_od,
+    datum_do:      input.datum_do,
+    stevilo_oseb:  input.stevilo_oseb,
+    skupaj_cena:   skupaj_cena || null,
+    rezervacija_id,
+  }).catch(console.error);
+
+  return { ok: true, id: rezervacija_id };
 }
 
 // ─── Potrdi rezervacijo (lastnik) ─────────────────────────────────────────────
@@ -110,40 +137,61 @@ export async function potrdiRezervacijo(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, napaka: "Niste prijavljeni." };
 
-  // Pridobi rezervacijo + kmetijo za validacijo lastništva
+  // Fetch booking + farm for ownership check
   const { data: rez } = await supabase
     .from("rezervacije")
-    .select(`*, kmetije(ime, naslov, lastnik_id)`)
+    .select(`
+      id, gost_ime, gost_email, datum_od, datum_do,
+      skupaj_cena, stevilo_oseb, status,
+      kmetije(id, slug, ime, naslov, lastnik_id, iban, bic)
+    `)
     .eq("id", rezervacija_id)
     .single();
 
   if (!rez) return { ok: false, napaka: "Rezervacija ne obstaja." };
-  if ((rez.kmetije as { lastnik_id: string }).lastnik_id !== user.id) {
-    return { ok: false, napaka: "Nimate dovoljenja." };
-  }
-  if (rez.status !== "cakanje") {
-    return { ok: false, napaka: "Rezervacija ni v čakanju." };
+
+  const kmetija = rez.kmetije as unknown as {
+    id: string; slug: string; ime: string; naslov: string | null;
+    lastnik_id: string; iban?: string | null; bic?: string | null;
+  };
+
+  if (kmetija.lastnik_id !== user.id) {
+    // Allow super_admin to override
+    const { data: profil } = await supabase
+      .from("profili").select("vloga").eq("id", user.id).single();
+    if (profil?.vloga !== "super_admin") {
+      return { ok: false, napaka: "Nimate dovoljenja." };
+    }
   }
 
+  if (rez.status !== "cakanje") {
+    return { ok: false, napaka: `Rezervacija je v stanju "${rez.status}" in je ni mogoče potrditi.` };
+  }
+
+  // Update status
   const { error } = await supabase
     .from("rezervacije")
     .update({ status: "potrjena", posodobljeno: new Date().toISOString() })
     .eq("id", rezervacija_id);
 
   if (error?.code === "23P01") {
-    return { ok: false, napaka: "Termini so bili medtem zasedeni." };
+    return { ok: false, napaka: "Termini so bili medtem zasedeni s strani druge rezervacije." };
   }
   if (error) return { ok: false, napaka: "Napaka pri potrditvi." };
 
-  // Pošlji email gostu
+  // Send confirmation email with UPN payment slip (fire-and-forget)
   posljiPotrditev({
-    gost_email: rez.gost_email,
-    gost_ime: rez.gost_ime,
-    kmetija_ime: (rez.kmetije as { ime: string }).ime,
-    kmetija_naslov: (rez.kmetije as { naslov: string | null }).naslov,
-    datum_od: rez.datum_od,
-    datum_do: rez.datum_do,
-    skupaj_cena: rez.skupaj_cena,
+    gost_email:      rez.gost_email,
+    gost_ime:        rez.gost_ime,
+    kmetija_ime:     kmetija.ime,
+    kmetija_naslov:  kmetija.naslov,
+    kmetija_slug:    kmetija.slug,
+    datum_od:        rez.datum_od,
+    datum_do:        rez.datum_do,
+    skupaj_cena:     rez.skupaj_cena,
+    rezervacija_id,
+    kmetija_iban:    kmetija.iban ?? null,
+    kmetija_bic:     kmetija.bic ?? null,
   }).catch(console.error);
 
   return { ok: true };
@@ -167,20 +215,27 @@ export async function zavrniRezervacijo(
 
   if (!rez) return { ok: false, napaka: "Rezervacija ne obstaja." };
   if ((rez.kmetije as { lastnik_id: string }).lastnik_id !== user.id) {
-    return { ok: false, napaka: "Nimate dovoljenja." };
+    const { data: profil } = await supabase
+      .from("profili").select("vloga").eq("id", user.id).single();
+    if (profil?.vloga !== "super_admin") {
+      return { ok: false, napaka: "Nimate dovoljenja." };
+    }
   }
 
-  await supabase
+  const { error } = await supabase
     .from("rezervacije")
     .update({ status: "zavrnjena", posodobljeno: new Date().toISOString() })
     .eq("id", rezervacija_id);
 
+  if (error) return { ok: false, napaka: "Napaka pri zavrnitvi." };
+
   posljiZavrnitev({
-    gost_email: rez.gost_email,
-    gost_ime: rez.gost_ime,
-    kmetija_ime: (rez.kmetije as { ime: string }).ime,
-    datum_od: rez.datum_od,
-    datum_do: rez.datum_do,
+    gost_email:    rez.gost_email,
+    gost_ime:      rez.gost_ime,
+    kmetija_ime:   (rez.kmetije as { ime: string }).ime,
+    datum_od:      rez.datum_od,
+    datum_do:      rez.datum_do,
+    rezervacija_id,
   }).catch(console.error);
 
   return { ok: true };

@@ -335,6 +335,10 @@ export async function posodobiKmetijo(
     kontakt_telefon?: string;
     kontakt_email?: string;
     kontakt_spletna_stran?: string;
+    cena_noc?: number | null;
+    max_gostov?: number | null;
+    iban?: string | null;
+    bic?: string | null;
     dozivetja_ids?: string[];
   }
 ): Promise<{ ok: boolean; napaka?: string }> {
@@ -372,6 +376,10 @@ export async function posodobiKmetijo(
   if (vhod.obcina !== undefined) posodobitev.obcina = vhod.obcina || null;
   if (vhod.postna_stevilka !== undefined) posodobitev.postna_stevilka = vhod.postna_stevilka || null;
   if (Object.keys(kontaktniPodatki).length > 0) posodobitev.kontaktni_podatki = kontaktniPodatki;
+  if (vhod.cena_noc !== undefined) posodobitev.cena_noc = vhod.cena_noc;
+  if (vhod.max_gostov !== undefined) posodobitev.max_gostov = vhod.max_gostov;
+  if (vhod.iban !== undefined) posodobitev.iban = vhod.iban || null;
+  if (vhod.bic !== undefined) posodobitev.bic = vhod.bic || null;
 
   const { error } = await supabase
     .from("kmetije")

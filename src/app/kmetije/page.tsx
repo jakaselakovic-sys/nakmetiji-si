@@ -1,15 +1,20 @@
 // =============================================================================
 // NaKmetiji.si — Kmetije listing
 // Server component: fetch Supabase → KmetijeClient
+//
+// ISR: data is revalidated every 60 s via unstable_cache (stale-while-revalidate).
+// The page itself is statically rendered between revalidation cycles.
 // =============================================================================
 
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { createSupabaseServer } from "@/lib/supabase/server";
+import { unstable_cache } from "next/cache";
+import { createClient } from "@supabase/supabase-js";
 import type { Dozivetje, KmetijaSDozivetji } from "@/types/database";
 import { KmetijeClient } from "./KmetijeClient";
 
-export const dynamic = "force-dynamic";
+// ISR: revalidate every 60 seconds (stale-while-revalidate semantics)
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Vse kmetije | NaKmetiji",
@@ -29,23 +34,45 @@ function normalizirajKmetijo(raw: Record<string, unknown>): KmetijaSDozivetji {
   };
 }
 
+// ─── Cached data fetch (anon client — no cookies needed for public farms) ────
+//
+// unstable_cache wraps the fetch so that all concurrent requests within the
+// 60-second window share a single Supabase round-trip. The anon client is
+// intentional: RLS on kmetije must allow SELECT for the anon role on
+// rows where aktivna = true (standard Supabase public-listing policy).
+const getCachedFarmData = unstable_cache(
+  async () => {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    const [{ data: kmetijeSurov }, { data: dozivetjaSurov }] = await Promise.all([
+      supabase
+        .from("kmetije")
+        .select(`*, kmetija_dozivetje(dozivetja(*))`)
+        .eq("aktivna", true)
+        .order("ocena", { ascending: false, nullsFirst: false }),
+      supabase
+        .from("dozivetja")
+        .select("*")
+        .order("vrstni_red"),
+    ]);
+
+    return {
+      kmetijeSurov: (kmetijeSurov ?? []) as Record<string, unknown>[],
+      dozivetjaSurov: (dozivetjaSurov ?? []) as Dozivetje[],
+    };
+  },
+  ["public-farms-listing"],
+  { revalidate: 60, tags: ["farms"] }
+);
+
 export default async function KmetijePage() {
-  const supabase = await createSupabaseServer();
+  const { kmetijeSurov, dozivetjaSurov } = await getCachedFarmData();
 
-  const [{ data: kmetijeSurov }, { data: dozivetjaSurov }] = await Promise.all([
-    supabase
-      .from("kmetije")
-      .select(`*, kmetija_dozivetje(dozivetja(*))`)
-      .eq("aktivna", true)
-      .order("ocena", { ascending: false, nullsFirst: false }),
-    supabase
-      .from("dozivetja")
-      .select("*")
-      .order("vrstni_red"),
-  ]);
-
-  const kmetije = ((kmetijeSurov as Record<string, unknown>[]) ?? []).map(normalizirajKmetijo);
-  const dozivetja = (dozivetjaSurov as Dozivetje[]) ?? [];
+  const kmetije = kmetijeSurov.map(normalizirajKmetijo);
+  const dozivetja = dozivetjaSurov;
 
   return (
     <div className="min-h-screen bg-cream">
