@@ -8,7 +8,7 @@
 //               before the server round-trip confirms the change
 // =============================================================================
 
-import { useState, useTransition, useOptimistic } from "react";
+import { useState, useTransition, useOptimistic, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, CheckCircle, Euro, Users } from "lucide-react";
 import { posodobiKmetijo } from "@/lib/actions/kmetije";
@@ -82,6 +82,8 @@ export function UrediKmetijoView({ kmetija, vseDozivetja, izbranaDozivetjaIds }:
   const [napaka, setNapaka] = useState<string | null>(null);
   const [uspeh, setUspeh] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const uspehTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => { clearTimeout(uspehTimerRef.current); }, []);
 
   // ── Optimistic pricing — updates instantly when form is submitted ──────────
   const [optimisticPricing, updateOptimisticPricing] = useOptimistic(
@@ -182,7 +184,8 @@ export function UrediKmetijoView({ kmetija, vseDozivetja, izbranaDozivetjaIds }:
       if (rezultat.ok) {
         setUspeh(true);
         router.refresh();
-        setTimeout(() => setUspeh(false), 4_000);
+        clearTimeout(uspehTimerRef.current);
+        uspehTimerRef.current = setTimeout(() => setUspeh(false), 4_000);
       } else {
         setNapaka(rezultat.napaka ?? "Napaka pri shranjevanju.");
       }

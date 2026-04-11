@@ -17,6 +17,7 @@ import Groq from "groq-sdk";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import type { Znamenitost } from "@/types/landmarks";
 import { AI_DEMO_MODE } from "@/lib/config/demo";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -463,6 +464,20 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: "Sporočilo je predolgo." }), {
       status: 400, headers: { "Content-Type": "application/json" },
     });
+  }
+
+  // Rate limit by IP — Oracle is unauthenticated but Groq calls are expensive.
+  // 15 queries per hour per IP address.
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown";
+  const rl = checkRateLimit(ip, "oracle", 15, 3_600);
+  if (!rl.ok) {
+    return new Response(
+      JSON.stringify({ error: `Presegli ste omejitev poizvedb. Poskusite čez ${rl.retryAfter}s.` }),
+      { status: 429, headers: { "Content-Type": "application/json", "Retry-After": String(rl.retryAfter) } }
+    );
   }
 
   const recentHistory = history.slice(-6);
