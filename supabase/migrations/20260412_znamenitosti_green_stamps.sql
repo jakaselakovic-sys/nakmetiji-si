@@ -189,10 +189,12 @@ CREATE TABLE IF NOT EXISTS public.green_stamps (
   kmetija_id      UUID NOT NULL REFERENCES public.kmetije(id) ON DELETE CASCADE,
   rezervacija_id  UUID REFERENCES public.rezervacije(id) ON DELETE SET NULL,
   ustvarjeno      TIMESTAMPTZ DEFAULT NOW(),
-  skenirano       BOOLEAN DEFAULT TRUE,
-  -- One stamp per guest per farm per day (abuse prevention)
-  UNIQUE (gost_id, kmetija_id, (DATE(ustvarjeno)))
+  skenirano       BOOLEAN DEFAULT TRUE
 );
+
+-- One stamp per guest per farm (unique index — reservation link prevents abuse)
+CREATE UNIQUE INDEX IF NOT EXISTS green_stamps_unique
+  ON public.green_stamps (gost_id, kmetija_id);
 
 ALTER TABLE public.green_badges       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kmetija_green_badges ENABLE ROW LEVEL SECURITY;
