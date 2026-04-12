@@ -62,8 +62,10 @@ export async function pridobiKmetije(
   if (premium !== undefined) query = query.eq("premium", premium);
   if (ocenaMin) query = query.gte("ocena", ocenaMin);
   if (iskanje?.trim()) {
+    // Escape ILIKE special characters to prevent wildcard DoS / timing attacks
+    const esc = iskanje.trim().replace(/[%_\\]/g, "\\$&").slice(0, 100);
     query = query.or(
-      `ime.ilike.%${iskanje}%,opis.ilike.%${iskanje}%,kratki_opis.ilike.%${iskanje}%,obcina.ilike.%${iskanje}%`
+      `ime.ilike.%${esc}%,opis.ilike.%${esc}%,kratki_opis.ilike.%${esc}%,obcina.ilike.%${esc}%`
     );
   }
 
@@ -290,6 +292,17 @@ export async function posodobiSlikeKmetije(
   kmetija_id: string,
   nova_url: string
 ): Promise<{ ok: boolean; napaka?: string }> {
+  // Whitelist: only allow HTTPS URLs pointing to Supabase storage
+  try {
+    const parsed = new URL(nova_url);
+    const allowed = process.env.NEXT_PUBLIC_SUPABASE_URL!.replace("https://", "");
+    if (parsed.protocol !== "https:" || !parsed.hostname.endsWith(allowed)) {
+      return { ok: false, napaka: "Neveljaven URL slike." };
+    }
+  } catch {
+    return { ok: false, napaka: "Neveljaven URL slike." };
+  }
+
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, napaka: "Niste prijavljeni." };
@@ -418,10 +431,11 @@ export async function isciKmetije(iskanje: string, limit = 5) {
   if (!iskanje || iskanje.trim().length < 2) return [];
 
   const supabase = await createSupabaseServer();
+  const esc = iskanje.trim().replace(/[%_\\]/g, "\\$&").slice(0, 100);
   const { data } = await supabase
     .from("kmetije")
     .select("id, slug, ime, regija, naslovna_slika")
-    .or(`ime.ilike.%${iskanje}%,obcina.ilike.%${iskanje}%`)
+    .or(`ime.ilike.%${esc}%,obcina.ilike.%${esc}%`)
     .eq("aktivna", true)
     .limit(limit);
 

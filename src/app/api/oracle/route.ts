@@ -467,10 +467,12 @@ export async function POST(req: NextRequest) {
   }
 
   // Rate limit by IP — Oracle is unauthenticated but Groq calls are expensive.
-  // 15 queries per hour per IP address.
+  // Use x-vercel-forwarded-for (set by Vercel infrastructure, not spoofable by clients).
+  // Fall back to x-forwarded-for only as last resort (dev/non-Vercel environments).
   const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("x-vercel-forwarded-for") ??
     req.headers.get("x-real-ip") ??
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     "unknown";
   const rl = checkRateLimit(ip, "oracle", 15, 3_600);
   if (!rl.ok) {
