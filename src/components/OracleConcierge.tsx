@@ -334,6 +334,11 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
   const [isLoading, setIsLoading] = useState(false);
   const [statusPhase, setStatusPhase] = useState<string | null>(null);
   const [hasGreeted, setHasGreeted] = useState(false);
+  const [retryInfo, setRetryInfo] = useState<{
+    retryable: boolean;
+    retryAfterMs: number | null;
+    lastMessage: string;
+  } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -401,6 +406,7 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
       setInput("");
       setIsLoading(true);
       setStatusPhase("intent");
+      setRetryInfo(null);
 
       // Add streaming assistant placeholder
       setMessages((prev) => [
@@ -454,6 +460,13 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
                 try {
                   const d = JSON.parse(raw) as { farms: FarmCard[] };
                   farmCards = d.farms;
+                } catch { /* skip */ }
+              } else if (currentEvent === "error") {
+                try {
+                  const d = JSON.parse(raw) as { retryable?: boolean; retryAfterMs?: number | null };
+                  if (d.retryable) {
+                    setRetryInfo({ retryable: true, retryAfterMs: d.retryAfterMs ?? null, lastMessage: text });
+                  }
                 } catch { /* skip */ }
               } else if (currentEvent === null) {
                 try {
@@ -663,6 +676,29 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
                   />
                 ))}
               </AnimatePresence>
+
+              {/* "Try again" — shown when server emits a retryable error event */}
+              <AnimatePresence>
+                {retryInfo?.retryable && !isLoading && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    className="flex justify-center pb-1"
+                  >
+                    <button
+                      onClick={() => sendMessage(retryInfo.lastMessage)}
+                      className="flex items-center gap-2 rounded-full bg-white/80 hover:bg-white border border-earth-200 hover:border-forest-300 px-4 py-2 text-xs font-semibold text-earth-700 hover:text-forest-800 shadow-sm transition-all"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      {locale === "sl" ? "Poskusi znova" : locale === "de" ? "Erneut versuchen" : locale === "it" ? "Riprova" : "Try again"}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <div ref={messagesEndRef} />
             </div>
 

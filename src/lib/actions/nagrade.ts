@@ -4,11 +4,12 @@
 
 "use server";
 
+import { randomUUID } from "crypto";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { getLevel, calculateTotalPoints } from "@/lib/greenPassport";
 
 export type ZahtevekResult =
-  | { ok: true; levelName: string }
+  | { ok: true; levelName: string; reward_code: string }
   | { ok: false; napaka: string };
 
 /**
@@ -61,9 +62,12 @@ export async function zahtevajNagrado(): Promise<ZahtevekResult> {
     return { ok: false, napaka: "Zahtevek za ta nivo je že v obravnavi." };
   }
 
+  // Unique, human-readable code: "NK-" + 8 uppercase hex chars (e.g. NK-3F8A2B1C)
+  const reward_code = "NK-" + randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
+
   const { error: insertErr } = await supabase
     .from("nagrade")
-    .insert({ user_id: user.id, level_name: currentLevel.name });
+    .insert({ user_id: user.id, level_name: currentLevel.name, reward_code });
 
   if (insertErr) {
     // Unique index violation — race condition; another request beat us to it
@@ -73,5 +77,5 @@ export async function zahtevajNagrado(): Promise<ZahtevekResult> {
     return { ok: false, napaka: "Napaka pri oddaji zahtevka." };
   }
 
-  return { ok: true, levelName: currentLevel.name };
+  return { ok: true, levelName: currentLevel.name, reward_code };
 }

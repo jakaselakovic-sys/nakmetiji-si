@@ -456,12 +456,30 @@ export async function togglePremium(
     }
   }
 
+  // premium_until: 30 days from now when enabling, null when disabling
+  const premiumUntil = enable
+    ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    : null;
+
   const { error } = await supabase
     .from("kmetije")
-    .update({ premium: enable, posodobljeno: new Date().toISOString() })
+    .update({ premium: enable, premium_until: premiumUntil, posodobljeno: new Date().toISOString() })
     .eq("id", kmetija_id);
 
   if (error) return { ok: false, napaka: "Napaka pri posodobitvi." };
+
+  // Record subscription period (best-effort, fire-and-forget)
+  if (enable) {
+    void supabase.from("premium_narocnine").insert({
+      kmetija_id,
+      user_id: user.id,
+      plan: "mesecna",
+      zacetek: new Date().toISOString(),
+      konec: premiumUntil!,
+      cena_eur: 29.99,
+    });
+  }
+
   return { ok: true, premium: enable };
 }
 
