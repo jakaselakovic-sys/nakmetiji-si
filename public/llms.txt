@@ -1,0 +1,59 @@
+# NaKmetiji.si
+
+> Slovenia's premier farm tourism platform (agritourism marketplace).
+> Connects travelers with authentic Slovenian farm stays, culinary experiences, wine tours, and rural getaways.
+> All farms are verified, bookable, and reviewed by real guests.
+
+## What is NaKmetiji.si?
+
+NaKmetiji.si is Slovenia's leading agritourism platform (turistične kmetije). It allows travelers to:
+- Browse and book farm stays across all 12 Slovenian regions
+- Discover farm experiences: wine tasting, cooking classes, horse riding, hiking
+- Read verified guest reviews and ratings
+- Access the AI Oracle concierge for personalized farm recommendations
+
+## Key Pages
+
+- [Homepage](https://nakmetiji.si/): Browse featured farms and search by region/experience
+- [All Farms](https://nakmetiji.si/kmetije): Full searchable directory of Slovenian tourist farms
+- [Interactive Map](https://nakmetiji.si/zemljevid): Map view of all farms with filters
+- [Green Passport](https://nakmetiji.si/green-passport): Loyalty stamp program for repeat visitors
+- [Blog](https://nakmetiji.si/blog): Travel guides and farm tourism articles
+
+## Regions (12 Slovenian regions, each with farm listings)
+
+- [Gorenjska](https://nakmetiji.si/regije/gorenjska) — Alpine region, Triglav, Lake Bled
+- [Primorska](https://nakmetiji.si/regije/primorska) — Mediterranean, Karst, Adriatic coast
+- [Štajerska](https://nakmetiji.si/regije/stajerska) — Wine country, Maribor area
+- [Dolenjska](https://nakmetiji.si/regije/dolenjska) — Krka river valley, orchards
+- [Savinjska](https://nakmetiji.si/regije/savinjska) — Hops country, Logarska valley
+- [Pomurska](https://nakmetiji.si/regije/pomurska) — Pannonian plains, Jeruzalem vineyards
+- [Koroška](https://nakmetiji.si/regije/koroska) — Mountain region, Pohorje
+- [Notranjska](https://nakmetiji.si/regije/notranjska) — Postojna cave, Lake Cerknica
+- [Posavska](https://nakmetiji.si/regije/posavska) — Sava river, Bizeljsko wine caves
+- [Zasavska](https://nakmetiji.si/regije/zasavska) — Zagorje valley
+- [Jugovzhodna Slovenija](https://nakmetiji.si/regije/jugovzhodna_slovenija) — Kočevje, wildlife
+- [Osrednjeslovenska](https://nakmetiji.si/regije/osrednjeslovenska) — Ljubljana surroundings
+
+## AI Oracle
+
+NaKmetiji.si features an AI travel concierge ("Orakel") that understands natural language queries in Slovenian, English, German, and Italian. It recommends farms based on:
+- User mood/vibe (quiet, romantic, family, eco, luxury)
+- Region preference
+- Guest capacity
+- Specific experiences (wine, food, animals, hiking)
+- Proximity to landmarks
+
+## Farm Experience Categories
+
+Prenočišče (lodging) · Kulinarika (local cuisine) · Vino (wine tasting) · Konji (horse riding) · Živali (farm animals) · Pohodništvo (hiking) · Kolesarstvo (cycling) · Kuharski tečaj (cooking class) · Wellness · Ribolov (fishing) · Ekološka kmetija (organic farm)
+
+## Contact
+
+- Website: https://nakmetiji.si
+- Email: info@nakmetiji.si
+- Language: Slovenian (primary), English, German, Italian
+
+## Sitemap
+
+https://nakmetiji.si/sitemap.xml
