@@ -9,21 +9,18 @@
 // Usage: drop once into layout.tsx, done.
 // =============================================================================
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { DEMO_MODE } from "@/lib/config/demo";
 
 // ── Top banner (dismissible, remembered in sessionStorage) ──────────────────
 
 export function DemoBanner() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    if (!DEMO_MODE) return;
-    const dismissed = sessionStorage.getItem("demo-banner-dismissed");
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!dismissed) setVisible(true);
-  }, []);
+  // Lazy initializer reads sessionStorage once on mount — no effect needed
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === "undefined" || !DEMO_MODE) return false;
+    return !sessionStorage.getItem("demo-banner-dismissed");
+  });
 
   if (!visible) return null;
 
@@ -31,25 +28,23 @@ export function DemoBanner() {
     <div
       role="banner"
       aria-label="Demo opozorilo"
-      className="relative z-[200] w-full bg-amber-400 text-amber-950 text-xs font-semibold px-4 py-2 flex items-center justify-center gap-3 text-center"
+      className="fixed bottom-4 left-4 flex items-center gap-2 rounded-full bg-amber-400/90 backdrop-blur-sm border border-amber-500/40 shadow-lg px-3 py-1.5 text-[11px] font-semibold text-amber-950"
+      style={{ zIndex: "var(--z-demo)" }}
     >
-      <span className="inline-block animate-pulse text-amber-800">⚗️</span>
-      <span>
-        <strong>Tehnološki demo</strong> — rezervacije niso prave, nobene storitve se ne zaračunavajo.{" "}
-        <Link
-          href="/pogoji-demo"
-          className="underline underline-offset-2 hover:text-amber-900 transition-colors"
-        >
-          Pogoji uporabe
-        </Link>
-      </span>
+      <span>⚗️</span>
+      <Link
+        href="/pogoji-demo"
+        className="hover:text-amber-800 transition-colors whitespace-nowrap"
+      >
+        Tehnološki demo
+      </Link>
       <button
         onClick={() => {
           sessionStorage.setItem("demo-banner-dismissed", "1");
           setVisible(false);
         }}
         aria-label="Zapri opozorilo"
-        className="ml-auto flex-shrink-0 text-amber-800 hover:text-amber-950 transition-colors"
+        className="ml-0.5 text-amber-800 hover:text-amber-950 transition-colors leading-none"
       >
         ✕
       </button>

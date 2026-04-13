@@ -425,6 +425,46 @@ export async function pridobiDozivetjaKmetije(kmetija_id: string): Promise<strin
   return (data ?? []).map((d) => d.dozivetje_id);
 }
 
+// ─── Premium Boost ───────────────────────────────────────────────────────────
+//
+// Toggles the `premium` flag on a farm. Only the farm owner (or super_admin)
+// can call this. Returns { ok, premium } so the UI can optimistically update.
+
+export async function togglePremium(
+  kmetija_id: string,
+  enable: boolean
+): Promise<{ ok: boolean; napaka?: string; premium?: boolean }> {
+  const supabase = await createSupabaseServer();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, napaka: "Niste prijavljeni." };
+
+  // Ownership check — also allow super_admin override
+  const { data: kmetija } = await supabase
+    .from("kmetije")
+    .select("lastnik_id")
+    .eq("id", kmetija_id)
+    .single();
+
+  if (!kmetija) return { ok: false, napaka: "Kmetija ne obstaja." };
+
+  if (kmetija.lastnik_id !== user.id) {
+    const { data: profil } = await supabase
+      .from("profili").select("vloga").eq("id", user.id).single();
+    if (profil?.vloga !== "super_admin") {
+      return { ok: false, napaka: "Nimate dovoljenja." };
+    }
+  }
+
+  const { error } = await supabase
+    .from("kmetije")
+    .update({ premium: enable, posodobljeno: new Date().toISOString() })
+    .eq("id", kmetija_id);
+
+  if (error) return { ok: false, napaka: "Napaka pri posodobitvi." };
+  return { ok: true, premium: enable };
+}
+
 // ─── Iskanje (autocomplete) ───────────────────────────────────────────────────
 
 export async function isciKmetije(iskanje: string, limit = 5) {

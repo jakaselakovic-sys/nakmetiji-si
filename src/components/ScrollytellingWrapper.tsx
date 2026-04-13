@@ -1,127 +1,140 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import { useScroll, useTransform, useSpring, motion } from "framer-motion";
+
+// ---------------------------------------------------------------------------
+// Transform input/output arrays defined at module level.
+// Prevents array recreation on every render, which would otherwise cause
+// Framer Motion to rebuild the interpolation function unnecessarily.
+// ---------------------------------------------------------------------------
+
+const BG_OPACITY_1 = { input: [0, 0.15, 0.30],    output: [1, 1, 0] };
+const BG_OPACITY_2 = { input: [0.10, 0.25, 0.35, 0.50], output: [0, 1, 1, 0] };
+const BG_OPACITY_3 = { input: [0.30, 0.45, 0.55, 0.70], output: [0, 1, 1, 0] };
+const BG_OPACITY_4 = { input: [0.55, 0.70, 1.0],  output: [0, 1, 1] };
+
+const THEME_INPUT  = [0, 0.15, 0.25, 0.35, 0.45, 0.55, 0.70];
+const THEME_OUTPUT = ["#f8fafc", "#f8fafc", "#fef08a", "#fef08a", "#99f6e4", "#99f6e4", "#bae6fd"];
+
+const SUB1_INPUT = [0, 0.10, 0.20];
+const SUB2_INPUT = [0.10, 0.20, 0.30, 0.40];
+const SUB3_INPUT = [0.30, 0.40, 0.50, 0.60];
+const SUB4_INPUT = [0.55, 0.70, 1.0];
+
+const FADE_01   = [1, 1, 0];
+const FADE_0110 = [0, 1, 1, 0];
+const FADE_011  = [0, 1, 1];
 
 export function ScrollytellingWrapper() {
   const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Track scroll within the 700vh container
+
+  // Detect mobile — reduce scroll height to prevent overwhelming scroll on small screens.
+  // Initial: "800vh" (SSR-safe desktop default); updates after mount.
+  const [heroHeight, setHeroHeight] = useState("800vh");
+  useEffect(() => {
+    function update() {
+      setHeroHeight(window.innerWidth < 640 ? "400vh" : "800vh");
+    }
+    update();
+    window.addEventListener("resize", update, { passive: true });
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start start", "end end"],
   });
 
-  // Apply spring smoothing - the secret sauce for the "heavy" Apple scroll feel
+  // Spring physics:
+  // Desktop: stiffness 50 / damping 20 → heavy, cinematic Apple scroll feel.
+  // The same spring works on mobile at 400vh — it just resolves faster since
+  // the range is shorter, which actually feels more responsive on touch.
   const springScroll = useSpring(scrollYProgress, {
     stiffness: 50,
     damping: 20,
-    restDelta: 0.001
+    restDelta: 0.001,
   });
 
-  // ––––– LAYER OPACITIES (Backgrounds) –––––
-  // ALL visual cross-fades complete absolutely by 0.70!
-  // This leaves 30% of an 800vh container (2.4 whole screen heights) as a pure visual freeze.
-  const opacity1 = useTransform(springScroll, [0, 0.15, 0.30], [1, 1, 0]);
-  const opacity2 = useTransform(springScroll, [0.10, 0.25, 0.35, 0.50], [0, 1, 1, 0]);
-  const opacity3 = useTransform(springScroll, [0.30, 0.45, 0.55, 0.70], [0, 1, 1, 0]); 
-  const opacity4 = useTransform(springScroll, [0.55, 0.70, 1.0], [0, 1, 1]);
-  const opacities = [opacity1, opacity2, opacity3, opacity4];
+  // ── Background opacities ──────────────────────────────────────────────────
+  const opacity1 = useTransform(springScroll, BG_OPACITY_1.input, BG_OPACITY_1.output);
+  const opacity2 = useTransform(springScroll, BG_OPACITY_2.input, BG_OPACITY_2.output);
+  const opacity3 = useTransform(springScroll, BG_OPACITY_3.input, BG_OPACITY_3.output);
+  const opacity4 = useTransform(springScroll, BG_OPACITY_4.input, BG_OPACITY_4.output);
 
-  // ––––– BACKGROUND SCALING (Zoom-out on arrival) –––––
-  const backgroundScale = useTransform(springScroll, [0, 1], [1.1, 1.0]);
-  const backgroundY = useTransform(springScroll, [0, 1], ["0%", "5%"]); 
+  // ── Background pan (subtle parallax) ─────────────────────────────────────
+  const backgroundScale = useTransform(springScroll, [0, 1], [1.08, 1.0]);
+  const backgroundY     = useTransform(springScroll, [0, 1], ["0%", "5%"]);
 
-  // ––––– DYNAMIC UI SHIFTING (Text colors) –––––
-  const themeColor = useTransform(
-    springScroll, 
-    [0, 0.15,  0.25, 0.35,  0.45, 0.55,  0.70], 
-    [
-      "#f8fafc", // Mountains
-      "#f8fafc", 
-      "#fef08a", // Vineyards
-      "#fef08a", 
-      "#99f6e4", // River
-      "#99f6e4", 
-      "#bae6fd"  // Night
-    ]
-  );
+  // ── Accent color (tied to scene) ──────────────────────────────────────────
+  const themeColor = useTransform(springScroll, THEME_INPUT, THEME_OUTPUT);
 
-  // ––––– DYNAMIC SUBTITLES –––––
-  const sub1Opacity = useTransform(springScroll, [0, 0.10, 0.20], [1, 1, 0]);
-  const sub2Opacity = useTransform(springScroll, [0.10, 0.20, 0.30, 0.40], [0, 1, 1, 0]);
-  const sub3Opacity = useTransform(springScroll, [0.30, 0.40, 0.50, 0.60], [0, 1, 1, 0]);
-  const sub4Opacity = useTransform(springScroll, [0.55, 0.70, 1.0], [0, 1, 1]);
+  // ── Subtitle crossfades ───────────────────────────────────────────────────
+  const sub1Opacity = useTransform(springScroll, SUB1_INPUT, FADE_01);
+  const sub2Opacity = useTransform(springScroll, SUB2_INPUT, FADE_0110);
+  const sub3Opacity = useTransform(springScroll, SUB3_INPUT, FADE_0110);
+  const sub4Opacity = useTransform(springScroll, SUB4_INPUT, FADE_011);
 
-  // ––––– PROGRESS TIMELINE (Right side) –––––
+  // ── Progress bar ──────────────────────────────────────────────────────────
   const progressHeight = useTransform(springScroll, [0, 1], ["0%", "100%"]);
 
+  // useMemo so layer array identity is stable across re-renders
+  const opacities = useMemo(
+    () => [opacity1, opacity2, opacity3, opacity4],
+    [opacity1, opacity2, opacity3, opacity4]
+  );
+
+  const LAYERS = useMemo(
+    () => [
+      { bg: "bg-[url('/images/bg-mountains.webp')]" },
+      { bg: "bg-[url('/images/bg-vineyards.webp')]" },
+      { bg: "bg-[url('/images/bg-river.webp')]" },
+      { bg: "bg-[url('/images/bg-sheep-night.png')]" },
+    ],
+    []
+  );
+
   return (
-    <section ref={containerRef} className="relative h-[800vh]">
-      <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col bg-slate-950 context-layer">
-        
-        {/* =========================================================
-            BACKGROUND ENGINE (Pure Image Cross-Fading)
-            ========================================================= */}
-        <motion.div 
+    <section ref={containerRef} style={{ height: heroHeight }} className="relative">
+      <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col bg-slate-950">
+
+        {/* ── Background engine ───────────────────────────────────────────── */}
+        <motion.div
           className="absolute inset-0 z-0 origin-center"
-          style={{ 
-            scale: backgroundScale, 
-            y: backgroundY, 
-            willChange: "transform" 
-          }}
+          style={{ scale: backgroundScale, y: backgroundY, willChange: "transform" }}
         >
-          {/* Layer 1: Mountains */}
-          <motion.div 
-            className="absolute inset-0 bg-cover bg-center bg-[url('/images/bg-mountains.webp')]" 
-            style={{ opacity: opacities[0], willChange: 'opacity' }}
-          />
-
-          {/* Layer 2: Vineyards */}
-          <motion.div 
-            className="absolute inset-0 bg-cover bg-center bg-[url('/images/bg-vineyards.webp')]"
-            style={{ opacity: opacities[1], willChange: 'opacity' }}
-          />
-
-          {/* Layer 3: River */}
-          <motion.div 
-            className="absolute inset-0 bg-cover bg-center bg-[url('/images/bg-river.webp')]"
-            style={{ opacity: opacities[2], willChange: 'opacity' }}
-          />
-
-          {/* Layer 4: Sheep Farm (Night) */}
-          <motion.div 
-            className="absolute inset-0 bg-cover bg-center bg-[url('/images/bg-sheep-night.png')]"
-            style={{ opacity: opacities[3], willChange: 'opacity' }}
-          />
+          {LAYERS.map((layer, i) => (
+            <motion.div
+              key={i}
+              className={`absolute inset-0 bg-cover bg-center ${layer.bg}`}
+              style={{ opacity: opacities[i], willChange: "opacity" }}
+            />
+          ))}
         </motion.div>
 
-        {/* Ambient Dark Overlay for High-Contrast Text Readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60 z-10 pointer-events-none" />
+        {/* Ambient overlay — improves text contrast without washing out imagery */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/65 z-10 pointer-events-none" />
 
-        {/* =========================================================
-            FOREGROUND SECTIONS (Minimalist Typography)
-            ========================================================= */}
+        {/* ── Typography ──────────────────────────────────────────────────── */}
         <div className="relative z-20 flex flex-col items-center justify-center h-screen w-full px-6 text-center pointer-events-none">
-          {/* Main Typographic Display (STATIC - No Parallax) */}
-          <div className="max-w-6xl relative -mt-32">
-            <motion.h1 
+          <div className="max-w-6xl relative -mt-32 sm:-mt-32">
+            <motion.h1
               initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               transition={{ duration: 1.2, ease: "easeOut", delay: 0.2 }}
-              className="font-display text-6xl sm:text-7xl md:text-8xl lg:text-[7.5rem] font-bold text-white tracking-tight leading-[1.05] mb-6 max-w-6xl drop-shadow-2xl"
+              className="font-display text-5xl sm:text-7xl md:text-8xl lg:text-[7.5rem] font-bold text-white tracking-tight leading-[1.05] mb-6 max-w-6xl drop-shadow-2xl text-balance"
             >
               <span className="text-white/95">Odkrijte Slovenijo,</span>
-              <motion.span 
+              <motion.span
                 className="block mt-2 font-black italic drop-shadow-lg"
                 style={{ color: themeColor, willChange: "color" }}
               >
                 ki diši po domačem.
               </motion.span>
             </motion.h1>
-            
-            {/* Dynamic Subtitles */}
-            <div className="relative h-12 flex justify-center items-center mt-8 text-2xl md:text-3xl font-display font-medium italic text-white/90 drop-shadow-lg tracking-wide">
+
+            {/* Dynamic subtitles */}
+            <div className="relative h-10 sm:h-12 flex justify-center items-center mt-6 sm:mt-8 text-xl sm:text-2xl md:text-3xl font-display font-medium italic text-white/90 drop-shadow-lg tracking-wide">
               <motion.p className="absolute" style={{ opacity: sub1Opacity, willChange: "opacity" }}>
                 Kjer se nebo dotakne gora.
               </motion.p>
@@ -138,15 +151,11 @@ export function ScrollytellingWrapper() {
           </div>
         </div>
 
-        {/* =========================================================
-            VERTICAL PROGRESS INDICATOR (Apple-Style)
-            ========================================================= */}
-        <div className="absolute right-6 top-1/2 -translate-y-1/2 z-50 flex flex-col items-center gap-2 hidden md:flex">
-          {/* Background Track */}
+        {/* ── Progress indicator — desktop only ───────────────────────────── */}
+        <div className="absolute right-6 top-1/2 -translate-y-1/2 z-50 hidden md:flex flex-col items-center gap-2">
           <div className="w-[2px] h-32 bg-white/10 rounded-full relative overflow-hidden">
-            {/* Active Fill Line linked to Day-to-Night color */}
-            <motion.div 
-              className="absolute top-0 left-0 w-full bg-white/70"
+            <motion.div
+              className="absolute top-0 left-0 w-full"
               style={{ height: progressHeight, backgroundColor: themeColor }}
             />
           </div>

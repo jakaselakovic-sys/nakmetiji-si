@@ -14,6 +14,7 @@
 
 "use server";
 
+import { z } from "zod";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import {
   posljiEmailLastniku,
@@ -31,18 +32,67 @@ interface AtomicRpcResult {
   code?: "DATE_CONFLICT" | "OVER_CAPACITY" | "RACE_CONDITION" | "NOT_FOUND" | "FARM_INACTIVE" | "INVALID_DATES" | "PAST_DATES" | "INTERNAL";
 }
 
+// ─── Validation schema ────────────────────────────────────────────────────────
+// Guards the server action boundary — raw form/client data is untrusted.
+// Zod 4 coerces strings where needed and gives specific error messages in Slovenian.
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+const RezervacijaSchema = z
+  .object({
+    kmetija_id:    z.string().uuid({ message: "Neveljaven ID kmetije." }),
+    datum_od:      z.string().regex(ISO_DATE, { message: "Datum prihoda mora biti v obliki LLLL-MM-DD." }),
+    datum_do:      z.string().regex(ISO_DATE, { message: "Datum odhoda mora biti v obliki LLLL-MM-DD." }),
+    gost_ime:      z.string().min(2, { message: "Ime mora imeti vsaj 2 znaka." }).max(120),
+    gost_email:    z.string().email({ message: "Neveljaven e-poštni naslov." }),
+    gost_telefon:  z.string().max(30).optional(),
+    stevilo_oseb:  z.number().int().min(1, { message: "Vsaj 1 gost." }).max(50, { message: "Največ 50 gostov." }),
+    opombe:        z.string().max(1000).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const today = new Date().toISOString().split("T")[0];
+    if (data.datum_od < today) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["datum_od"],
+        message: "Datum prihoda ne sme biti v preteklosti.",
+      });
+    }
+    if (data.datum_do <= data.datum_od) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["datum_do"],
+        message: "Datum odhoda mora biti po datumu prihoda.",
+      });
+    }
+    // Prevent excessively long bookings (> 60 nights)
+    const nights =
+      (new Date(data.datum_do).getTime() - new Date(data.datum_od).getTime()) /
+      86_400_000;
+    if (nights > 60) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["datum_do"],
+        message: "Rezervacija ne sme presegati 60 nočitev.",
+      });
+    }
+  });
+
+type RezervacijaInput = z.infer<typeof RezervacijaSchema>;
+
 // ─── Oddaj rezervacijo (gost) ─────────────────────────────────────────────────
 
-export async function oddajRezervacijo(input: {
-  kmetija_id: string;
-  datum_od: string;         // "YYYY-MM-DD"
-  datum_do: string;
-  gost_ime: string;
-  gost_email: string;
-  gost_telefon?: string;
-  stevilo_oseb: number;
-  opombe?: string;
-}): Promise<{ ok: boolean; napaka?: string; id?: string }> {
+export async function oddajRezervacijo(
+  rawInput: RezervacijaInput
+): Promise<{ ok: boolean; napaka?: string; id?: string }> {
+  // Validate at the server action boundary before any DB access
+  const parsed = RezervacijaSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    const firstError = parsed.error.issues[0]?.message ?? "Neveljavni podatki.";
+    return { ok: false, napaka: firstError };
+  }
+  const input = parsed.data;
+
   const supabase = await createSupabaseServer();
 
   // ── Fetch farm metadata for price calculation and emails ──────────────────

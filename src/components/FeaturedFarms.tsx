@@ -64,9 +64,10 @@ export async function FeaturedFarms() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
-            {kmetije.map((kmetija) => (
+            {kmetije.map((kmetija, i) => (
               <FarmCard
                 key={kmetija.id}
+                priority={i < 3}
                 farm={{
                   slug: kmetija.slug,
                   name: kmetija.ime,

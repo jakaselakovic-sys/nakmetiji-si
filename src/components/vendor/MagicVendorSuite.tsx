@@ -250,9 +250,9 @@ const LANG_TABS = [
 ] as const;
 type LangKey = "sl" | "en" | "de" | "it";
 
-function StorytellerTab() {
-  const [kmetijaIme, setKmetijaIme] = useState("");
-  const [regija, setRegija] = useState<string>("gorenjska");
+function StorytellerTab({ defaultIme = "", defaultRegija = "gorenjska" }: { defaultIme?: string; defaultRegija?: string }) {
+  const [kmetijaIme, setKmetijaIme] = useState(defaultIme);
+  const [regija, setRegija] = useState<string>(defaultRegija);
   const [bulletsText, setBulletsText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -423,9 +423,9 @@ function StorytellerTab() {
 
 // ─── Price Advisor Tab ───────────────────────────────────────────────────────
 
-function PriceAdvisorTab() {
-  const [priceStr, setPriceStr] = useState("");
-  const [regija, setRegija] = useState<string>("gorenjska");
+function PriceAdvisorTab({ defaultPrice, defaultRegija = "gorenjska" }: { defaultPrice?: number; defaultRegija?: string }) {
+  const [priceStr, setPriceStr] = useState(defaultPrice ? String(defaultPrice) : "");
+  const [regija, setRegija] = useState<string>(defaultRegija);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PriceAdvisorResult | null>(null);
@@ -677,7 +677,14 @@ const TOOL_CARDS = [
   },
 ] as const;
 
-export function MagicVendorSuite() {
+interface MagicVendorSuiteProps {
+  kmetijaId?: string;
+  kmetijaIme?: string;
+  kmetijaRegija?: string;
+  cenaNoc?: number | null;
+}
+
+export function MagicVendorSuite({ kmetijaIme = "", kmetijaRegija = "gorenjska", cenaNoc }: MagicVendorSuiteProps) {
   const [activeTool, setActiveTool] = useState<ToolKey>("none");
 
   return (
@@ -734,8 +741,12 @@ export function MagicVendorSuite() {
               className="bg-black/20 border border-white/10 rounded-2xl p-6"
             >
               {activeTool === "appleify" && <AppleifyTab />}
-              {activeTool === "storyteller" && <StorytellerTab />}
-              {activeTool === "price" && <PriceAdvisorTab />}
+              {activeTool === "storyteller" && (
+                <StorytellerTab defaultIme={kmetijaIme} defaultRegija={kmetijaRegija} />
+              )}
+              {activeTool === "price" && (
+                <PriceAdvisorTab defaultPrice={cenaNoc ?? undefined} defaultRegija={kmetijaRegija} />
+              )}
             </motion.div>
           )}
         </AnimatePresence>

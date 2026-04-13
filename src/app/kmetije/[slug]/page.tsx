@@ -8,6 +8,7 @@ import { Metadata } from "next";
 import { pridobiKmetijo } from "@/lib/actions/kmetije";
 import { REGIJA_LABELS } from "@/types/database";
 import { FarmProfileClient } from "./FarmProfileClient";
+import { createSupabaseServer } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,22 @@ export default async function FarmProfilePage({ params }: Props) {
     izdelki: data.izdelki ?? [],
   };
 
+  // Green Passport: check if user is logged in and has already stamped this farm
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isLoggedIn = !!user;
+
+  let isAlreadyStamped = false;
+  if (user) {
+    const { data: stamp } = await supabase
+      .from("green_stamps")
+      .select("id")
+      .eq("gost_id", user.id)
+      .eq("kmetija_id", data.id)
+      .maybeSingle();
+    isAlreadyStamped = !!stamp;
+  }
+
   // ── JSON-LD Schema.org LodgingBusiness ──
   const jsonLd = {
     "@context": "https://schema.org",
@@ -113,6 +130,8 @@ export default async function FarmProfilePage({ params }: Props) {
       <FarmProfileClient
         kmetija={kmetijaZaMnenja}
         regionLabel={regionLabel}
+        isLoggedIn={isLoggedIn}
+        isAlreadyStamped={isAlreadyStamped}
       />
     </>
   );

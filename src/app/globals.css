@@ -52,6 +52,22 @@
   --font-display: var(--font-playfair), Georgia, "Times New Roman", serif;
 }
 
+/* ── Z-index scale ───────────────────────────────────────────────────────── */
+/* Single source of truth. Never use raw z-* Tailwind classes for these layers. */
+
+:root {
+  --z-base:      0;
+  --z-raised:    10;
+  --z-dropdown:  20;
+  --z-map-card:  30;  /* InfoCard on Mapbox */
+  --z-sticky:    35;
+  --z-nav:       40;
+  --z-oracle:    50;  /* OracleConcierge FAB */
+  --z-modal:    100;  /* FarmVideoModal, lightbox */
+  --z-demo:     200;  /* DemoDisclaimer */
+  --z-toast:    300;
+}
+
 /* ── Base stili ──────────────────────────────────────────────────────────── */
 
 html {

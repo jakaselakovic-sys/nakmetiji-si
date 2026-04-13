@@ -162,6 +162,70 @@ function padR(s: string, len: number): string {
   return s.slice(0, len).padEnd(len, " ");
 }
 
+// ─── QR string validator ─────────────────────────────────────────────────────
+//
+// Call before rendering the payment slip.  Returns a typed result so the caller
+// can show an error state instead of a broken/empty QR code.
+//
+// BSI UPN QR field order (14 \n-delimited fields):
+//   0  UPNQR
+//   1  payer_name
+//   2  payer_address
+//   3  payer_city
+//   4  amount_cents  — exactly 11 digits
+//   5  payment_date
+//   6  urgency
+//   7  recipient_name
+//   8  recipient_address
+//   9  recipient_city
+//  10  iban           — SI IBAN (SI56 + 15 digits)
+//  11  reference      — starts with SI
+//  12  purpose_code   — 4 uppercase letters
+//  13  description
+
+export type UpnQrValidation =
+  | { valid: true }
+  | { valid: false; reason: string };
+
+export function validateUpnQr(qrString: string): UpnQrValidation {
+  if (!qrString || typeof qrString !== "string") {
+    return { valid: false, reason: "QR niz je prazen." };
+  }
+
+  const fields = qrString.split("\n");
+
+  if (fields.length < 14) {
+    return { valid: false, reason: `QR niz ima ${fields.length} polj (pričakovano 14).` };
+  }
+
+  if (fields[0] !== "UPNQR") {
+    return { valid: false, reason: "QR niz se ne začne z 'UPNQR'." };
+  }
+
+  // Amount: exactly 11 digits
+  if (!/^\d{11}$/.test(fields[4])) {
+    return { valid: false, reason: "Znesek v QR nizu ni veljavnih 11 števk." };
+  }
+
+  // IBAN: SI56 + 15 digits (no spaces)
+  const iban = fields[10].replace(/\s/g, "");
+  if (!/^SI\d{17}$/.test(iban)) {
+    return { valid: false, reason: `IBAN '${iban}' ni v veljavni obliki (SI + 17 številk).` };
+  }
+
+  // Reference starts with SI
+  if (!fields[11].startsWith("SI")) {
+    return { valid: false, reason: "Referenca mora začeti z 'SI'." };
+  }
+
+  // Purpose code: 4 uppercase letters
+  if (!/^[A-Z]{4}$/.test(fields[12])) {
+    return { valid: false, reason: "Koda namena mora biti 4 velike črke." };
+  }
+
+  return { valid: true };
+}
+
 // ─── Platform defaults (override via env) ────────────────────────────────────
 //
 // In production: each farm has their own IBAN in the database.

@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { potrdiRezervacijo, zavrniRezervacijo } from "@/lib/actions/rezervacije";
 import { GreenPassportShare } from "@/components/vendor/GreenPassportShare";
-import { posodobiSlikeKmetije } from "@/lib/actions/kmetije";
+import { posodobiSlikeKmetije, togglePremium } from "@/lib/actions/kmetije";
 import { compressImage, formatBytes } from "@/lib/compress";
 import type { Rezervacija, RezervacijaStatus } from "@/types/database";
 import { REZERVACIJA_STATUS_LABELS } from "@/types/database";
@@ -18,6 +18,64 @@ interface Props {
   kmetijaIme: string;
   rezervacije: Rezervacija[];
   naslovnaSlika: string;
+  isPremium?: boolean;
+}
+
+// ─── Premium Boost Card ──────────────────────────────────────────────────────
+
+function PremiumBoostCard({ kmetijaId, isPremium: initialPremium }: { kmetijaId: string; isPremium: boolean }) {
+  const [premium, setPremium] = useState(initialPremium);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function handleToggle() {
+    setLoading(true);
+    setMsg(null);
+    const res = await togglePremium(kmetijaId, !premium);
+    setLoading(false);
+    if (res.ok) {
+      setPremium(res.premium ?? !premium);
+      setMsg(res.premium ? "Premium oglas aktiviran!" : "Premium oglas deaktiviran.");
+    } else {
+      setMsg(res.napaka ?? "Napaka.");
+    }
+  }
+
+  return (
+    <div className={`rounded-2xl border p-5 shadow-sm transition-colors ${premium ? "bg-amber-50 border-amber-200" : "bg-white border-earth-200/60"}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-lg">⭐</span>
+            <h4 className="text-sm font-bold text-forest-900">Premium oglas</h4>
+            {premium && (
+              <span className="text-[10px] font-bold bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full uppercase tracking-wide">Aktiven</span>
+            )}
+          </div>
+          <p className="text-xs text-earth-500 leading-relaxed">
+            Premium kmetije se prikažejo na vrhu iskanja in v priporočilih Orakla (+20 točk pri rangiranju).
+          </p>
+          {msg && (
+            <p className={`text-xs mt-2 font-semibold ${msg.includes("Napaka") ? "text-red-600" : "text-forest-700"}`}>
+              {msg}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={handleToggle}
+          disabled={loading}
+          className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+            premium
+              ? "bg-earth-100 text-earth-700 hover:bg-earth-200"
+              : "bg-amber-500 text-white hover:bg-amber-600 shadow-md"
+          } disabled:opacity-50`}
+        >
+          {loading && <Loader2 size={14} className="animate-spin" />}
+          {premium ? "Deaktiviraj" : "Aktiviraj Premium"}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 const STATUS_COLORS: Record<RezervacijaStatus, string> = {
@@ -113,7 +171,7 @@ function OccupancyCalendar({ rezervacije }: { rezervacije: Rezervacija[] }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika }: Props) {
+export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika, isPremium }: Props) {
   // Real state — source of truth between re-renders
   const [rezervacije, setRezervacije] = useState(initialRez);
   const [activeFilter, setActiveFilter] = useState<RezervacijaStatus | "vse">("vse");
@@ -270,6 +328,11 @@ export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika 
           </div>
         ))}
       </div>
+
+      {/* ── Premium Boost ───────────────────────────────────────────── */}
+      {kmetijaId && (
+        <PremiumBoostCard kmetijaId={kmetijaId} isPremium={isPremium ?? false} />
+      )}
 
       {/* ── Rezervacije ─────────────────────────────────────────────── */}
       <div className="rounded-2xl bg-white border border-earth-200/60 shadow-sm overflow-hidden">

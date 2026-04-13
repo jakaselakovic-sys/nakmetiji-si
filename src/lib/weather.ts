@@ -93,7 +93,9 @@ export function shortDay(isoDate: string): string {
   return d.toLocaleDateString("sl-SI", { weekday: "short" });
 }
 
-// ─── In-memory cache (30 min TTL) ──────────────────────────────────────────
+// ─── In-memory client cache (30 min TTL) ────────────────────────────────────
+// Prevents re-fetching the proxy on every WeatherWidget re-render in the same
+// browser tab. The real 1-hour server cache lives in /api/weather.
 
 const CACHE = new Map<string, WeatherData>();
 const CACHE_TTL = 30 * 60 * 1000;
@@ -102,7 +104,7 @@ function cacheKey(lat: number, lng: number) {
   return `${lat.toFixed(2)},${lng.toFixed(2)}`;
 }
 
-// ─── Fetcher ────────────────────────────────────────────────────────────────
+// ─── Fetcher (goes through /api/weather proxy, not Open-Meteo directly) ─────
 
 export async function fetchWeather(
   lat: number,
@@ -113,33 +115,11 @@ export async function fetchWeather(
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL) return cached;
 
   try {
-    const params = new URLSearchParams({
-      latitude: lat.toFixed(4),
-      longitude: lng.toFixed(4),
-      current: [
-        "temperature_2m",
-        "relative_humidity_2m",
-        "apparent_temperature",
-        "precipitation",
-        "weather_code",
-        "wind_speed_10m",
-        "wind_direction_10m",
-        "uv_index",
-      ].join(","),
-      daily: [
-        "weather_code",
-        "temperature_2m_max",
-        "temperature_2m_min",
-        "precipitation_probability_max",
-        "precipitation_sum",
-      ].join(","),
-      timezone: "Europe/Ljubljana",
-      forecast_days: "7",
-    });
-
+    // Use our server-side proxy which has Vercel Data Cache (1h revalidation).
+    // This keeps Open-Meteo hidden from the browser and shares cache across users.
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
     const resp = await fetch(
-      `https://api.open-meteo.com/v1/forecast?${params}`,
-      { next: { revalidate: 1800 } }  // Next.js cache hint
+      `${origin}/api/weather?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}`
     );
     if (!resp.ok) return null;
 

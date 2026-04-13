@@ -42,6 +42,8 @@ import { IZDELEK_KATEGORIJA_LABELS } from "@/types/database";
 import type { Kmetija, Dozivetje, Mnenje, Izdelek } from "@/types/database";
 import { oddajRezervacijo } from "@/lib/actions/rezervacije";
 import { createSupabaseBrowser } from "@/lib/supabase/client";
+import { GreenStampButton } from "@/components/GreenStampButton";
+import { FarmVideoModal } from "@/components/FarmVideoModal";
 
 // ─── Share buttons ──────────────────────────────────────────────────────────
 
@@ -99,6 +101,8 @@ interface Props {
     izdelki: Izdelek[];
   };
   regionLabel: string;
+  isLoggedIn: boolean;
+  isAlreadyStamped: boolean;
 }
 
 // ─── Experience icons ───────────────────────────────────────────────────────
@@ -113,7 +117,7 @@ const EXPERIENCE_ICONS: Record<string, string> = {
 // MAIN COMPONENT
 // =============================================================================
 
-export function FarmProfileClient({ kmetija, regionLabel }: Props) {
+export function FarmProfileClient({ kmetija, regionLabel, isLoggedIn, isAlreadyStamped }: Props) {
   // ── Lightbox state ──
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -221,27 +225,41 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
           1. HERO — Cover photo
           ═══════════════════════════════════════════════════════════════════ */}
       <section id="farm-hero" className="relative h-[50vh] sm:h-[55vh] md:h-[60vh] lg:h-[65vh] overflow-hidden">
-        <Image
-          src={kmetija.naslovna_slika}
-          alt={kmetija.ime}
-          fill
-          sizes="100vw"
-          className="object-cover"
-          priority
-          quality={90}
-          placeholder="blur"
-          blurDataURL={BLUR_DATA_URL}
-        />
+        {/* Ken Burns ambient zoom+pan — only when there's no video (video provides its own motion) */}
+        <motion.div
+          className="absolute inset-0"
+          {...(!kmetija.video_url && {
+            animate: { scale: [1, 1.08, 1], x: [0, -12, 0], y: [0, -6, 0] },
+            transition: { duration: 20, ease: "easeInOut", repeat: Infinity, repeatType: "mirror" },
+          })}
+        >
+          <Image
+            src={kmetija.naslovna_slika}
+            alt={kmetija.ime}
+            fill
+            sizes="100vw"
+            className="object-cover"
+            priority
+            quality={90}
+            placeholder="blur"
+            blurDataURL={BLUR_DATA_URL}
+          />
+        </motion.div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/10" />
 
-        {/* Gallery button */}
-        <button
-          onClick={() => { setLightboxIndex(0); setLightboxOpen(true); }}
-          className="absolute bottom-6 right-6 z-10 flex items-center gap-2 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/30 transition-all"
-        >
-          <Camera size={18} />
-          Vse slike ({allImages.length})
-        </button>
+        {/* Hero controls — gallery + video (bottom-right) */}
+        <div className="absolute bottom-6 right-6 z-10 flex items-center gap-2">
+          {kmetija.video_url && (
+            <FarmVideoModal videoUrl={kmetija.video_url} farmIme={kmetija.ime} />
+          )}
+          <button
+            onClick={() => { setLightboxIndex(0); setLightboxOpen(true); }}
+            className="flex items-center gap-2 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/30 transition-all"
+          >
+            <Camera size={18} />
+            Vse slike ({allImages.length})
+          </button>
+        </div>
 
         {/* Bottom info bar */}
         <div className="absolute bottom-0 left-0 right-0 z-10">
@@ -816,6 +834,19 @@ export function FarmProfileClient({ kmetija, regionLabel }: Props) {
                     </li>
                   )}
                 </ul>
+              </div>
+
+              {/* Green Passport stamp */}
+              <div className="rounded-2xl bg-white border border-emerald-200/70 shadow-sm p-5">
+                <h4 className="text-sm font-bold text-forest-900 mb-1 flex items-center gap-2">
+                  🌿 Zeleni Potni List
+                </h4>
+                <p className="text-xs text-earth-500 mb-3">Obiskal si to kmetijo? Zabelezi obisk v svojem potnem listu.</p>
+                <GreenStampButton
+                  farmSlug={kmetija.slug}
+                  isLoggedIn={isLoggedIn}
+                  isAlreadyStamped={isAlreadyStamped}
+                />
               </div>
 
               {/* Share */}

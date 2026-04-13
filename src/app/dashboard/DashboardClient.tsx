@@ -11,10 +11,11 @@ import { PregledView } from "./views/PregledView";
 import { AnalyticsView } from "./views/AnalyticsView";
 import { SettingsView } from "./views/SettingsView";
 import { UrediKmetijoView } from "./views/UrediKmetijoView";
+import { MagicVendorSuite } from "@/components/vendor/MagicVendorSuite";
 
-type DashboardTab = "pregled" | "uredi" | "analitika" | "nastavitve";
+type DashboardTab = "pregled" | "uredi" | "analitika" | "ai-orodja" | "nastavitve";
 
-const SIDEBAR_ITEMS: { key: DashboardTab; label: string; icon: React.ReactNode; onlyWithFarm?: boolean }[] = [
+const SIDEBAR_ITEMS: { key: DashboardTab; label: string; icon: React.ReactNode; onlyWithFarm?: boolean; badge?: string }[] = [
   {
     key: "pregled",
     label: "Pregled",
@@ -40,6 +41,17 @@ const SIDEBAR_ITEMS: { key: DashboardTab; label: string; icon: React.ReactNode; 
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    ),
+  },
+  {
+    key: "ai-orodja",
+    label: "AI Orodja",
+    onlyWithFarm: true,
+    badge: "Nova",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
       </svg>
     ),
   },
@@ -85,6 +97,7 @@ export function DashboardClient({ userEmail, profilIme, vloga, kmetija, rezervac
   const TAB_TITLES: Record<DashboardTab, { title: string; sub: string }> = {
     pregled: { title: "Pregled", sub: "Rezervacije, status in slike" },
     uredi: { title: "Uredi kmetijo", sub: "Uredite podatke, opis in doživetja" },
+    "ai-orodja": { title: "AI Orodja", sub: "Storyteller, analiza fotografij in svetovalec cen" },
     analitika: { title: "Analitika", sub: "Pregled obiskov in statistik" },
     nastavitve: { title: "Nastavitve", sub: "Upravljajte nastavitve računa" },
   };
@@ -155,6 +168,11 @@ export function DashboardClient({ userEmail, profilIme, vloga, kmetija, rezervac
                 {item.icon}
               </span>
               {item.label}
+              {item.badge && (
+                <span className="ml-auto text-[10px] font-bold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">
+                  {item.badge}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -236,6 +254,7 @@ export function DashboardClient({ userEmail, profilIme, vloga, kmetija, rezervac
               kmetijaIme={kmetija?.ime ?? ""}
               rezervacije={rezervacije}
               naslovnaSlika={kmetija?.naslovna_slika ?? ""}
+              isPremium={kmetija?.premium ?? false}
             />
           )}
           {activeTab === "uredi" && kmetija && (
@@ -250,6 +269,19 @@ export function DashboardClient({ userEmail, profilIme, vloga, kmetija, rezervac
               kmetija={kmetija}
               rezervacije={rezervacije}
             />
+          )}
+          {activeTab === "ai-orodja" && kmetija && (
+            <MagicVendorSuite
+              kmetijaId={kmetija.id}
+              kmetijaIme={kmetija.ime}
+              kmetijaRegija={kmetija.regija}
+              cenaNoc={kmetija.cena_noc}
+            />
+          )}
+          {activeTab === "ai-orodja" && !kmetija && (
+            <div className="rounded-3xl border-2 border-dashed border-earth-300 bg-white/60 p-12 text-center">
+              <p className="text-earth-500 font-medium">Najprej dodajte kmetijo, da lahko dostopate do AI orodij.</p>
+            </div>
           )}
           {activeTab === "nastavitve" && (
             <SettingsView

@@ -549,6 +549,7 @@ export function KmetijeClient({ initialKmetije, dozivetja }: Props) {
                   transition={{ duration: 0.3, delay: i * 0.04 }}
                 >
                   <FarmCard
+                    priority={i < 3}
                     farm={{
                       slug: kmetija.slug,
                       name: kmetija.ime,

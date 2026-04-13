@@ -15,7 +15,7 @@ import { GuestAwaiting } from "./templates/GuestAwaiting";
 import { GuestConfirmed } from "./templates/GuestConfirmed";
 import { GuestRejected } from "./templates/GuestRejected";
 import { AutoCancelled } from "./templates/AutoCancelled";
-import { buildUpn, generateUpnReference, PLATFORM_IBAN, PLATFORM_BIC, PLATFORM_IME } from "@/lib/upn";
+import { buildUpn, generateUpnReference, validateUpnQr, PLATFORM_IBAN, PLATFORM_BIC, PLATFORM_IME } from "@/lib/upn";
 import React from "react";
 
 const FROM = "NaKmetiji.si <obvestila@nakmetiji.si>";
@@ -173,6 +173,13 @@ export async function posljiPotrditev(params: {
     rezervacija_id: params.rezervacija_id,
     kmetija_ime_kratko: params.kmetija_ime.slice(0, 22),
   });
+
+  // Guard: abort email if QR string is malformed — better to send no slip than a broken one
+  const qrValidation = validateUpnQr(upnResult.qr_string);
+  if (!qrValidation.valid) {
+    console.error("[email] UPN QR validation failed:", qrValidation.reason, { rezervacija_id: params.rezervacija_id });
+    return; // skip sending rather than deliver a broken payment slip
+  }
 
   const rokStr = rokPlacila.toLocaleDateString("sl-SI", {
     day: "2-digit", month: "2-digit", year: "numeric",

@@ -79,6 +79,23 @@ function useLightCycle() {
 // Markdown-lite renderer (bold, links only — no external dep)
 // ---------------------------------------------------------------------------
 
+// Allowlist: only internal farm paths and safe absolute HTTPS URLs.
+// Prevents XSS if a prompt-injected model response emits javascript: or data: URLs.
+function isSafeUrl(url: string): boolean {
+  if (url.startsWith("/kmetije/")) return true;
+  if (url.startsWith("/")) return true; // any internal path
+  try {
+    const { protocol, hostname } = new URL(url);
+    return (
+      (protocol === "https:" || protocol === "http:") &&
+      // Restrict external links to known-safe domains only
+      (hostname === "nakmetiji.si" || hostname.endsWith(".nakmetiji.si"))
+    );
+  } catch {
+    return false;
+  }
+}
+
 function renderMarkdown(text: string): React.ReactNode[] {
   const parts = text.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g);
   return parts.map((part, i) => {
@@ -90,9 +107,9 @@ function renderMarkdown(text: string): React.ReactNode[] {
           {boldMatch[1]}
         </strong>
       );
-    // Link: [text](url)
+    // Link: [text](url) — URL is validated before rendering
     const linkMatch = part.match(/^\[(.+)\]\((.+)\)$/);
-    if (linkMatch)
+    if (linkMatch && isSafeUrl(linkMatch[2]))
       return (
         <Link
           key={i}
@@ -103,6 +120,8 @@ function renderMarkdown(text: string): React.ReactNode[] {
           <ChevronRight size={12} />
         </Link>
       );
+    // Unsafe or unrecognised URL — render as plain text, never as a link
+    if (linkMatch) return <span key={i}>{linkMatch[1]}</span>;
     return <span key={i}>{part}</span>;
   });
 }
@@ -111,7 +130,7 @@ function renderMarkdown(text: string): React.ReactNode[] {
 function renderLine(line: string, i: number): React.ReactNode {
   // ## [Farm Name](/kmetije/slug)
   const headingLinkMatch = line.match(/^##\s+\[(.+?)\]\((.+?)\)$/);
-  if (headingLinkMatch)
+  if (headingLinkMatch && isSafeUrl(headingLinkMatch[2]))
     return (
       <Link
         key={i}
@@ -121,6 +140,13 @@ function renderLine(line: string, i: number): React.ReactNode {
         {headingLinkMatch[1]}
         <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
       </Link>
+    );
+  // Unsafe heading link — render as plain heading
+  if (headingLinkMatch)
+    return (
+      <p key={i} className="mt-3 mb-1 font-bold text-forest-900 text-base leading-snug">
+        {headingLinkMatch[1]}
+      </p>
     );
   // ## Plain heading (fallback)
   const headingMatch = line.match(/^##\s+(.+)$/);
@@ -312,6 +338,9 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const lightCycle = useLightCycle();
+  // AbortController ref — cancelled on component unmount or when a new message
+  // is sent while a previous stream is still running.
+  const abortRef = useRef<AbortController | null>(null);
 
   // Auto-scroll to bottom on new content
   useEffect(() => {
@@ -349,9 +378,23 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
     }
   }, [isOpen, hasGreeted, locale]);
 
+  // Cancel stream on unmount (e.g. user navigates away mid-stream)
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, []);
+
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || isLoading) return;
+
+      // Cancel any in-flight stream before starting a new one
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      // 45-second hard timeout — Groq maxDuration is 60s on server, give
+      // ourselves 15s of margin to detect hangs before the server kills it.
+      const timeoutId = setTimeout(() => controller.abort(), 45_000);
 
       const userMessage: OracleMessage = { role: "user", content: text };
       setMessages((prev) => [...prev, userMessage]);
@@ -377,6 +420,7 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: text, locale, history }),
+          signal: controller.signal,
         });
 
         if (!response.ok || !response.body) throw new Error("Stream unavailable");
@@ -437,12 +481,15 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
           }
         }
       } catch (err) {
+        // Ignore intentional aborts (user navigated away or sent a new message)
+        if (err instanceof Error && err.name === "AbortError") return;
         console.error("[Oracle UI] Stream error:", err);
         accumulated =
           locale === "sl"
             ? "Oprosti, ta hip ne morem pomagati. Poskusi znova."
             : "Sorry, The Oracle is momentarily offline.";
       } finally {
+        clearTimeout(timeoutId);
         setIsLoading(false);
         setStatusPhase(null);
         // Finalize the last assistant message
@@ -491,8 +538,9 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
             exit={{ scale: 0, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 22 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-2xl px-5 py-3.5 text-white font-semibold text-sm shadow-2xl select-none"
+            className="fixed bottom-6 right-6 flex items-center gap-2.5 rounded-2xl px-5 py-3.5 text-white font-semibold text-sm shadow-2xl select-none"
             style={{
+              zIndex: "var(--z-oracle)",
               background: `linear-gradient(135deg, ${lightCycle.accent}, ${lightCycle.accent}cc)`,
               boxShadow: `0 8px 32px ${lightCycle.accent}55, 0 2px 8px rgba(0,0,0,0.15)`,
             }}
@@ -522,8 +570,9 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 24 }}
             transition={{ type: "spring", stiffness: 280, damping: 26 }}
-            className="fixed bottom-6 right-6 z-50 flex flex-col overflow-hidden rounded-3xl shadow-2xl"
+            className="fixed bottom-6 right-6 flex flex-col overflow-hidden rounded-3xl shadow-2xl"
             style={{
+              zIndex: "var(--z-oracle)",
               width: panelWidth,
               height: panelHeight,
               background: "rgba(255,255,255,0.72)",
