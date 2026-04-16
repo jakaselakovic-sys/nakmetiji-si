@@ -1,5 +1,6 @@
 // =============================================================================
 // NaKmetiji.si — robots.txt (generated via Next.js Metadata API)
+// Includes AI search bot rules and llms.txt reference for AI discoverability.
 // =============================================================================
 
 import type { MetadataRoute } from "next";
@@ -15,11 +16,11 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
         disallow: ["/admin/", "/dashboard/", "/api/", "/moj-potni-list"],
       },
-      // ── AI Search bots (Perplexity, Bing Copilot, you.com) — ALLOW ─────────
+      // ── AI Search bots (Perplexity, Bing Copilot, you.com, Claude) — ALLOW ─
       // These index pages for real-time AI answers — essential for AI search visibility.
       {
-        userAgent: ["PerplexityBot", "YouBot", "Applebot-Extended", "ChatGPT-User"],
-        allow: ["/", "/kmetije/", "/regije/", "/blog/", "/green-passport"],
+        userAgent: ["PerplexityBot", "YouBot", "Applebot-Extended", "ChatGPT-User", "ClaudeBot", "anthropic-ai"],
+        allow: ["/", "/kmetije/", "/regije/", "/blog/", "/green-passport", "/llms.txt", "/llms-full.txt"],
         disallow: ["/admin/", "/dashboard/", "/api/", "/moj-potni-list"],
       },
       // ── Training-only scrapers — BLOCK ─────────────────────────────────────

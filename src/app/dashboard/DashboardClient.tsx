@@ -276,6 +276,7 @@ export function DashboardClient({ userEmail, profilIme, vloga, kmetija, rezervac
               kmetijaIme={kmetija.ime}
               kmetijaRegija={kmetija.regija}
               cenaNoc={kmetija.cena_noc}
+              paket={kmetija.paket}
             />
           )}
           {activeTab === "ai-orodja" && !kmetija && (

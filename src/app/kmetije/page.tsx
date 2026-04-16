@@ -17,8 +17,29 @@ import { KmetijeClient } from "./KmetijeClient";
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: "Vse kmetije | NaKmetiji",
-  description: "Poiščite in filtrirajte turistične kmetije po vsej Sloveniji.",
+  title: "Vse turistične kmetije v Sloveniji | NaKmetiji",
+  description:
+    "Poiščite in filtrirajte turistične kmetije po vsej Sloveniji. Prenočišča, kulinarična doživetja, vinski turizem in družinska doživetja na podeželju.",
+  keywords: [
+    "turistične kmetije Slovenija",
+    "kmečki turizem",
+    "prenočišče na kmetiji",
+    "podeželski turizem",
+    "kmetija Slovenija",
+    "agroturizem",
+  ],
+  openGraph: {
+    title: "Vse turistične kmetije v Sloveniji",
+    description:
+      "Odkrijte najboljše turistične kmetije po vsej Sloveniji. Prenočišča, kulinarika, vinski turizem in doživetja za vso družino.",
+    type: "website",
+    locale: "sl_SI",
+    siteName: "NaKmetiji",
+    url: "https://nakmetiji.si/kmetije",
+  },
+  alternates: {
+    canonical: "https://nakmetiji.si/kmetije",
+  },
 };
 
 function normalizirajKmetijo(raw: Record<string, unknown>): KmetijaSDozivetji {

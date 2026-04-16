@@ -151,7 +151,7 @@ function MobileBottomSheet({
             {/* pb accounts for iOS home-indicator (safe-area-inset-bottom) */}
             <div className="px-5 pt-2 pb-[max(40px,calc(env(safe-area-inset-bottom)+24px))]">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-forest-900">Iskanje kmetij</h2>
+                <h2 className="text-lg font-bold text-forest-900">Poiščite svoj košček miru</h2>
                 <button
                   onClick={onClose}
                   className="p-2 rounded-full hover:bg-earth-100 transition-colors"
@@ -418,7 +418,7 @@ function DesktopSearchBar({ dozivetja }: { dozivetja: DozivetjeOption[] }) {
             className="w-full flex items-center justify-center gap-2.5 rounded-2xl bg-forest-700 px-10 py-5 text-white font-bold text-base shadow-lg hover:bg-forest-600 hover:shadow-xl hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
           >
             <Search size={18} strokeWidth={2.5} />
-            <span>Išči</span>
+            <span>Poiščite pot</span>
           </button>
         </div>
       </div>
@@ -458,7 +458,7 @@ export function HeroSearch({ dozivetja = [] }: { dozivetja?: DozivetjeOption[] }
               <Search size={16} strokeWidth={2.5} />
             </div>
             <div className="flex-1 text-left">
-              <p className="text-sm font-semibold text-forest-900">Kje greste?</p>
+              <p className="text-sm font-semibold text-forest-900">Kam vas kliče duša?</p>
               <p className="text-xs text-earth-500">Regija · Doživetje · Datum</p>
             </div>
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-earth-100 text-earth-600 flex-shrink-0">

@@ -42,7 +42,6 @@ import { IZDELEK_KATEGORIJA_LABELS } from "@/types/database";
 import type { Kmetija, Dozivetje, Mnenje, Izdelek } from "@/types/database";
 import { oddajRezervacijo } from "@/lib/actions/rezervacije";
 import { createSupabaseBrowser } from "@/lib/supabase/client";
-import { GreenStampButton } from "@/components/GreenStampButton";
 import { FarmVideoModal } from "@/components/FarmVideoModal";
 
 // ─── Share buttons ──────────────────────────────────────────────────────────
@@ -117,7 +116,7 @@ const EXPERIENCE_ICONS: Record<string, string> = {
 // MAIN COMPONENT
 // =============================================================================
 
-export function FarmProfileClient({ kmetija, regionLabel, isLoggedIn, isAlreadyStamped }: Props) {
+export function FarmProfileClient({ kmetija, regionLabel, isAlreadyStamped }: Props) {
   // ── Lightbox state ──
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -235,7 +234,7 @@ export function FarmProfileClient({ kmetija, regionLabel, isLoggedIn, isAlreadyS
         >
           <Image
             src={kmetija.naslovna_slika}
-            alt={kmetija.ime}
+            alt={`${kmetija.ime} — turistična kmetija ${regionLabel}, Slovenija`}
             fill
             sizes="100vw"
             className="object-cover"
@@ -324,7 +323,7 @@ export function FarmProfileClient({ kmetija, regionLabel, isLoggedIn, isAlreadyS
                 >
                   <Image
                     src={url}
-                    alt={`${kmetija.ime} - slika ${i + 1}`}
+                    alt={`${kmetija.ime} — galerija slika ${i + 1}, turistična kmetija ${regionLabel}`}
                     fill
                     className="object-cover group-hover:scale-110 transition-transform duration-500"
                     sizes="144px"
@@ -424,7 +423,7 @@ export function FarmProfileClient({ kmetija, regionLabel, isLoggedIn, isAlreadyS
                           {izdelek.slika_url ? (
                             <Image
                               src={izdelek.slika_url}
-                              alt={izdelek.ime}
+                              alt={`${izdelek.ime} — domači izdelek, ${kmetija.ime}`}
                               fill
                               className="object-cover group-hover:scale-105 transition-transform duration-500"
                               sizes="(max-width: 640px) 100vw, 33vw"
@@ -836,17 +835,32 @@ export function FarmProfileClient({ kmetija, regionLabel, isLoggedIn, isAlreadyS
                 </ul>
               </div>
 
-              {/* Green Passport stamp */}
+              {/* Green Passport stamp — QR only */}
               <div className="rounded-2xl bg-white border border-emerald-200/70 shadow-sm p-5">
                 <h4 className="text-sm font-bold text-forest-900 mb-1 flex items-center gap-2">
                   🌿 Zeleni Potni List
                 </h4>
-                <p className="text-xs text-earth-500 mb-3">Obiskal si to kmetijo? Zabelezi obisk v svojem potnem listu.</p>
-                <GreenStampButton
-                  farmSlug={kmetija.slug}
-                  isLoggedIn={isLoggedIn}
-                  isAlreadyStamped={isAlreadyStamped}
-                />
+                {isAlreadyStamped ? (
+                  <div className="flex items-center gap-2.5 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-emerald-700 mt-2">
+                    <span className="text-lg">✅</span>
+                    <div>
+                      <p className="font-bold text-sm">Žig zbran!</p>
+                      <p className="text-xs text-emerald-600">Ta kmetija je v tvojem potnem listu.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2 mt-2">
+                    <div className="flex items-start gap-3 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3">
+                      <span className="text-2xl mt-0.5">📱</span>
+                      <div>
+                        <p className="text-xs font-bold text-forest-800 mb-0.5">Skeniraj QR kodo na kmetiji</p>
+                        <p className="text-[11px] text-earth-500 leading-relaxed">
+                          Žig lahko pridobite le fizično na lokaciji kmetije — poiščite QR kodo pri gostitelju in jo skenirajte s telefonom.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Share */}
@@ -890,7 +904,7 @@ export function FarmProfileClient({ kmetija, regionLabel, isLoggedIn, isAlreadyS
             >
               <Image
                 src={allImages[lightboxIndex]}
-                alt={`${kmetija.ime} - slika ${lightboxIndex + 1}`}
+                alt={`${kmetija.ime} — galerija slika ${lightboxIndex + 1}, turistična kmetija ${regionLabel}`}
                 fill
                 className="object-contain"
                 sizes="90vw"

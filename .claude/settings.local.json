@@ -72,7 +72,37 @@
       "Bash(node -e ':*)",
       "Bash(node -e \"const z = require\\('zod'\\); console.log\\(z.version || require\\('./node_modules/zod/package.json'\\).version\\)\")",
       "WebFetch(domain:www.turisticnekmetije.si)",
-      "WebFetch(domain:www.farmstays-slovenia.si)"
+      "WebFetch(domain:www.farmstays-slovenia.si)",
+      "Bash(find /c/Users/jakas/Desktop/nakmetiji/src -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) -exec grep -l \"use client\\\\|use server\" {} \\\\;)",
+      "Bash(ls -la /c/Users/jakas/Desktop/nakmetiji/next.config* /c/Users/jakas/Desktop/nakmetiji/tsconfig.json)",
+      "Bash(ls -la /c/Users/jakas/Desktop/nakmetiji/.env*)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(node_modules/.bin/eslint --max-warnings=0 \"src/app/api/cron/cleanup-bookings/route.ts\" \"src/app/api/vendor/apple-ify/route.ts\" \"src/app/api/vendor/storyteller/route.ts\" \"src/app/api/vendor/price-advisor/route.ts\" \"src/lib/rateLimit.ts\" \"src/app/dashboard/views/SettingsView.tsx\" \"src/app/dashboard/views/UrediKmetijoView.tsx\")",
+      "Bash(node_modules/.bin/eslint --max-warnings=0 \"src/app/dashboard/views/UrediKmetijoView.tsx\" \"src/app/api/oracle/route.ts\")",
+      "Bash(node_modules/.bin/next build:*)",
+      "Bash(grep -l \"znamenitosti\\\\|napake_log\\\\|green_stamps\" supabase/migrations/*.sql)",
+      "Bash(node_modules/.bin/tsx --version)",
+      "Bash(npx tsx:*)",
+      "Bash(openssl rand:*)",
+      "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(32\\).toString\\('hex'\\)\\)\")",
+      "Read(//tmp/**)",
+      "Bash(echo \"\")",
+      "Bash(echo \"CRON_SECRET=1411d147d9338ff96716a8b566ec17bc5ee7db1e88ee228a4697240ddfa8facd\")",
+      "Bash(rm scripts/gen-landmarks-sql.ts scripts/gen-migration.ts)",
+      "Bash(rmdir scripts:*)",
+      "Bash(npx supabase:*)",
+      "Bash(npx vercel:*)",
+      "Bash(powershell -command \"Get-Content 'c:\\\\Users\\\\jakas\\\\Desktop\\\\nakmetiji\\\\supabase\\\\migrations\\\\20260410_ai_green_passport.sql' -Raw | Set-Clipboard\")",
+      "Bash(clip)",
+      "Bash(grep -n \"RLS\\\\|policy\\\\|POLICY\" /c/Users/jakas/Desktop/nakmetiji/supabase/migrations/*.sql)",
+      "Bash(grep -n \"sanitiz\\\\|escape\\\\|strip\\\\|html\" /c/Users/jakas/Desktop/nakmetiji/src/lib/actions/*.ts)",
+      "Bash(find /c/Users/jakas/Desktop/nakmetiji/src -name \"*.tsx\" -exec grep -l \"force-dynamic\\\\|force-static\" {} \\\\;)",
+      "Bash(node_modules/.bin/eslint --max-warnings=0 src/app/api/oracle/route.ts src/lib/actions/kmetije.ts)",
+      "Bash(echo \"EXIT: $?\")",
+      "Read(//mnt/c/Users/jakas/Desktop/**)",
+      "Read(//c/Users/jakas/Desktop/**)",
+      "Bash(ls src/*.ts)",
+      "Bash(ls *.ts)"
     ],
     "additionalDirectories": [
       "C:\\Users\\jakas\\Desktop\\nakmetiji\\src\\app",
@@ -81,7 +111,9 @@
       "C:\\Users\\jakas\\Desktop\\nakmetiji\\src\\types",
       "c:\\Users\\jakas\\Desktop\\nakmetiji\\src\\app\\api\\ical",
       "c:\\Users\\jakas\\Desktop\\nakmetiji\\src\\app\\kmetije\\[slug]",
-      "c:\\Users\\jakas\\Desktop\\nakmetiji\\src\\app\\api\\og\\kmetije"
+      "c:\\Users\\jakas\\Desktop\\nakmetiji\\src\\app\\api\\og\\kmetije",
+      "c:\\Users\\jakas\\Desktop\\nakmetiji\\src\\app\\regije",
+      "C:\\Users\\jakas\\Desktop\\nakmetiji\\.next"
     ]
   }
 }

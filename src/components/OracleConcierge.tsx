@@ -128,6 +128,25 @@ function renderMarkdown(text: string): React.ReactNode[] {
 
 // Renders a single paragraph/line — detects ## headings with embedded links
 function renderLine(line: string, i: number): React.ReactNode {
+  // Booking widget logic (Closer feature)
+  const bookingMatch = line.match(/\[BOOK_WIDGET:([^\]]+)\]/);
+  if (bookingMatch) {
+    const slug = bookingMatch[1];
+    return (
+      <Link
+        key={i}
+        href={`/kmetije/${slug}#booking`}
+        className="mt-3 mb-2 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-forest-600 to-forest-500 hover:from-forest-500 hover:to-forest-400 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
+        onClick={() => {
+          // smooth anchor behaviour handled by browser default
+        }}
+      >
+        <Sparkles size={16} className="text-amber-200" />
+        Preveri razpoložljivost in rezerviraj
+      </Link>
+    );
+  }
+
   // ## [Farm Name](/kmetije/slug)
   const headingLinkMatch = line.match(/^##\s+\[(.+?)\]\((.+?)\)$/);
   if (headingLinkMatch && isSafeUrl(headingLinkMatch[2]))
@@ -156,8 +175,9 @@ function renderLine(line: string, i: number): React.ReactNode {
         {headingMatch[1]}
       </p>
     );
-  // Normal paragraph
-  return line ? <p key={i}>{renderMarkdown(line)}</p> : null;
+  // Normal paragraph (remove any trailing book widgets if they were merged into a line by mistake)
+  const cleanLine = line.replace(/\[BOOK_WIDGET:[^\]]+\]/g, "");
+  return cleanLine ? <p key={i}>{renderMarkdown(cleanLine)}</p> : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -316,10 +336,10 @@ const SUGGESTIONS: Record<Locale, string[]> = {
 };
 
 const STATUS_LABELS: Record<string, Record<Locale, string>> = {
-  intent:  { sl: "Razumem vašo željo...",       en: "Reading your desire...",          de: "Verstehe Ihren Wunsch...",     it: "Capisco il tuo desiderio..."   },
-  search:  { sl: "Iščem pravo kmetijo...",       en: "Searching for your farm...",      de: "Suche die perfekte Farm...",   it: "Cerco la fattoria perfetta..." },
-  geo:     { sl: "Preverjam bližnje kraje...",   en: "Mapping nearby landmarks...",     de: "Kartiere Sehenswürdigkeiten...", it: "Mappando i dintorni..."        },
-  pitch:   { sl: "Pripravljam vašo zgodbo...",   en: "Crafting your story...",          de: "Schreibe Ihre Geschichte...",  it: "Preparando la tua storia..."   },
+  intent:  { sl: "Jože posluša...",              en: "Jože is listening...",             de: "Jože hört zu...",             it: "Jože ascolta..."               },
+  search:  { sl: "Jože brska po zakladih...",    en: "Jože searches his treasures...",   de: "Jože sucht seine Schätze...", it: "Jože cerca i suoi tesori..."   },
+  geo:     { sl: "Jože pregleduje okolico...",   en: "Jože scans the surroundings...",   de: "Jože erkundet die Umgebung...", it: "Jože esplora i dintorni..."  },
+  pitch:   { sl: "Jože pripoveduje...",          en: "Jože tells a story...",            de: "Jože erzählt...",             it: "Jože racconta..."              },
 };
 
 // ---------------------------------------------------------------------------
@@ -334,6 +354,8 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
   const [isLoading, setIsLoading] = useState(false);
   const [statusPhase, setStatusPhase] = useState<string | null>(null);
   const [hasGreeted, setHasGreeted] = useState(false);
+  const [failCount, setFailCount] = useState(0);
+  const isCircuitBroken = failCount >= 3;
   const [retryInfo, setRetryInfo] = useState<{
     retryable: boolean;
     retryAfterMs: number | null;
@@ -372,10 +394,10 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
     if (isOpen && !hasGreeted) {
       setHasGreeted(true);
       const greetings: Record<Locale, string> = {
-        sl: `Pozdravljeni. Sem Orakel — vaš osebni vodnik po slovenskem podeželju.\n\nPovedite mi, kaj vaša duša želi: tiho dolino, vonj po moštu, zjutranjo meglo nad vinogradi... Opisujte v svojih besedah.`,
-        en: `Welcome. I am The Oracle — your personal guide to Slovenia's hidden countryside.\n\nTell me what your soul craves: a quiet valley, the scent of harvest, morning mist over vineyards... Describe it in your own words.`,
-        de: `Willkommen. Ich bin das Orakel — Ihr persönlicher Reiseführer durch Sloweniens verborgene Landschaft.\n\nErzählen Sie mir, wonach Ihre Seele sucht: ein stilles Tal, der Duft des Herbstes, Morgennebel über Weinbergen...`,
-        it: `Benvenuti. Sono l'Oracolo — la vostra guida personale nella campagna nascosta della Slovenia.\n\nDitemi cosa desidera la vostra anima: una valle silenziosa, il profumo del mosto, la nebbia mattutina sui vigneti...`,
+        sl: `Bog žegnaj! Sem Jože, vaš kmečki vodnik.\n\nPovejte mi — kam vas srce vleče? Tihi gozd, vonj po sveže pečenem kruhu, jutranja megla nad travnikom? Opišite v svojih besedah, pa vam bom povedal, kje to najdete.\n\n*Ker kdor prej pride, prej melje.* 😊`,
+        en: `Welcome! I'm Jože — your countryside guide to hidden Slovenia.\n\nTell me, where does your heart pull you? A quiet forest, the smell of fresh bread from a stone oven, morning mist lifting over a meadow...\n\nDescribe it in your own words.`,
+        de: `Willkommen! Ich bin Jože — Ihr Reiseführer ins verborgene Slowenien.\n\nErzählen Sie mir, wohin Ihr Herz Sie zieht: ein stiller Wald, der Duft von frischem Brot, Morgennebel über Wiesen...`,
+        it: `Benvenuti! Sono Jože — la vostra guida nella Slovenia nascosta.\n\nDitemi, dove vi porta il cuore? Un bosco silenzioso, il profumo del pane fresco, la nebbia del mattino sui prati...`,
       };
       setMessages([
         { role: "assistant", content: greetings[locale] },
@@ -407,6 +429,8 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
       setIsLoading(true);
       setStatusPhase("intent");
       setRetryInfo(null);
+      // Reset fail count if it's a new successful attempt? No, let circuit break be hard until refresh.
+      if (isCircuitBroken) return;
 
       // Add streaming assistant placeholder
       setMessages((prev) => [
@@ -496,11 +520,12 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
       } catch (err) {
         // Ignore intentional aborts (user navigated away or sent a new message)
         if (err instanceof Error && err.name === "AbortError") return;
+        setFailCount(c => c + 1);
         console.error("[Oracle UI] Stream error:", err);
         accumulated =
           locale === "sl"
-            ? "Oprosti, ta hip ne morem pomagati. Poskusi znova."
-            : "Sorry, The Oracle is momentarily offline.";
+            ? "Oj, počakajte hip — šel sem v klet po eno dobro. Poskusite znova čez trenutek. *Ker lepa beseda lepo mesto najde.*"
+            : "Ah, hold on — I just went to the wine cellar for a good one. Try again in a moment.";
       } finally {
         clearTimeout(timeoutId);
         setIsLoading(false);
@@ -521,7 +546,7 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
         });
       }
     },
-    [isLoading, messages, locale]
+    [isLoading, isCircuitBroken, messages, locale]
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -550,26 +575,41 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 22 }}
-            onClick={() => setIsOpen(true)}
+            onClick={() => {
+              if (isCircuitBroken) return;
+              setIsOpen(true);
+            }}
             className="fixed bottom-6 right-6 flex items-center gap-2.5 rounded-2xl px-5 py-3.5 text-white font-semibold text-sm shadow-2xl select-none"
             style={{
               zIndex: "var(--z-oracle)",
-              background: `linear-gradient(135deg, ${lightCycle.accent}, ${lightCycle.accent}cc)`,
-              boxShadow: `0 8px 32px ${lightCycle.accent}55, 0 2px 8px rgba(0,0,0,0.15)`,
+              background: isCircuitBroken 
+                ? "rgba(100, 110, 100, 0.9)"
+                : `linear-gradient(135deg, ${lightCycle.accent}, ${lightCycle.accent}cc)`,
+              boxShadow: isCircuitBroken ? "none" : `0 8px 32px ${lightCycle.accent}55, 0 2px 8px rgba(0,0,0,0.15)`,
+              cursor: isCircuitBroken ? "not-allowed" : "pointer",
             }}
-            aria-label="Odpri Orakla"
+            aria-label="Vprašaj Jožeta"
           >
-            <Sparkles size={18} />
-            <span className="hidden sm:inline">Vprašaj Orakla</span>
-            <span className="sm:hidden">Oracle</span>
+            {isCircuitBroken ? (
+              <>
+                <TreePine size={18} className="opacity-70" />
+                <span className="hidden sm:inline">Jože počiva</span>
+              </>
+            ) : (
+              <>
+                <Sparkles size={18} />
+                <span className="hidden sm:inline">Vprašaj Jožeta</span>
+                <span className="sm:hidden">Jože</span>
 
-            {/* Pulse ring */}
-            <motion.span
-              className="absolute inset-0 rounded-2xl border-2"
-              style={{ borderColor: lightCycle.accent }}
-              animate={{ scale: [1, 1.15], opacity: [0.6, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-            />
+                {/* Pulse ring */}
+                <motion.span
+                  className="absolute inset-0 rounded-2xl border-2"
+                  style={{ borderColor: lightCycle.accent }}
+                  animate={{ scale: [1, 1.15], opacity: [0.6, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+                />
+              </>
+            )}
           </motion.button>
         )}
       </AnimatePresence>
@@ -613,7 +653,7 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-bold text-forest-900">Orakel</p>
+                  <p className="text-sm font-bold text-forest-900">Jože</p>
                   {/* Light cycle indicator */}
                   <span
                     className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
@@ -641,7 +681,7 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
                       animate={{ opacity: 1 }}
                       className="text-xs text-earth-500"
                     >
-                      {locale === "sl" ? "AI vodnik po podeželju" : "AI countryside guide"}
+                      {locale === "sl" ? "Vaš kmečki vodnik" : "Your countryside guide"}
                     </motion.p>
                   )}
                 </AnimatePresence>
@@ -743,16 +783,18 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  disabled={isLoading}
+                  disabled={isLoading || isCircuitBroken}
                   rows={1}
                   placeholder={
-                    locale === "sl"
-                      ? "Opišite svojo idealno izkušnjo..."
+                    isCircuitBroken 
+                      ? "Jože počiva..." 
+                      : locale === "sl"
+                      ? "Povejte mi, kam vas srce vleče..."
                       : locale === "de"
-                      ? "Beschreiben Sie Ihren Traumurlaub..."
+                      ? "Wohin zieht Sie Ihr Herz..."
                       : locale === "it"
-                      ? "Descrivete la vostra esperienza ideale..."
-                      : "Describe your perfect escape..."
+                      ? "Dove vi porta il cuore..."
+                      : "Tell me, where does your heart pull you..."
                   }
                   className="flex-1 resize-none bg-transparent text-sm text-forest-900 placeholder:text-earth-400 focus:outline-none leading-relaxed max-h-28 overflow-y-auto"
                   style={{ scrollbarWidth: "none" }}
@@ -760,11 +802,11 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
 
                 <motion.button
                   onClick={() => sendMessage(input)}
-                  disabled={isLoading || !input.trim()}
+                  disabled={isLoading || !input.trim() || isCircuitBroken}
                   whileTap={{ scale: 0.9 }}
                   className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-white disabled:opacity-40 transition-all"
                   style={{
-                    background: input.trim() && !isLoading
+                    background: input.trim() && !isLoading && !isCircuitBroken
                       ? lightCycle.accent
                       : "#b0b8b0",
                   }}

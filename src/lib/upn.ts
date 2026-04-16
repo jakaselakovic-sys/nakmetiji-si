@@ -139,7 +139,7 @@ export function buildUpn(params: {
     referenca,
     "RENT",
     namen,
-  ].join("\n");
+  ].join("\n") + "\n";
 
   return { referenca, upn_text, qr_string };
 }

@@ -101,6 +101,7 @@ export interface Kmetija {
   ocena: number | null;
   stevilo_ocen: number;
   premium: boolean;
+  paket?: KmetijaPaket;
   aktivna: boolean;
 
   // Metadata
@@ -249,6 +250,7 @@ export interface KmetijeFilter {
   dozivetje?: string | string[]; // slug doživetja
   iskanje?: string; // full-text search
   premium?: boolean;
+  paket?: KmetijaPaket;
   ocenaMin?: number;
   sortiranje?: "ocena" | "ime" | "najnovejse";
   smer?: "asc" | "desc";
@@ -517,3 +519,6 @@ export interface Database {
     };
   };
 }
+
+
+export type KmetijaPaket = 'free' | 'basic' | 'premium';

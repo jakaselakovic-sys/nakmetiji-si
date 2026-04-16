@@ -1,6 +1,7 @@
 // =============================================================================
 // NaKmetiji.si — Dynamic Sitemap
 // Generira sitemap.xml z vsemi statičnimi in dinamičnimi rutami.
+// Vključuje: statične strani, regije, kmetije, blog, znamenitosti.
 // Revalidates every 12 hours (ISR) so newly approved farms appear automatically.
 // =============================================================================
 
@@ -23,6 +24,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/regije`,                 lastModified: now, changeFrequency: "weekly",  priority: 0.75 },
     { url: `${BASE_URL}/blog`,                   lastModified: now, changeFrequency: "weekly",  priority: 0.7 },
     { url: `${BASE_URL}/green-passport`,         lastModified: now, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${BASE_URL}/o-nas`,                  lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${BASE_URL}/dodaj-kmetijo`,          lastModified: now, changeFrequency: "monthly", priority: 0.55 },
   ];
 
   // ── Region hub pages — high-value for "turistična kmetija [regija]" keyword ──
@@ -30,11 +33,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url:             `${BASE_URL}/regije/${slug}`,
     lastModified:    now,
     changeFrequency: "daily" as const,
-    priority:        0.88, // Just below /kmetije, above individual farms
+    priority:        0.88,
   }));
 
-  // ── Dynamic farm pages ──────────────────────────────────────────────────────
-  // Anon client: no cookies needed, RLS on kmetije allows public reads
+  // ── Dynamic farm pages + blog posts ─────────────────────────────────────────
   try {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -54,8 +56,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority:        0.85,
     }));
 
-    return [...staticRoutes, ...regionRoutes, ...farmRoutes];
+    // ── Blog posts ────────────────────────────────────────────────────────────
+    let blogRoutes: MetadataRoute.Sitemap = [];
+    try {
+      const { getAllPosts } = await import("@/lib/blog");
+      const posts = getAllPosts();
+      blogRoutes = posts.map((post) => ({
+        url:             `${BASE_URL}/blog/${post.slug}`,
+        lastModified:    post.date ?? now,
+        changeFrequency: "monthly" as const,
+        priority:        0.65,
+      }));
+    } catch {
+      // Blog module may not be available — skip gracefully
+    }
+
+    return [...staticRoutes, ...regionRoutes, ...farmRoutes, ...blogRoutes];
   } catch {
-    return staticRoutes;
+    return [...staticRoutes, ...regionRoutes];
   }
 }

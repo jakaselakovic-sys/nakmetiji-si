@@ -9,6 +9,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { OracleConcierge } from "@/components/OracleConcierge";
 import { DemoBanner, DemoFooterStrip } from "@/components/DemoDisclaimer";
+import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -116,17 +117,7 @@ export default function RootLayout({
         {/* Demo mode footer strip */}
         <DemoFooterStrip />
         <OracleConcierge locale="sl" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                  navigator.serviceWorker.register('/sw.js').catch(() => {});
-                });
-              }
-            `,
-          }}
-        />
+        <ServiceWorkerRegistrar />
       </body>
     </html>
   );

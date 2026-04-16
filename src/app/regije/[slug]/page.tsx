@@ -195,7 +195,7 @@ export default async function RegijaPage({ params }: Props) {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {farmList.map((farm) => (
+              {farmList.map((farm, idx) => (
                 <Link
                   key={farm.id}
                   href={`/kmetije/${farm.slug}`}
@@ -206,12 +206,13 @@ export default async function RegijaPage({ params }: Props) {
                     {farm.naslovna_slika ? (
                       <Image
                         src={farm.naslovna_slika}
-                        alt={`${farm.ime} — turistična kmetija ${label}`}
+                        alt={`${farm.ime} — turistična kmetija ${label}, ${farm.kratki_opis ?? "Slovenija"}`}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         placeholder="blur"
                         blurDataURL={BLUR_DATA_URL}
+                        priority={idx < 3}
                       />
                     ) : (
                       <div className="w-full h-full bg-forest-100 flex items-center justify-center">

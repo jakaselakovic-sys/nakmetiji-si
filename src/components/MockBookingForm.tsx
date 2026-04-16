@@ -42,7 +42,14 @@ interface MockConfirmation {
   steviloOseb: number;
   skupajCena: number;
   gostIme: string;
+  gostEmail: string;
+  dodatki?: { label: string; price: number }[];
 }
+
+const DODATKI_MOCK = [
+  { id: "piknik", label: "Domača piknik košarica", price: 25 },
+  { id: "kolo", label: "Najem kolesa (cel dan)", price: 15 },
+];
 
 // ── Helper: generate fake reservation ID ─────────────────────────────────────
 
@@ -88,9 +95,11 @@ function MockFormInner({
   const [loading, setLoading]         = useState(false);
   const [confirmed, setConfirmed]     = useState<MockConfirmation | null>(null);
   const [errors, setErrors]           = useState<Record<string, string>>({});
+  const [izbraniDodatki, setIzbraniDodatki] = useState<string[]>([]);
 
   const noci        = nocitve(datumOd, datumDo);
-  const skupajCena  = cenaNoc ? noci * cenaNoc : 0;
+  const dodatkiCena = izbraniDodatki.reduce((sum, id) => sum + DODATKI_MOCK.find(d => d.id === id)!.price, 0);
+  const skupajCena  = (cenaNoc ? noci * cenaNoc : 0) + dodatkiCena;
   const today       = new Date().toISOString().split("T")[0];
 
   function validate(): boolean {
@@ -121,6 +130,8 @@ function MockFormInner({
       steviloOseb,
       skupajCena,
       gostIme: gostIme.trim(),
+      gostEmail: gostEmail.trim(),
+      dodatki: izbraniDodatki.map(id => DODATKI_MOCK.find(d => d.id === id)!),
     });
     setLoading(false);
   }
@@ -183,6 +194,34 @@ function MockFormInner({
             </div>
           )}
 
+          {confirmed.dodatki && confirmed.dodatki.length > 0 && (
+            <div className="rounded-xl border border-earth-200 p-3 space-y-1">
+              <p className="text-xs font-bold text-earth-500 uppercase">Dodatki (Upsell)</p>
+              {confirmed.dodatki.map((d, i) => (
+                <div key={i} className="flex justify-between text-xs text-earth-700">
+                  <span>{d.label}</span>
+                  <span className="font-semibold text-earth-900">{d.price} €</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* SIMULATED SMS LINK FOR VENDOR */}
+          <div className="bg-forest-900 text-white rounded-xl p-4 mt-4 shadow-inner">
+            <p className="text-xs text-forest-200 mb-2 font-semibold">🔗 SIMULACIJA (GAP Analiza)</p>
+            <p className="text-[13px] leading-snug mb-3 text-forest-100">
+              V komercialni verziji lastnik tukaj prejme SMS na aparat. 
+              Do takrat pa lahko stestirate <strong>One-Tap Approval</strong> sistem:
+            </p>
+            <a 
+              href={`/potrdi?token=${btoa(JSON.stringify(confirmed))}`}
+              target="_blank"
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white text-forest-900 text-sm font-bold rounded-lg hover:bg-forest-50 transition-colors w-full justify-center"
+            >
+              Odpri »Potrdi« okno <ArrowRight size={14} />
+            </a>
+          </div>
+
           <DemoBookingNotice />
 
           <button
@@ -206,7 +245,7 @@ function MockFormInner({
       {/* Header */}
       <div className="px-6 py-4 border-b border-earth-100 flex items-center justify-between">
         <div>
-          <h3 className="text-base font-bold text-forest-900">Rezerviraj</h3>
+          <h3 className="text-base font-bold text-forest-900">Dogovorite se za obisk</h3>
           {cenaNoc && (
             <p className="text-sm text-earth-500">
               <span className="font-bold text-forest-900">{cenaNoc} €</span> / noč
@@ -284,7 +323,7 @@ function MockFormInner({
           {errors.steviloOseb && <p className="text-xs text-red-600 mt-1">{errors.steviloOseb}</p>}
         </div>
 
-        {/* Guest info */}
+        {/* Guest count */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>Ime in priimek</label>
@@ -307,6 +346,30 @@ function MockFormInner({
               className={inputCls("gostEmail")}
             />
             {errors.gostEmail && <p className="text-xs text-red-600 mt-1">{errors.gostEmail}</p>}
+          </div>
+        </div>
+
+        {/* UPSell Shramba */}
+        <div className="pt-2 border-t border-earth-100">
+          <label className={labelCls}>Dodatki iz shrambe</label>
+          <div className="space-y-2 mt-2">
+            {DODATKI_MOCK.map((dodatek) => (
+              <label key={dodatek.id} className="flex items-start gap-3 p-3 rounded-xl border border-earth-200 cursor-pointer hover:bg-earth-50 transition-colors">
+                <input 
+                  type="checkbox"
+                  checked={izbraniDodatki.includes(dodatek.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) setIzbraniDodatki(prev => [...prev, dodatek.id]);
+                    else setIzbraniDodatki(prev => prev.filter(id => id !== dodatek.id));
+                  }}
+                  className="mt-1 h-4 w-4 rounded border-earth-300 text-forest-600 focus:ring-forest-600"
+                />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-earth-900">{dodatek.label}</p>
+                </div>
+                <div className="text-sm font-bold text-forest-700">+{dodatek.price} €</div>
+              </label>
+            ))}
           </div>
         </div>
 
@@ -334,9 +397,9 @@ function MockFormInner({
           className="w-full py-3.5 bg-forest-600 hover:bg-forest-500 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
         >
           {loading ? (
-            <><Loader2 size={16} className="animate-spin" /> Obdelujem...</>
+            <><Loader2 size={16} className="animate-spin" /> Pripravljamo...</>
           ) : (
-            <>Pošlji povpraševanje <ArrowRight size={16} /></>
+            <>Rezervirajte svoj košček miru <ArrowRight size={16} /></>
           )}
         </button>
       </div>

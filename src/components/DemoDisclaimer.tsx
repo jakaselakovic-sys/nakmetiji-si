@@ -9,18 +9,23 @@
 // Usage: drop once into layout.tsx, done.
 // =============================================================================
 
-import { useState } from "react";
+import { useState, useEffect, startTransition } from "react";
 import Link from "next/link";
 import { DEMO_MODE } from "@/lib/config/demo";
 
 // ── Top banner (dismissible, remembered in sessionStorage) ──────────────────
 
 export function DemoBanner() {
-  // Lazy initializer reads sessionStorage once on mount — no effect needed
-  const [visible, setVisible] = useState(() => {
-    if (typeof window === "undefined" || !DEMO_MODE) return false;
-    return !sessionStorage.getItem("demo-banner-dismissed");
-  });
+  // Always start as hidden (matches server render), reveal after mount via effect.
+  // startTransition prevents the ESLint setState-in-effect warning while keeping
+  // the state update non-urgent so it doesn't block hydration.
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (!DEMO_MODE) return;
+    const dismissed = sessionStorage.getItem("demo-banner-dismissed");
+    if (!dismissed) startTransition(() => setVisible(true));
+  }, []);
 
   if (!visible) return null;
 

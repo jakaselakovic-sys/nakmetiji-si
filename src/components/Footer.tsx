@@ -16,8 +16,8 @@ const FOOTER_LINKS = {
     { label: "Blog", href: "/blog" },
   ],
   zaKmetije: [
-    { label: "Dodajte svojo kmetijo", href: "/dodaj-kmetijo" },
-    { label: "O nas", href: "/o-nas" },
+    { label: "Odprite vrata vaše kmetije", href: "/dodaj-kmetijo" },
+    { label: "Naša zgodba", href: "/o-nas" },
   ],
 } as const;
 
@@ -38,15 +38,15 @@ export function Footer() {
               </span>
             </div>
             <p className="text-sm leading-relaxed text-white/70 max-w-xs">
-              Odkrijte čar slovenskega podeželja. Turistične kmetije, vinska
-              doživetja, kulinarika in nepozabne družinske počitnice.
+              Vonj sveže pokošene trave, topel kruh iz krušne peči, ptičje
+              petje ob zori. To je Slovenija, ki jo varujemo.
             </p>
           </div>
 
           {/* Razišči */}
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-wider text-white/35 mb-5">
-              Razišči
+              Odkrijte
             </h3>
             <ul className="space-y-3">
               {FOOTER_LINKS.razisci.map((link) => (

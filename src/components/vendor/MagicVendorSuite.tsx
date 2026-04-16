@@ -4,9 +4,11 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, ImageIcon, Languages, TrendingUp, TrendingDown, Minus,
-  Wand2, CheckCircle, AlertCircle, Copy, Check, Loader2, Star,
+  Wand2, CheckCircle, AlertCircle, Copy, Check, Loader2, Star, Save
 } from "lucide-react";
 import { REGIJA_LABELS, REGIJE } from "@/types/database";
+import type { KmetijaPaket } from "@/types/database";
+import { saveFarmTranslations } from "@/lib/actions/vendor";
 
 // ─── API response types ─────────────────────────────────────────────────────
 
@@ -250,7 +252,7 @@ const LANG_TABS = [
 ] as const;
 type LangKey = "sl" | "en" | "de" | "it";
 
-function StorytellerTab({ defaultIme = "", defaultRegija = "gorenjska" }: { defaultIme?: string; defaultRegija?: string }) {
+function StorytellerTab({ defaultIme = "", defaultRegija = "gorenjska", kmetijaId }: { defaultIme?: string; defaultRegija?: string; kmetijaId?: string }) {
   const [kmetijaIme, setKmetijaIme] = useState(defaultIme);
   const [regija, setRegija] = useState<string>(defaultRegija);
   const [bulletsText, setBulletsText] = useState("");
@@ -258,6 +260,25 @@ function StorytellerTab({ defaultIme = "", defaultRegija = "gorenjska" }: { defa
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<StorytellerResult | null>(null);
   const [activeTab, setActiveTab] = useState<LangKey>("sl");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  async function handleSaveToDB() {
+    if (!kmetijaId || !result) return;
+    setIsSaving(true);
+    setSaveSuccess(false);
+    try {
+      const prevodi = { en: result.en, de: result.de, it: result.it, sl: result.sl };
+      const res = await saveFarmTranslations(kmetijaId, prevodi);
+      if (res.error) throw new Error(res.error);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch(e: unknown) {
+      setError(e instanceof Error ? e.message : "Napaka pri shranjevanju v bazo.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   async function handleGenerate() {
     const bullets = bulletsText
@@ -413,6 +434,17 @@ function StorytellerTab({ defaultIme = "", defaultRegija = "gorenjska" }: { defa
                   ))}
                 </div>
               </div>
+            )}
+
+            {kmetijaId && (
+              <button
+                onClick={handleSaveToDB}
+                disabled={isSaving || saveSuccess}
+                className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg mt-4"
+              >
+                {isSaving ? <Loader2 size={16} className="animate-spin" /> : saveSuccess ? <Check size={16} /> : <Save size={16} />}
+                {saveSuccess ? "Uspešno shranjeno v profil!" : "Shrani prevode in opis v živi profil"}
+              </button>
             )}
           </motion.div>
         )}
@@ -682,10 +714,16 @@ interface MagicVendorSuiteProps {
   kmetijaIme?: string;
   kmetijaRegija?: string;
   cenaNoc?: number | null;
+  paket?: KmetijaPaket;
 }
 
-export function MagicVendorSuite({ kmetijaIme = "", kmetijaRegija = "gorenjska", cenaNoc }: MagicVendorSuiteProps) {
-  const [activeTool, setActiveTool] = useState<ToolKey>("none");
+export function MagicVendorSuite({ kmetijaId, kmetijaIme = "", kmetijaRegija = "gorenjska", cenaNoc, paket = "free" }: MagicVendorSuiteProps) {
+  const [activeTool] = useState<ToolKey>("none");
+
+  // Granularni dostop
+  const isFree = paket === "free";
+  const isPremium = paket === "premium";
+  const isToolsAvailable = !isFree; // Free sploh ne more klikati
 
   return (
     <div className="rounded-2xl bg-gradient-to-br from-indigo-900/60 via-purple-900/60 to-indigo-950/60 p-[1px] shadow-2xl overflow-hidden relative">
@@ -707,31 +745,71 @@ export function MagicVendorSuite({ kmetijaIme = "", kmetijaRegija = "gorenjska",
         </div>
 
         {/* Tool cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {TOOL_CARDS.map((card) => {
-            const Icon = card.icon;
-            const isActive = activeTool === card.key;
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+          {TOOL_CARDS.map((tool) => {
+            const isActive = activeTool === tool.key;
+            const ToolIcon = tool.icon;
+
             return (
               <button
-                key={card.key}
-                onClick={() => setActiveTool(isActive ? "none" : card.key)}
-                className={`text-left p-5 rounded-2xl border transition-all duration-200 ${
+                key={tool.key}
+                className={`text-left p-5 rounded-2xl border transition-all duration-200 relative ${
+                  !isPremium ? "opacity-60 cursor-not-allowed group" : ""
+                } ${
                   isActive
-                    ? `${card.activeBg} ${card.activeBorder} ring-1 ${card.activeRing}`
+                    ? `${tool.activeBg} ${tool.activeBorder} ring-1 ${tool.activeRing}`
                     : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
                 }`}
               >
-                <Icon className={`${card.iconColor} mb-3`} size={24} />
-                <h3 className="font-semibold text-white mb-1 text-sm">{card.title}</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">{card.desc}</p>
+                {!isPremium && (
+                  <div className="absolute inset-0 z-10 hidden group-hover:flex items-center justify-center backdrop-blur-sm rounded-2xl bg-black/40 border border-amber-500/50">
+                     <span className="bg-amber-400 text-amber-950 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider flex items-center gap-1"><Star size={10} /> Premium</span>
+                  </div>
+                )}
+                <ToolIcon className={`${tool.iconColor} mb-3 relative z-0`} size={24} />
+                <h3 className="font-semibold text-white mb-1 text-sm relative z-0">{tool.title}</h3>
+                <p className="text-xs text-slate-400 leading-relaxed relative z-0">{tool.desc}</p>
               </button>
             );
           })}
         </div>
 
+        {/* Not Premium Banner - Unbreakable Paywall */}
+        {!isPremium && (
+           <div className="mt-8 mb-4 p-8 rounded-3xl bg-gradient-to-br from-[#1a140f] to-[#2d1c0b] border border-amber-500/20 text-center relative overflow-hidden shadow-2xl">
+             <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-amber-500/10 blur-[100px] pointer-events-none" />
+             <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-orange-500/10 blur-[100px] pointer-events-none" />
+             
+             <div className="relative z-10">
+               <div className="inline-flex items-center justify-center p-3 bg-amber-500/10 rounded-2xl border border-amber-500/30 mb-5 shadow-[0_0_30px_rgba(245,158,11,0.15)]">
+                 <Star className="text-amber-400" size={32} />
+               </div>
+               <h3 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-orange-300 mb-3 tracking-tight">
+                 Odklenite Magic Vendor Suite
+               </h3>
+               <p className="text-base text-amber-200/70 max-w-lg mx-auto mb-8 font-medium leading-relaxed">
+                 Umetna inteligenca prevzame vlogo profesionalnega tekstopisca, prevajalca in stratega za cene.
+                 <br/><br/>
+                 Prihranite do <span className="font-bold text-amber-400">500 €</span> letno na zunanjih agencijah in drastično povečajte zasedenost vaše kmetije.
+               </p>
+               
+               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                 <button className="w-full sm:w-auto relative group overflow-hidden rounded-xl">
+                    <div className="absolute inset-0 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 transition-all duration-300 group-hover:scale-105" />
+                    <div className="relative px-8 py-3.5 flex items-center justify-center gap-2">
+                      <Star size={18} className="text-amber-950 fill-amber-950" />
+                      <span className="font-bold text-amber-950">Nadgradite na Premium (29€ / mesec)</span>
+                    </div>
+                 </button>
+                 <span className="text-xs text-earth-500 italic">Vključuje 14-dnevno garancijo na zadovoljstvo.</span>
+               </div>
+             </div>
+           </div>
+        )}
+
         {/* Active tool panel */}
         <AnimatePresence mode="wait">
-          {activeTool !== "none" && (
+          {isToolsAvailable && activeTool !== "none" && (
             <motion.div
               key={activeTool}
               initial={{ opacity: 0, y: 12 }}
@@ -742,7 +820,7 @@ export function MagicVendorSuite({ kmetijaIme = "", kmetijaRegija = "gorenjska",
             >
               {activeTool === "appleify" && <AppleifyTab />}
               {activeTool === "storyteller" && (
-                <StorytellerTab defaultIme={kmetijaIme} defaultRegija={kmetijaRegija} />
+                <StorytellerTab defaultIme={kmetijaIme} defaultRegija={kmetijaRegija} kmetijaId={kmetijaId} />
               )}
               {activeTool === "price" && (
                 <PriceAdvisorTab defaultPrice={cenaNoc ?? undefined} defaultRegija={kmetijaRegija} />

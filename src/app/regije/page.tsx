@@ -10,9 +10,29 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { REGIJA_LABELS, REGIJE, type Regija } from "@/types/database";
 
 export const metadata: Metadata = {
-  title: "Regije | NaKmetiji",
+  title: "Regije Slovenije — Turistične kmetije po regijah | NaKmetiji",
   description:
-    "Poiščite turistične kmetije po vseh 12 regijah Slovenije — od Gorenjske do Pomurja, od Primorske do Posavja.",
+    "Poiščite turistične kmetije po vseh 12 regijah Slovenije — od Gorenjske do Pomurja, od Primorske do Posavja. Prenočišča, kulinarika in doživetja.",
+  keywords: [
+    "regije Slovenije",
+    "turistične kmetije po regijah",
+    "Gorenjska kmetije",
+    "Primorska kmetije",
+    "Štajerska kmetije",
+    "podeželski turizem Slovenija",
+  ],
+  openGraph: {
+    title: "Regije Slovenije — Turistične kmetije po regijah",
+    description:
+      "Izberite regijo in odkrijte turistične kmetije v vaši bližini ali na vaši poti.",
+    type: "website",
+    locale: "sl_SI",
+    siteName: "NaKmetiji",
+    url: "https://nakmetiji.si/regije",
+  },
+  alternates: {
+    canonical: "https://nakmetiji.si/regije",
+  },
 };
 
 const REGIJA_EMOJI: Record<Regija, string> = {

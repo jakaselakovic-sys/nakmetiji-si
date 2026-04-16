@@ -9,9 +9,28 @@ import { Clock, Calendar, Tag, ArrowRight } from "lucide-react";
 import { getAllPosts } from "@/lib/blog";
 
 export const metadata: Metadata = {
-  title: "Blog — NaKmetiji",
+  title: "Blog — Nasveti za podeželski turizem | NaKmetiji",
   description:
     "Nasveti, zgodbe in inspiracija za podeželski turizem v Sloveniji. Odkrijte najboljše turistične kmetije, kulinarične dogodivščine in trajnostne počitnice.",
+  keywords: [
+    "blog podeželski turizem",
+    "turistične kmetije Slovenija nasveti",
+    "kulinarični turizem",
+    "trajnostni turizem",
+    "kmečki turizem zgodbe",
+  ],
+  openGraph: {
+    title: "Blog — Zgodbe s podeželja | NaKmetiji",
+    description:
+      "Nasveti, zgodbe in inspiracija za vaš naslednji podeželski oddih v Sloveniji.",
+    type: "website",
+    locale: "sl_SI",
+    siteName: "NaKmetiji",
+    url: "https://nakmetiji.si/blog",
+  },
+  alternates: {
+    canonical: "https://nakmetiji.si/blog",
+  },
 };
 
 export default function BlogPage() {

@@ -47,9 +47,9 @@ export function ContactForm({ farmName, farmOwnerEmail }: ContactFormProps) {
     <div className="rounded-2xl bg-white border border-earth-200/60 shadow-lg shadow-earth-200/30 overflow-hidden">
       {/* Header */}
       <div className="bg-gradient-to-r from-forest-700 to-forest-800 px-6 py-5">
-        <h3 className="text-lg font-bold text-white">Pošljite povpraševanje</h3>
+        <h3 className="text-lg font-bold text-white">Napišite nam — z veseljem odgovorimo</h3>
         <p className="mt-1 text-sm text-white/60">
-          Kontaktirajte {farmName} neposredno
+          {farmName} vas pričakuje z odprtimi vrati
         </p>
       </div>
 
@@ -206,7 +206,7 @@ export function ContactForm({ farmName, farmOwnerEmail }: ContactFormProps) {
                 name="message"
                 rows={4}
                 required
-                placeholder="Povejte nam o vašem idealnem obisku..."
+                placeholder="Povejte nam — kaj si želite doživeti, kakšen oddih iščete..."
                 className="w-full rounded-xl border border-earth-200 bg-earth-50/50 px-4 py-3 text-sm text-forest-900 placeholder:text-earth-400 outline-none focus:border-forest-400 focus:ring-2 focus:ring-forest-200 transition-all resize-none"
               />
             </div>
@@ -237,7 +237,7 @@ export function ContactForm({ farmName, farmOwnerEmail }: ContactFormProps) {
                   Pošiljam...
                 </>
               ) : (
-                "Pošlji povpraševanje"
+                "Pošljite sporočilo"
               )}
             </button>
 

@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion";
 import { Leaf, Award, Share2, Camera, Network, HeartHandshake } from "lucide-react";
+import html2canvas from "html2canvas";
+import { QRCodeSVG } from "qrcode.react";
 
 export function GreenPassportShare() {
   const BADGES = [
@@ -31,9 +33,31 @@ export function GreenPassportShare() {
     }
   ];
 
-  const handleShare = (platform: "ig" | "li") => {
-    // In a real app, this would use Web Share API or generate an image blob and prompt to share.
-    alert(`Deljenje "Green Passport" kartice na ${platform === "ig" ? "Instagram" : "LinkedIn"}... \n(Ta funkcija ustvari grafiko za objavo in oznako @NaKmetiji)`);
+  const handleShare = async (badgeId: number) => {
+    const el = document.getElementById(`badge-${badgeId}`);
+    if (!el) return;
+    try {
+      // Skrijemo gumbe pred izvozom za lepši izgled značke
+      const buttons = el.querySelector('.share-buttons');
+      if (buttons) (buttons as HTMLElement).style.display = 'none';
+
+      const canvas = await html2canvas(el, { 
+        scale: window.devicePixelRatio * 2, // High-res IG Story Support
+        useCORS: true, 
+        backgroundColor: null 
+      });
+      
+      if (buttons) (buttons as HTMLElement).style.display = 'flex';
+
+      const imgData = canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = imgData;
+      a.download = `NaKmetiji-GreenPassport-${badgeId}.png`;
+      a.click();
+    } catch (err) {
+      console.error("Napaka pri generiranju PNG:", err);
+      alert("Napaka pri ustvarjanju slike.");
+    }
   };
 
   return (
@@ -55,6 +79,7 @@ export function GreenPassportShare() {
           {BADGES.map((badge, i) => (
             <motion.div
               key={badge.id}
+              id={`badge-${badge.id}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
@@ -69,15 +94,28 @@ export function GreenPassportShare() {
                 <h4 className="font-bold text-lg leading-tight mb-2">{badge.title}</h4>
                 <p className="text-xs text-white/70 mb-6 font-medium">{badge.desc}</p>
                 
-                <div className="flex items-center gap-2">
+                {/* Watermark + QR Code for Export */}
+                <div className="absolute top-6 right-6 flex flex-col items-end opacity-20 group-hover:opacity-100 transition-opacity">
+                  <div className="bg-white p-1 rounded-md shadow-sm mb-1">
+                    <QRCodeSVG 
+                      value="https://nakmetiji.si/" 
+                      size={48} 
+                      fgColor="#0f172a"
+                      bgColor="#ffffff"
+                    />
+                  </div>
+                  <span className="text-[8px] font-bold tracking-widest text-white/50 uppercase">NaKmetiji.si</span>
+                </div>
+
+                <div className="flex items-center gap-2 share-buttons">
                   <button 
-                    onClick={() => handleShare("ig")}
+                    onClick={() => handleShare(badge.id)}
                     className="flex-1 flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-lg py-2 text-xs font-semibold transition-colors"
                   >
                     <Camera size={14} /> IG Zgodba
                   </button>
                   <button 
-                    onClick={() => handleShare("li")}
+                    onClick={() => handleShare(badge.id)}
                     className="flex-1 flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-lg py-2 text-xs font-semibold transition-colors"
                   >
                     <Network size={14} /> LinkedIn

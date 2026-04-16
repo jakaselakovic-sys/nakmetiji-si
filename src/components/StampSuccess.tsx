@@ -202,7 +202,7 @@ export function StampSuccess({
           className="bg-white/10 backdrop-blur-md border border-white/15 rounded-3xl p-6 mb-4 text-center"
         >
           <p className="text-forest-300 text-xs font-bold uppercase tracking-widest mb-1">
-            Točke zbrane
+            Spomin ohranjen
           </p>
           <p className="text-5xl font-black text-white mb-3">
             +{displayPoints}
@@ -236,7 +236,7 @@ export function StampSuccess({
               className="bg-gradient-to-r from-amber-500/30 to-emerald-500/30 border border-amber-400/40 rounded-2xl px-5 py-4 mb-4 text-center"
             >
               <p className="text-amber-300 text-xs font-bold uppercase tracking-widest mb-1">
-                ⬆️ Nivo dosežen!
+                ⬆️ Nova čast!
               </p>
               <p className="text-white font-black text-lg">
                 {currentLevel.icon} {currentLevel.name}
@@ -280,14 +280,14 @@ export function StampSuccess({
             href="/moj-potni-list"
             className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-4 transition-all hover:-translate-y-0.5 shadow-lg"
           >
-            Poglej potni list <ArrowRight size={18} />
+            Oglej si svojo pot <ArrowRight size={18} />
           </Link>
 
           <button
             onClick={handleShare}
             className="w-full flex items-center justify-center gap-2 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-semibold py-3.5 text-sm border border-white/15 transition-all"
           >
-            <Share2 size={16} /> Deli napredek
+            <Share2 size={16} /> Deli svojo zgodbo
           </button>
 
           <Link

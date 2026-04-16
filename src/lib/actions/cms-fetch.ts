@@ -1,0 +1,98 @@
+"use server";
+
+import { createSupabaseServer } from "@/lib/supabase/server";
+import { z } from "zod";
+import { revalidatePath } from "next/cache";
+
+// ============================================================================
+// NaKmetiji.si CMS: Content Validation & Server Actions
+// ============================================================================
+
+export const storySchema = z.object({
+  title: z.string().min(5, "Naslov mora biti dolg vsaj 5 znakov."),
+  slug: z.string().min(3),
+  excerpt: z.string().min(10, "Kratek povzetek je obvezen."),
+  content_html: z.string().min(20, "Vsebina je prekrata."),
+  content_json: z.any().optional(), // Tiptap state
+  type: z.enum(["news", "blog"]),
+  category: z.enum(["nasveti", "recepti", "dogodki", "intervjuji", "splosno"]),
+  status: z.enum(["draft", "published", "archived"]),
+  related_farm_id: z.string().uuid().optional().nullable(),
+  metadata: z.object({
+    focus_keywords: z.array(z.string()).optional(),
+    meta_description: z.string().optional(),
+    og_caption: z.string().optional(),
+  }).optional(),
+});
+
+export type StoryInput = z.infer<typeof storySchema>;
+
+/**
+ * Upsert content (Zgodba) into the DB securely.
+ */
+export async function upsertStory(id: string | null, data: StoryInput) {
+  const supabase = await createSupabaseServer();
+
+  // Validate the input rigorously
+  const parsed = storySchema.safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.format() };
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const payload = {
+    ...parsed.data,
+    author_id: user.id,
+    published_at: parsed.data.status === "published" ? new Date().toISOString() : null,
+    updated_at: new Date().toISOString(),
+  };
+
+  const query = supabase.from("zgodbe");
+  let result;
+
+  if (id) {
+    result = await query.update(payload).eq("id", id).select().single();
+  } else {
+    result = await query.insert(payload).select().single();
+  }
+
+  if (result.error) {
+    console.error("[CMS Error]", result.error);
+    return { success: false, error: "Napaka pri shranjevanju baze." };
+  }
+
+  // Clear caches so the new blog appears immediately
+  revalidatePath("/");
+  revalidatePath("/blog");
+  revalidatePath("/novice");
+
+  return { success: true, data: result.data };
+}
+
+/**
+ * Smart Linking logic: Fetch related posts based on geography or farm match
+ */
+export async function fetchRelatedPosts(farm_id?: string, category?: string) {
+  const supabase = await createSupabaseServer();
+  
+  let query = supabase
+    .from("zgodbe")
+    .select("id, slug, title, excerpt, category, metadata")
+    .eq("status", "published")
+    .limit(3);
+
+  if (farm_id) {
+    // Exact farm match always wins priority
+    query = query.eq("related_farm_id", farm_id);
+  } else if (category) {
+    // Fallback to category
+    query = query.eq("category", category);
+  }
+
+  const { data } = await query;
+  return data ?? [];
+}

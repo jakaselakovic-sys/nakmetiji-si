@@ -89,17 +89,17 @@ export default async function GreenPassportPage() {
         {/* Left: copy */}
         <div className="flex-1 space-y-6 relative z-10 w-full text-center md:text-left">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100/50 border border-emerald-200 text-emerald-800 text-sm font-bold shadow-sm mx-auto md:mx-0">
-            <Leaf size={16} /> Prva ekološka turistična igra
+            <Leaf size={16} /> Ponos naše dediščine
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black text-forest-900 leading-[1.1] tracking-tight text-balance">
-            Raziskuj.<br />
-            <span className="text-emerald-600">Zbiraj.</span> Nagrajuj.
+            Stopite na pot.<br />
+            <span className="text-emerald-600">Zbirajte</span> korenine.
           </h1>
 
           <p className="text-lg md:text-xl text-earth-600 max-w-xl mx-auto md:mx-0 leading-relaxed font-medium">
-            Zeleni potni list je nova dimenzija potovanj. Obišči najlepše slovenske kmetije,
-            skeniraj QR kodo in za svoj doprinos k zelenemu turizmu prejmi popuste ter nagrade.
+            Vsak žig je spomin na gostoljubnost, vonj po senu in tišino gore.
+            Vaš potni list je kronika vaše poti po slovenski zemlji — od prve domačije do legende podeželja.
           </p>
 
           {/* User progress pill — only when logged in */}
@@ -128,14 +128,14 @@ export default async function GreenPassportPage() {
               href="/kmetije"
               className="w-full sm:w-auto px-8 py-4 bg-forest-900 hover:bg-forest-800 text-white rounded-2xl font-bold transition-all shadow-xl hover:shadow-2xl hover:-translate-y-0.5 flex items-center justify-center gap-2"
             >
-              <Search size={18} /> Odkrij kmetije
+              <Search size={18} /> Poiščite kmetijo
             </Link>
             {user ? (
               <Link
                 href="/moj-potni-list"
                 className="w-full sm:w-auto px-8 py-4 bg-white border-2 border-forest-900 hover:bg-forest-50 text-forest-900 rounded-2xl font-bold transition-all flex items-center justify-center gap-2"
               >
-                Moj potni list <ChevronRight size={18} />
+                Moja pot <ChevronRight size={18} />
               </Link>
             ) : (
               <Link
@@ -194,7 +194,7 @@ export default async function GreenPassportPage() {
           ═══════════════════════════════════════════════════════════════════ */}
       <section className="bg-forest-900 text-white py-20 px-6 mt-8">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl lg:text-5xl font-black text-center mb-16 text-balance">Kako deluje?</h2>
+          <h2 className="text-3xl lg:text-5xl font-black text-center mb-16 text-balance">Kako hodite po naši poti?</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
             {/* Connecting line */}
@@ -203,18 +203,18 @@ export default async function GreenPassportPage() {
             {[
               {
                 icon: <MapPin className="text-emerald-400" size={32} />,
-                step: "1. Rezerviraj eko-kmetijo",
-                text: "Poiščite kmetije z značko trajnostnega razvoja in pri njih preživite vikend.",
+                step: "1. Poiščite kmetijo, ki vas kliče",
+                text: "Preveč ste glav, preveč vas bo. Najdite kmetijo, ki diši po vaših sanjah.",
               },
               {
                 icon: <QrCode className="text-emerald-400" size={32} />,
-                step: "2. Pritisni »Pridobi žig«",
-                text: "Na strani kmetije pritisni gumb ali skeniraj QR kodo gostitelja — žig se shrani v tvoj potni list.",
+                step: "2. Skenirajte žig pri gostitelju",
+                text: "Poiščite QR kodo pri gostitelju in jo skenirajte s telefonom — spomin se samodejno ohrani v vaši kroniki.",
               },
               {
                 icon: <Award className="text-emerald-400" size={32} />,
-                step: "3. Osvoji popuste in nagrade",
-                text: `Za vsake ${TARGET} različne obiske prejmete 100 € popust na naslednji oddih.`,
+                step: "3. Prejmite dar naše zemlje",
+                text: `Za vsake ${TARGET} obiski prejmete darilo — košarica domačih dobrot, popust ali VIP povabilo.`,
               },
             ].map(({ icon, step, text }) => (
               <div key={step} className="relative z-10 flex flex-col items-center text-center">
@@ -235,10 +235,10 @@ export default async function GreenPassportPage() {
       <section className="px-6 py-24 max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-black text-forest-900 text-balance">
-            Elite — Ambasadorji narave
+            Častna straža — varuhi naših kmetij
           </h2>
           <p className="text-earth-600 mt-3 font-medium">
-            Kmetije, ki so letos prejele največ zelenih žigov od obiskovalcev.
+            Kmetije, ki so letos prejele največ zelenih žigov. *Drevo se po sadu pozna.*
           </p>
         </div>
 
@@ -297,10 +297,10 @@ export default async function GreenPassportPage() {
         <section className="bg-forest-900 py-16 px-6 text-center">
           <div className="max-w-xl mx-auto">
             <h2 className="text-2xl font-black text-white mb-3 text-balance">
-              Začni zbirati žige danes
+              Stopite na pot danes
             </h2>
             <p className="text-forest-200 mb-8 text-sm">
-              Ustvari brezplačen račun in začni svojo ekološko pustolovščino po Sloveniji.
+              Ustvarite brezplačen račun in začnite svojo kroniko po slovenskem podeželju. *Kdor prej pride, prej melje.*
             </p>
             <Link
               href="/registracija"

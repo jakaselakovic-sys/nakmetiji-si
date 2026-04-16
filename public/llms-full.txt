@@ -1,0 +1,121 @@
+# NaKmetiji.si — Popoln vodnik po turističnih kmetijah v Sloveniji
+
+> NaKmetiji je vodilna platforma za odkrivanje in rezervacijo turističnih kmetij po vsej Sloveniji. Ponujamo prenočišča, kulinarična doživetja, degustacije vin, wellness in družinsko zabavo na podeželju.
+
+## O platformi
+
+NaKmetiji.si povezuje popotnike z avtentičnimi slovenskimi turističnimi kmetijami. Platforma pokriva vseh 12 statističnih regij Slovenije — od alpske Gorenjske do mediteranske Primorske, od vinogradniške Štajerske do ravninske Pomurske.
+
+Vsaka kmetija na platformi ima:
+- Podroben profil z fotografijami in opisom
+- Seznam doživetij (vino, kulinarika, prenočišča, wellness...)
+- Ocene in mnenja gostov
+- Domače izdelke v digitalni tržnici (sir, med, vino, meso...)
+- Možnost rezervacije in povpraševanja
+- Lokacijo na interaktivnem zemljevidu
+
+## Razdelki platforme
+
+### Vse kmetije (nakmetiji.si/kmetije)
+Poiščite in filtrirajte turistične kmetije po regiji, doživetju, oceni ali ključni besedi. Razvrstite po oceni, imenu ali datumu dodajanja.
+
+### Regije (nakmetiji.si/regije)
+Vsaka regija ima svojo pristajalno stran z opisom, značilnostmi in seznamom kmetij.
+
+### Zemljevid (nakmetiji.si/zemljevid)
+Interaktivni zemljevid z vsemi kmetijami in 190+ slovenskimi znamenitostmi.
+
+### Blog (nakmetiji.si/blog)
+Nasveti za popotnike, zgodbe s podeželja, sezonski vodiči in kulinarične inspiracije.
+
+### Zeleni Potni List (nakmetiji.si/green-passport)
+Gamificiran sistem odkrivanja: zbiraj žige po 12 regijah, odklepaj značke in nagrade. Fizično preveri obisk s QR kodo na kmetiji.
+
+## Regije Slovenije — podroben pregled
+
+### Gorenjska
+Dežela Triglava, Blejskega jezera in alpskih travnikov. Turistične kmetije v Gorenjski ponujajo svež gorski zrak, pohodništvo in pristno alpsko kulinariko. Ključne destinacije: Bled, Bohinj, Kranjska Gora, Velika planina.
+
+### Primorska
+Mediteransko podnebje, oljčni nasadi in kraška pokrajina. Kmetije v Primorski združujejo morje, vino in domačo kuhinjo z mediteranskim pridihom. Ključne destinacije: Piran, Soča, Goriška Brda, Kras, Vipavska dolina.
+
+### Štajerska
+Vinogradniška dežela s toplimi pobočji Haloz in Slovenskih goric. Kmetije so znane po odličnih vinih (laški rizling, šipon) in bogati kulinarični tradiciji. Ključne destinacije: Maribor, Pohorje, Slovenske gorice, Jeruzalem.
+
+### Dolenjska
+Mirna podeželska idila ob reki Krki. Kmetije nudijo sadovnjake, vinogradništvo in toplico ob termalni vodi. Ključne destinacije: Novo mesto, Dolenjske Toplice, Krka.
+
+### Koroška
+Gorska dežela ob avstrijski meji z bogatim planinskim izročilom. Ključne destinacije: Mežica, Slovenj Gradec, Dravograd, Peca.
+
+### Savinjska
+Hmeljarsko srce Slovenije z zelenimi dolinami in Logarsko dolino. Ključne destinacije: Celje, Logarska dolina, Robanov kot, Velenje.
+
+### Pomurska
+Ravninska pokrajina ob Muri z vinogradi Jeruzalema. Bogata folklorna in kulinarična dediščina (prekmurska gibanica, bograč). Ključne destinacije: Murska Sobota, Ljutomer, Radenci, Lendava.
+
+### Notranjska
+Dežela Postojnske jame in Cerkniškega jezera. Kmetije so odlično izhodišče za odkrivanje jamskega sveta. Ključne destinacije: Postojna, Cerknica, Škocjanske jame.
+
+### Zasavska
+Zelena dolina Zagorja s sadovnjaki in mirnim podeželjem ob Savi. Ključne destinacije: Zagorje ob Savi, Trbovlje.
+
+### Posavska
+Vinogradniška pokrajina ob Savi z bizeljskimi kraškimi kletmi. Ključne destinacije: Brežice, Sevnica, Bizeljsko.
+
+### Jugovzhodna Slovenija
+Dežela divje narave, medvedov in Kočevskega pragozda. Ekoturizem in kmečka gostoljubnost. Ključne destinacije: Kočevje, Črnomelj, Metlika.
+
+### Osrednjeslovenska
+Podeželje v okolici Ljubljane — idealna kombinacija bližine mesta in pristne kmečke izkušnje. Ključne destinacije: Kamnik, Vrhnika, Škofja Loka.
+
+## Vrste doživetij na kmetijah
+
+| Doživetje | Opis |
+|-----------|------|
+| Vino & Degustacija | Vinske degustacije, obiski kleti, spoznavanje sort |
+| Prenočišče | Nastanitve na kmetiji — sobe, apartmaji, glamping |
+| Za družine | Aktivnosti za otroke, igrala, živali, izobraževalne delavnice |
+| Kulinarika | Kmečki zajtrki, kosila, večerje iz lokalnih sestavin |
+| Wellness & Spa | Zeliščne kopeli, savna, masaže, terapevtsko jahanje |
+| Šport & Avantura | Pohodništvo, kolesarjenje, jahanje, plezanje |
+| Živali na kmetiji | Stik z domačimi živalmi — koze, ovce, konji, čebele |
+| Delavnice | Izdelava sira, medu, kruha, keramike, tkalstvo |
+| Ekološka kmetija | Certificirane eko kmetije z ekološko pridelavo |
+| Prireditve & Dogodki | Poroke, teambuilding, praznovanja, kmečke igre |
+
+## Domači izdelki (Digitalna tržnica)
+
+Kategorije izdelkov, ki jih kmetije ponujajo:
+- **Mlečni izdelki:** sir, maslo, jogurt, skuta
+- **Mesni izdelki:** pršut, salame, klobase, suho meso
+- **Sadje & zelenjava:** sveže, suho sadje, marmelade, sokovi
+- **Med & čebelji izdelki:** lipov, akacijev, gozdni med, propolis
+- **Vino & pijače:** bela, rdeča vina, žganje, penine, sokovi
+- **Pekovski izdelki:** kruh, potica, gibanica, štruklji
+- **Olja & kis:** bučno olje, oljčno olje, jabolčni kis
+- **Domača kozmetika:** mila, kreme, eterična olja
+
+## Pogosto zastavljena vprašanja
+
+### Kako rezerviram nastanitev na kmetiji?
+Na NaKmetiji.si poiščite želeno kmetijo in izpolnite obrazec za povpraševanje. Kmetija vas bo kontaktirala za potrditev razpoložljivosti.
+
+### Ali so kmetije primerne za družine z otroki?
+Da! Mnoge kmetije imajo označbo "Za družine" — nudijo aktivnosti za otroke, stik z živalmi in varno okolje.
+
+### Kaj je Zeleni Potni List?
+Gamificiran sistem odkrivanja Slovenije: obiščite kmetije v vseh 12 regijah, zbirajte žige s skeniranjem QR kod in odklepajte značke ter nagrade.
+
+### V katerem jeziku deluje platforma?
+Platforma je primarno v slovenščini (sl-SI), z načrtovano podporo za angleščino, nemščino in italijanščino.
+
+## Tehnične informacije
+
+- **URL:** https://nakmetiji.si
+- **Jezik:** Slovenščina (sl-SI)
+- **Valuta:** EUR (€)
+- **Država:** Slovenija (SI)
+- **Kontakt:** info@nakmetiji.si
+- **Sitemap:** https://nakmetiji.si/sitemap.xml
+- **Robots:** https://nakmetiji.si/robots.txt

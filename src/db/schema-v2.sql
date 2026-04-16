@@ -57,7 +57,8 @@ CREATE TABLE IF NOT EXISTS public.kmetije (
   ical_uvoz_url    TEXT,
   ical_izvoz_uuid  UUID DEFAULT gen_random_uuid(),
   ustvarjeno       TIMESTAMPTZ DEFAULT NOW(),
-  posodobljeno     TIMESTAMPTZ DEFAULT NOW()
+  posodobljeno     TIMESTAMPTZ DEFAULT NOW(),
+  prevodi          JSONB DEFAULT '{}'
 );
 
 -- ─── Dozivetja ────────────────────────────────────────────────────────────────
