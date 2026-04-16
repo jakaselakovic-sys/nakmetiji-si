@@ -533,7 +533,7 @@ export async function POST(req: NextRequest) {
     req.headers.get("x-real-ip") ??
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     "unknown";
-  const rl = checkRateLimit(ip, "oracle", 15, 3_600);
+  const rl = await checkRateLimit(ip, "oracle", 15, 3_600);
   if (!rl.ok) {
     return new Response(
       JSON.stringify({ error: `Presegli ste omejitev poizvedb. Poskusite ÄŤez ${rl.retryAfter}s.` }),
@@ -650,6 +650,19 @@ export async function POST(req: NextRequest) {
         // 1. Intent
         sendEvent("status", { phase: "intent" });
         const intent = await extractIntent(message, recentHistory);
+
+        // B16: Log query + intent to oracle_logs for Admin HQ trend analysis (fire-and-forget)
+        createSupabaseServer().then((logSb) =>
+          logSb
+            .from("oracle_logs")
+            .insert({
+              query: message.slice(0, 500),
+              locale,
+              vibes: intent.vibes,
+              regija: intent.regija ?? null,
+              ip: ip.slice(0, 45),
+            })
+        ).catch(() => {}); // Silent — never block the response
 
         // 2. Farms
         sendEvent("status", { phase: "search" });

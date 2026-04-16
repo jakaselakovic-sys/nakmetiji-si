@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Middleware Guard: Rate Limiting
-  const rl = checkRateLimit(user.id, "roadtrip", 10, 3600); // 10 roadtripov na uro maximum
+  const rl = await checkRateLimit(user.id, "roadtrip", 10, 3600); // 10 roadtripov na uro maximum
   if (!rl.ok) {
     return NextResponse.json(
       { error: `Presegli ste omejitev LLM generiranj. Poskusite čez ${rl.retryAfter}s.` },

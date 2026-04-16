@@ -10,7 +10,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Sparkles, Wand2, Save } from "lucide-react";
 
-import { storySchema, StoryInput, upsertStory } from "@/lib/actions/cms-fetch";
+import { storySchema, type StoryInput } from "@/lib/schemas/cms";
+import { upsertStory } from "@/lib/actions/cms-fetch";
 import { enhanceDraft, generateSEO } from "@/lib/actions/joze-cms";
 
 export function ZgodbeEditor() {

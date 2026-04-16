@@ -1,25 +1,65 @@
 // =============================================================================
-// NaKmetiji.si — Simple in-process rate limiter
+// NaKmetiji.si — Global Rate Limiter (Upstash Redis + in-memory fallback)
 //
-// Usage: call checkRateLimit(userId, "oracle", 20, 60) to allow 20 req/min.
-// Returns { ok: true } or { ok: false, retryAfter: seconds }.
+// Usage: const rl = await checkRateLimit(userId, "oracle", 20, 60);
 //
-// IMPORTANT — serverless caveat:
-//   On Vercel each lambda instance has its own Map. This does NOT provide
-//   globally consistent rate limits across instances — it prevents burst
-//   abuse on warm instances and protects during scale-to-zero cold starts.
-//   For strict global rate limiting, migrate to Upstash Redis.
+// Production: Upstash Redis sliding-window (globally consistent across lambdas)
+// Development: In-memory Map fallback (per-instance only)
 // =============================================================================
+
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
+export interface RateLimitResult {
+  ok: boolean;
+  remaining: number;
+  retryAfter?: number; // seconds until reset, only when ok=false
+}
+
+// ── Upstash Redis (production) ────────────────────────────────────────────
+
+let _redis: Redis | null = null;
+const _limiters = new Map<string, Ratelimit>();
+
+function getRedis(): Redis | null {
+  if (_redis) return _redis;
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    _redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+    return _redis;
+  }
+  return null;
+}
+
+function getUpstashLimiter(endpoint: string, limit: number, windowSec: number): Ratelimit | null {
+  const redis = getRedis();
+  if (!redis) return null;
+
+  const cacheKey = `${endpoint}:${limit}:${windowSec}`;
+  let limiter = _limiters.get(cacheKey);
+  if (!limiter) {
+    limiter = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(limit, `${windowSec} s`),
+      analytics: true,
+      prefix: `rl:${endpoint}`,
+    });
+    _limiters.set(cacheKey, limiter);
+  }
+  return limiter;
+}
+
+// ── In-memory fallback (development / missing env vars) ───────────────────
 
 interface Bucket {
   count: number;
   resetAt: number;
 }
 
-// Keyed by `${userId}:${endpoint}`
 const _buckets = new Map<string, Bucket>();
 
-// Periodic cleanup — prevent unbounded growth (runs every 5 min, server-side)
 if (typeof setInterval !== "undefined") {
   setInterval(() => {
     const now = Date.now();
@@ -29,23 +69,11 @@ if (typeof setInterval !== "undefined") {
   }, 5 * 60_000);
 }
 
-export interface RateLimitResult {
-  ok: boolean;
-  remaining: number;
-  retryAfter?: number; // seconds until reset, only when ok=false
-}
-
-/**
- * @param userId    Supabase user ID (or IP for unauthenticated routes)
- * @param endpoint  Short label, e.g. "oracle" or "apple-ify"
- * @param limit     Max requests per window
- * @param windowSec Window size in seconds (default: 60)
- */
-export function checkRateLimit(
+function checkInMemory(
   userId: string,
   endpoint: string,
   limit: number,
-  windowSec = 60
+  windowSec: number
 ): RateLimitResult {
   const key = `${userId}:${endpoint}`;
   const now = Date.now();
@@ -67,4 +95,34 @@ export function checkRateLimit(
   }
 
   return { ok: true, remaining: limit - bucket.count };
+}
+
+// ── Public API ────────────────────────────────────────────────────────────
+
+/**
+ * Globally consistent rate limiter.
+ * Uses Upstash Redis in production, falls back to in-memory for development.
+ *
+ * @param userId    Supabase user ID (or IP for unauthenticated routes)
+ * @param endpoint  Short label, e.g. "oracle" or "apple-ify"
+ * @param limit     Max requests per window
+ * @param windowSec Window size in seconds (default: 60)
+ */
+export function checkRateLimit(
+  userId: string,
+  endpoint: string,
+  limit: number,
+  windowSec = 60
+): RateLimitResult | Promise<RateLimitResult> {
+  const upstash = getUpstashLimiter(endpoint, limit, windowSec);
+
+  if (upstash) {
+    return upstash.limit(`${userId}`).then(({ success, remaining, reset }) => {
+      if (success) return { ok: true, remaining };
+      const retryAfter = Math.max(1, Math.ceil((reset - Date.now()) / 1_000));
+      return { ok: false, remaining: 0, retryAfter };
+    });
+  }
+
+  return checkInMemory(userId, endpoint, limit, windowSec);
 }

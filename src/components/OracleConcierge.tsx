@@ -26,6 +26,7 @@ import {
   Minimize2,
 } from "lucide-react";
 import { BLUR_DATA_URL } from "@/lib/blur";
+import { useOracleStore } from "@/lib/oracleStore";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -355,6 +356,9 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
   const [statusPhase, setStatusPhase] = useState<string | null>(null);
   const [hasGreeted, setHasGreeted] = useState(false);
   const [failCount, setFailCount] = useState(0);
+
+  // B11: Persist chat across navigations via Zustand sessionStorage store
+  const oracleStore = useOracleStore();
   const isCircuitBroken = failCount >= 3;
   const [retryInfo, setRetryInfo] = useState<{
     retryable: boolean;
@@ -389,21 +393,29 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
     }
   }, [input]);
 
-  // Greeting message
+  // Greeting message — restore from sessionStorage if available
   useEffect(() => {
     if (isOpen && !hasGreeted) {
       setHasGreeted(true);
+
+      // B11: Restore previous session messages if they exist
+      const stored = oracleStore.messages;
+      if (stored.length > 0) {
+        setMessages(stored.map((m) => ({ role: m.role, content: m.content })));
+        return;
+      }
+
       const greetings: Record<Locale, string> = {
         sl: `Bog žegnaj! Sem Jože, vaš kmečki vodnik.\n\nPovejte mi — kam vas srce vleče? Tihi gozd, vonj po sveže pečenem kruhu, jutranja megla nad travnikom? Opišite v svojih besedah, pa vam bom povedal, kje to najdete.\n\n*Ker kdor prej pride, prej melje.* 😊`,
         en: `Welcome! I'm Jože — your countryside guide to hidden Slovenia.\n\nTell me, where does your heart pull you? A quiet forest, the smell of fresh bread from a stone oven, morning mist lifting over a meadow...\n\nDescribe it in your own words.`,
         de: `Willkommen! Ich bin Jože — Ihr Reiseführer ins verborgene Slowenien.\n\nErzählen Sie mir, wohin Ihr Herz Sie zieht: ein stiller Wald, der Duft von frischem Brot, Morgennebel über Wiesen...`,
         it: `Benvenuti! Sono Jože — la vostra guida nella Slovenia nascosta.\n\nDitemi, dove vi porta il cuore? Un bosco silenzioso, il profumo del pane fresco, la nebbia del mattino sui prati...`,
       };
-      setMessages([
-        { role: "assistant", content: greetings[locale] },
-      ]);
+      const greeting: OracleMessage = { role: "assistant", content: greetings[locale] };
+      setMessages([greeting]);
+      oracleStore.addMessage({ role: greeting.role, content: greeting.content });
     }
-  }, [isOpen, hasGreeted, locale]);
+  }, [isOpen, hasGreeted, locale, oracleStore]);
 
   // Cancel stream on unmount (e.g. user navigates away mid-stream)
   useEffect(() => {
@@ -425,6 +437,7 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
 
       const userMessage: OracleMessage = { role: "user", content: text };
       setMessages((prev) => [...prev, userMessage]);
+      oracleStore.addMessage({ role: "user", content: text });
       setInput("");
       setIsLoading(true);
       setStatusPhase("intent");
@@ -544,9 +557,13 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
           }
           return next;
         });
+        // B11: Persist final assistant response to session store
+        if (accumulated) {
+          oracleStore.addMessage({ role: "assistant", content: accumulated });
+        }
       }
     },
-    [isLoading, isCircuitBroken, messages, locale]
+    [isLoading, isCircuitBroken, messages, locale, oracleStore]
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

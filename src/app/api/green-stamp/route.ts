@@ -80,17 +80,19 @@ export async function POST(req: NextRequest) {
        return NextResponse.json({ status: "error", message: "Kmetija ni najdena." }, { status: 404 });
     }
 
-    // 2. HMAC QR SIGNATURE VALIDATION
-    if (farm.qr_secret_key) {
-      if (!sig) {
-        Sentry.captureMessage("Missing QR signature for protected farm", { extra: { userId: user.id, farmId: farm.id } });
-        return NextResponse.json({ status: "error", message: "Manjka varnostni podpis QR kode." }, { status: 403 });
-      }
-      const expectedSig = crypto.createHmac("sha256", farm.qr_secret_key).update(farm.slug).digest("hex");
-      if (sig !== expectedSig) {
-        Sentry.captureMessage("Invalid QR signature", { extra: { userId: user.id, farmId: farm.id, sig } });
-        return NextResponse.json({ status: "error", message: "Neveljavna ali zastarela QR koda." }, { status: 403 });
-      }
+    // 2. HMAC QR SIGNATURE VALIDATION — always required (QR-only stamps)
+    if (!sig) {
+      Sentry.captureMessage("Missing QR signature", { extra: { userId: user.id, farmId: farm.id } });
+      return NextResponse.json({ status: "error", message: "Žig je mogoče pridobiti samo s skeniranjem QR kode na kmetiji." }, { status: 403 });
+    }
+    if (!farm.qr_secret_key) {
+      Sentry.captureMessage("Farm missing qr_secret_key", { extra: { farmSlug } });
+      return NextResponse.json({ status: "error", message: "Kmetija nima aktivirane QR kode. Obrnite se na gostitelja." }, { status: 403 });
+    }
+    const expectedSig = crypto.createHmac("sha256", farm.qr_secret_key).update(farm.slug).digest("hex");
+    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) {
+      Sentry.captureMessage("Invalid QR signature", { extra: { userId: user.id, farmId: farm.id, sig } });
+      return NextResponse.json({ status: "error", message: "Neveljavna ali zastarela QR koda." }, { status: 403 });
     }
 
     // 3. GEOFENCING VALIDATION

@@ -21,8 +21,18 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Nimate dostopa." }, { status: 401 });
 
+  // Paket check — free tier cannot use AI tools
+  const { data: farm } = await supabase
+    .from("kmetije")
+    .select("paket")
+    .eq("lastnik_id", user.id)
+    .maybeSingle();
+  if (!farm || farm.paket === "free" || farm.paket == null) {
+    return NextResponse.json({ error: "Ta funkcija zahteva Premium ali Basic paket." }, { status: 403 });
+  }
+
   // 10 analyses per hour per user — Groq vision is expensive
-  const rl = checkRateLimit(user.id, "apple-ify", 10, 3_600);
+  const rl = await checkRateLimit(user.id, "apple-ify", 10, 3_600);
   if (!rl.ok) {
     return NextResponse.json(
       { error: `Presegli ste dnevno omejitev analiz. Poskusite čez ${rl.retryAfter}s.` },

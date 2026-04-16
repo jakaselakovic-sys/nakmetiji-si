@@ -718,7 +718,7 @@ interface MagicVendorSuiteProps {
 }
 
 export function MagicVendorSuite({ kmetijaId, kmetijaIme = "", kmetijaRegija = "gorenjska", cenaNoc, paket = "free" }: MagicVendorSuiteProps) {
-  const [activeTool] = useState<ToolKey>("none");
+  const [activeTool, setActiveTool] = useState<ToolKey>("none");
 
   // Granularni dostop
   const isFree = paket === "free";
@@ -753,8 +753,9 @@ export function MagicVendorSuite({ kmetijaId, kmetijaIme = "", kmetijaRegija = "
             return (
               <button
                 key={tool.key}
+                onClick={() => isPremium && setActiveTool(tool.key === activeTool ? "none" : tool.key)}
                 className={`text-left p-5 rounded-2xl border transition-all duration-200 relative ${
-                  !isPremium ? "opacity-60 cursor-not-allowed group" : ""
+                  !isPremium ? "opacity-60 cursor-not-allowed group" : "cursor-pointer"
                 } ${
                   isActive
                     ? `${tool.activeBg} ${tool.activeBorder} ring-1 ${tool.activeRing}`

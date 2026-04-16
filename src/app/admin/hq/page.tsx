@@ -1,8 +1,58 @@
 import { createSupabaseServer } from "@/lib/supabase/server";
-import { Users, Store, Stamp, AlertTriangle, TrendingUp, RefreshCcw } from "lucide-react";
+import { Users, Store, Stamp, AlertTriangle, TrendingUp, RefreshCcw, Search } from "lucide-react";
 import Link from "next/link";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const revalidate = 0; // Always fresh in HQ
+
+// B16: Fetch top Oracle search trends from the last 7 days
+async function getOracleTrends(supabase: SupabaseClient) {
+  try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
+    const { data } = await supabase
+      .from("oracle_logs")
+      .select("query, vibes, regija")
+      .gte("created_at", sevenDaysAgo)
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    if (!data || data.length === 0) return null;
+
+    // Count vibe frequencies to surface top trends
+    const vibeCounts = new Map<string, number>();
+    for (const row of data) {
+      const vibes = row.vibes as string[] | null;
+      if (vibes) {
+        for (const v of vibes) {
+          vibeCounts.set(v, (vibeCounts.get(v) ?? 0) + 1);
+        }
+      }
+    }
+
+    // Top 5 queries (deduplicated by first 40 chars)
+    const seen = new Set<string>();
+    const topQueries: { query: string; count: number }[] = [];
+    for (const row of data) {
+      const key = (row.query as string).slice(0, 40).toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        topQueries.push({ query: row.query as string, count: 1 });
+      } else {
+        const existing = topQueries.find((q) => q.query.slice(0, 40).toLowerCase() === key);
+        if (existing) existing.count++;
+      }
+      if (topQueries.length >= 8) break;
+    }
+
+    const topVibes = [...vibeCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    return { totalQueries: data.length, topQueries: topQueries.slice(0, 5), topVibes };
+  } catch {
+    return null;
+  }
+}
 
 export default async function HQDashboardPage() {
   const supabase = await createSupabaseServer();
@@ -24,6 +74,9 @@ export default async function HQDashboardPage() {
       </div>
     );
   }
+
+  // B16: Fetch real Oracle trends
+  const trends = await getOracleTrends(supabase);
 
   const kpis = [
     { label: "Total Users", value: stats.total_users, icon: Users, color: "text-blue-400", bg: "bg-blue-400/10", border: "border-blue-400/20" },
@@ -103,18 +156,49 @@ export default async function HQDashboardPage() {
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-[#16181D] p-6 min-h-[300px]">
-           <h3 className="font-bold text-slate-300 mb-6 border-b border-white/10 pb-4">Oracle Semantic Trends</h3>
-           <div className="space-y-4">
-             {["Vegan breakfast prekmurje", "Pet friendly zidanice", "Glamping s termalno vodo"].map((trend, i) => (
-               <div key={i} className="flex items-center justify-between">
-                 <span className="text-sm font-medium text-slate-400 truncate pr-4">{trend}</span>
-                 <div className="flex items-center text-xs text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded">
-                   <TrendingUp size={12} className="mr-1" />
-                   {[12.4, 8.7, 15.2][i] ?? 10}%
+           <h3 className="font-bold text-slate-300 mb-6 border-b border-white/10 pb-4 flex items-center gap-2">
+             <Search size={14} className="text-purple-400" />
+             Oracle Semantic Trends
+             {trends && <span className="ml-auto text-xs text-slate-500 font-normal">{trends.totalQueries} poizvedb / 7d</span>}
+           </h3>
+           {trends ? (
+             <div className="space-y-4">
+               {trends.topQueries.map((t, i) => (
+                 <div key={i} className="flex items-center justify-between">
+                   <span className="text-sm font-medium text-slate-400 truncate pr-4">{t.query}</span>
+                   <div className="flex items-center text-xs text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded flex-shrink-0">
+                     <TrendingUp size={12} className="mr-1" />
+                     {t.count}x
+                   </div>
                  </div>
-               </div>
-             ))}
-           </div>
+               ))}
+               {trends.topVibes.length > 0 && (
+                 <div className="pt-4 border-t border-white/5">
+                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">Top Vibes</p>
+                   <div className="flex flex-wrap gap-1.5">
+                     {trends.topVibes.map(([vibe, count]) => (
+                       <span key={vibe} className="text-xs bg-purple-500/10 text-purple-300 px-2 py-0.5 rounded-full">
+                         {vibe} ({count})
+                       </span>
+                     ))}
+                   </div>
+                 </div>
+               )}
+             </div>
+           ) : (
+             <div className="space-y-4">
+               {["Vegan breakfast prekmurje", "Pet friendly zidanice", "Glamping s termalno vodo"].map((trend, i) => (
+                 <div key={i} className="flex items-center justify-between">
+                   <span className="text-sm font-medium text-slate-400 truncate pr-4">{trend}</span>
+                   <div className="flex items-center text-xs text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded">
+                     <TrendingUp size={12} className="mr-1" />
+                     {[12.4, 8.7, 15.2][i] ?? 10}%
+                   </div>
+                 </div>
+               ))}
+               <p className="text-[10px] text-slate-600 italic mt-2">Mock podatki — oracle_logs tabela ni najdena.</p>
+             </div>
+           )}
         </div>
       </div>
     </div>

@@ -1,11 +1,11 @@
 // =============================================================================
-// NaKmetiji.si — Blog Landing Page
+// NaKmetiji.si — Blog Landing Page (with pagination)
 // =============================================================================
 
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Clock, Calendar, Tag, ArrowRight } from "lucide-react";
+import { Clock, Calendar, Tag, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { getAllPosts } from "@/lib/blog";
 
 export const metadata: Metadata = {
@@ -33,8 +33,23 @@ export const metadata: Metadata = {
   },
 };
 
-export default function BlogPage() {
-  const posts = getAllPosts();
+const POSTS_PER_PAGE = 9;
+
+export default async function BlogPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const params = await searchParams;
+  const allPosts = getAllPosts();
+  const currentPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+  const totalPages = Math.max(1, Math.ceil(allPosts.length / POSTS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+
+  const posts = allPosts.slice(
+    (safePage - 1) * POSTS_PER_PAGE,
+    safePage * POSTS_PER_PAGE
+  );
 
   return (
     <div className="min-h-screen bg-cream">
@@ -81,7 +96,7 @@ export default function BlogPage() {
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                     sizes="(max-width:768px) 100vw, (max-width:1200px) 50vw, 33vw"
-                    priority={i === 0}
+                    priority={i === 0 && safePage === 1}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                 </div>
@@ -136,6 +151,60 @@ export default function BlogPage() {
               </Link>
             ))}
           </div>
+        )}
+
+        {/* ── Pagination ── */}
+        {totalPages > 1 && (
+          <nav className="flex items-center justify-center gap-2 mt-12" aria-label="Strani bloga">
+            {/* Prev */}
+            {safePage > 1 ? (
+              <Link
+                href={`/blog?page=${safePage - 1}`}
+                className="flex items-center gap-1 px-4 py-2.5 rounded-xl border border-earth-200 bg-white text-sm font-semibold text-forest-700 hover:bg-forest-50 hover:border-forest-300 transition-colors"
+              >
+                <ChevronLeft size={16} />
+                Prejšnja
+              </Link>
+            ) : (
+              <span className="flex items-center gap-1 px-4 py-2.5 rounded-xl border border-earth-100 bg-earth-50 text-sm font-semibold text-earth-300 cursor-not-allowed">
+                <ChevronLeft size={16} />
+                Prejšnja
+              </span>
+            )}
+
+            {/* Page numbers */}
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <Link
+                  key={page}
+                  href={`/blog?page=${page}`}
+                  className={`min-w-[40px] h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-colors ${
+                    page === safePage
+                      ? "bg-forest-700 text-white shadow-md"
+                      : "bg-white border border-earth-200 text-earth-700 hover:bg-forest-50 hover:border-forest-300"
+                  }`}
+                >
+                  {page}
+                </Link>
+              ))}
+            </div>
+
+            {/* Next */}
+            {safePage < totalPages ? (
+              <Link
+                href={`/blog?page=${safePage + 1}`}
+                className="flex items-center gap-1 px-4 py-2.5 rounded-xl border border-earth-200 bg-white text-sm font-semibold text-forest-700 hover:bg-forest-50 hover:border-forest-300 transition-colors"
+              >
+                Naslednja
+                <ChevronRight size={16} />
+              </Link>
+            ) : (
+              <span className="flex items-center gap-1 px-4 py-2.5 rounded-xl border border-earth-100 bg-earth-50 text-sm font-semibold text-earth-300 cursor-not-allowed">
+                Naslednja
+                <ChevronRight size={16} />
+              </span>
+            )}
+          </nav>
         )}
       </div>
     </div>

@@ -105,7 +105,17 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Nimate dostopa." }, { status: 401 });
 
-  const rl = checkRateLimit(user.id, "price-advisor", 60, 3_600);
+  // Paket check — free tier cannot use AI tools
+  const { data: farm } = await supabase
+    .from("kmetije")
+    .select("paket")
+    .eq("lastnik_id", user.id)
+    .maybeSingle();
+  if (!farm || farm.paket === "free" || farm.paket == null) {
+    return NextResponse.json({ error: "Ta funkcija zahteva Premium ali Basic paket." }, { status: 403 });
+  }
+
+  const rl = await checkRateLimit(user.id, "price-advisor", 60, 3_600);
   if (!rl.ok) {
     return NextResponse.json(
       { error: `Presegli ste omejitev. Poskusite čez ${rl.retryAfter}s.` },

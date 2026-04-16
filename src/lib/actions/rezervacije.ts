@@ -38,6 +38,12 @@ interface AtomicRpcResult {
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+const AddonSchema = z.object({
+  izdelek_id: z.string().uuid(),
+  ime: z.string().max(200),
+  kolicina: z.number().int().min(1).max(100),
+});
+
 const RezervacijaSchema = z
   .object({
     kmetija_id:    z.string().uuid({ message: "Neveljaven ID kmetije." }),
@@ -48,6 +54,7 @@ const RezervacijaSchema = z
     gost_telefon:  z.string().max(30).optional(),
     stevilo_oseb:  z.number().int().min(1, { message: "Vsaj 1 gost." }).max(50, { message: "Največ 50 gostov." }),
     opombe:        z.string().max(1000).optional(),
+    dodatki:       z.array(AddonSchema).max(20).optional(),
   })
   .superRefine((data, ctx) => {
     const today = new Date().toISOString().split("T")[0];
@@ -104,11 +111,36 @@ export async function oddajRezervacijo(
 
   if (!kmetija) return { ok: false, napaka: "Kmetija ne obstaja." };
 
+  // B5: Enforce max_gostov before hitting the DB
+  if (kmetija.max_gostov !== null && input.stevilo_oseb > kmetija.max_gostov) {
+    return { ok: false, napaka: `Ta kmetija sprejme največ ${kmetija.max_gostov} gostov.` };
+  }
+
   // Calculate nightly cost
   const od  = new Date(input.datum_od);
   const do_ = new Date(input.datum_do);
   const nocitve    = Math.max(1, Math.round((do_.getTime() - od.getTime()) / 86_400_000));
-  const skupaj_cena = nocitve * (kmetija.cena_noc ?? 0);
+  let skupaj_cena = nocitve * (kmetija.cena_noc ?? 0);
+
+  // B9: Add-on pricing — fetch real prices server-side to prevent client manipulation
+  if (input.dodatki && input.dodatki.length > 0) {
+    const izdelekIds = input.dodatki.map((d) => d.izdelek_id);
+    const { data: izdelki } = await supabase
+      .from("izdelki")
+      .select("id, cena")
+      .in("id", izdelekIds)
+      .eq("kmetija_id", input.kmetija_id);
+
+    if (izdelki) {
+      const priceMap = new Map(izdelki.map((iz) => [iz.id, iz.cena as number]));
+      for (const addon of input.dodatki) {
+        const unitPrice = priceMap.get(addon.izdelek_id);
+        if (unitPrice != null) {
+          skupaj_cena += unitPrice * addon.kolicina;
+        }
+      }
+    }
+  }
 
   // ── Atomic booking via PL/pgSQL (single serialized transaction) ───────────
   const { data: rpc, error: rpcError } = await supabase.rpc("atomic_rezerviraj", {
@@ -131,6 +163,10 @@ export async function oddajRezervacijo(
   const result = rpc as AtomicRpcResult;
 
   if (!result.ok) {
+    // B6: Expose specific OVER_CAPACITY message for UI differentiation
+    if (result.code === "OVER_CAPACITY") {
+      return { ok: false, napaka: `Kapaciteta kmetije je presežena za izbrane datume. (Maks. ${kmetija.max_gostov ?? "?"} gostov)` };
+    }
     return { ok: false, napaka: result.napaka ?? "Rezervacija ni uspela." };
   }
 
