@@ -113,11 +113,25 @@ export default async function BlogPostPage({ params }: Props) {
     mainEntityOfPage: `https://nakmetiji.si/blog/${post.slug}`,
   };
 
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Domov", item: "https://nakmetiji.si" },
+      { "@type": "ListItem", position: 2, name: "Blog", item: "https://nakmetiji.si/blog" },
+      { "@type": "ListItem", position: 3, name: post.title, item: `https://nakmetiji.si/blog/${post.slug}` },
+    ],
+  };
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
 
       <article className="min-h-screen bg-cream">

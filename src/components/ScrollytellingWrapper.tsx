@@ -126,7 +126,7 @@ export function ScrollytellingWrapper() {
             >
               <span className="text-white/95">Odkrijte Slovenijo,</span>
               <motion.span
-                className="block mt-2 font-black italic drop-shadow-lg"
+                className="block mt-2 font-script text-[1.15em] drop-shadow-lg"
                 style={{ color: themeColor, willChange: "color" }}
               >
                 ki diši po domačem.

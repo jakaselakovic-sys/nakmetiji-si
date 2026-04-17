@@ -550,6 +550,7 @@ export function KmetijeClient({ initialKmetije, dozivetja }: Props) {
                 >
                   <FarmCard
                     priority={i < 3}
+                    index={i}
                     farm={{
                       slug: kmetija.slug,
                       name: kmetija.ime,

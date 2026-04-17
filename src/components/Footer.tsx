@@ -6,29 +6,14 @@
 import Link from "next/link";
 import { Leaf, Mail, Phone, MapPin } from "lucide-react";
 
-const FOOTER_LINKS = {
-  razisci: [
-    { label: "Vse kmetije", href: "/kmetije" },
-    { label: "Po regijah", href: "/regije" },
-    { label: "Kulinarika", href: "/kmetije?dozivetje=kulinarika" },
-    { label: "Prenočišča", href: "/kmetije?dozivetje=prenocisce" },
-    { label: "Vinski turizem", href: "/kmetije?dozivetje=vino" },
-    { label: "Blog", href: "/blog" },
-  ],
-  zaKmetije: [
-    { label: "Odprite vrata vaše kmetije", href: "/dodaj-kmetijo" },
-    { label: "Naša zgodba", href: "/o-nas" },
-  ],
-} as const;
-
 export function Footer() {
   return (
     <footer className="bg-forest-900 text-white/80">
       {/* ── Main footer ── */}
       <div className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
-        <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8">
           {/* Brand */}
-          <div className="lg:col-span-1">
+          <div>
             <div className="flex items-center gap-2.5 mb-4">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-forest-700 text-white">
                 <Leaf size={18} strokeWidth={2.5} />
@@ -41,44 +26,6 @@ export function Footer() {
               Vonj sveže pokošene trave, topel kruh iz krušne peči, ptičje
               petje ob zori. To je Slovenija, ki jo varujemo.
             </p>
-          </div>
-
-          {/* Razišči */}
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-white/35 mb-5">
-              Odkrijte
-            </h3>
-            <ul className="space-y-3">
-              {FOOTER_LINKS.razisci.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-white/70 hover:text-white transition-colors duration-200"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Za kmetije */}
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-white/35 mb-5">
-              Za kmetije
-            </h3>
-            <ul className="space-y-3">
-              {FOOTER_LINKS.zaKmetije.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-white/70 hover:text-white transition-colors duration-200"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
           </div>
 
           {/* Kontakt */}

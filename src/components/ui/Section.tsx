@@ -90,11 +90,11 @@ export function SectionHeader({
     >
       <div>
         {overline && (
-          <span className="text-sm font-semibold uppercase tracking-[0.15em] text-forest-600 mb-2 block">
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-forest-600/70 mb-3 block">
             {overline}
           </span>
         )}
-        <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight wood-carved font-display">
+        <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-forest-900 font-display">
           {title}
         </h2>
         {description && (

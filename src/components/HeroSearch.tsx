@@ -273,7 +273,7 @@ function MobileBottomSheet({
                 <motion.button
                   onClick={onSearch}
                   whileTap={{ scale: 0.97 }}
-                  className="mt-2 w-full flex items-center justify-center gap-2.5 rounded-2xl bg-forest-700 px-8 py-4 text-white font-bold text-base shadow-lg hover:bg-forest-600 transition-colors duration-200"
+                  className="mt-2 w-full flex items-center justify-center gap-2.5 rounded-3xl bg-forest-700 px-8 py-4 text-white font-bold text-base shadow-lg hover:bg-forest-600 transition-colors duration-200"
                 >
                   <Search size={18} strokeWidth={2.5} />
                   Išči kmetije
@@ -314,7 +314,7 @@ function DesktopSearchBar({ dozivetja }: { dozivetja: DozivetjeOption[] }) {
   }, [setShowKjeDropdown, setShowKajDropdown]);
 
   return (
-    <div className="glass relative z-20 rounded-2xl p-3 shadow-2xl shadow-black/15 transition-all duration-500 hover:shadow-[0_20px_60px_rgba(0,0,0,0.18)] hover:scale-[1.01]">
+    <div className="paper-search relative z-20 p-3 shadow-2xl shadow-black/10 transition-all duration-500 hover:shadow-[0_20px_60px_rgba(45,90,39,0.12)] hover:scale-[1.005]">
       <div className="flex flex-row group/search">
         {/* Kje */}
         <div ref={kjeRef} className="relative flex-1 opacity-100 transition-opacity duration-300 group-focus-within/search:opacity-40 focus-within:!opacity-100">
@@ -338,7 +338,7 @@ function DesktopSearchBar({ dozivetja }: { dozivetja: DozivetjeOption[] }) {
             )}
           </div>
           {showKjeDropdown && filteredRegije.length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-forest-50/95 backdrop-blur-md rounded-xl shadow-2xl border border-forest-200/60 max-h-48 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-forest-50/95 backdrop-blur-md rounded-2xl shadow-2xl border border-forest-200/60 max-h-48 overflow-y-auto">
               {filteredRegije.map((r) => (
                 <button
                   key={r.value}
@@ -375,7 +375,7 @@ function DesktopSearchBar({ dozivetja }: { dozivetja: DozivetjeOption[] }) {
             )}
           </div>
           {showKajDropdown && filteredDozivetja.length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-forest-50/95 backdrop-blur-md rounded-xl shadow-2xl border border-forest-200/60 max-h-48 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-forest-50/95 backdrop-blur-md rounded-2xl shadow-2xl border border-forest-200/60 max-h-48 overflow-y-auto">
               {filteredDozivetja.map((d) => (
                 <button
                   key={d.id}
@@ -415,7 +415,7 @@ function DesktopSearchBar({ dozivetja }: { dozivetja: DozivetjeOption[] }) {
         <div className="p-2 pl-0 transition-opacity duration-300 group-focus-within/search:opacity-80">
           <button
             onClick={handleSearch}
-            className="w-full flex items-center justify-center gap-2.5 rounded-2xl bg-forest-700 px-10 py-5 text-white font-bold text-base shadow-lg hover:bg-forest-600 hover:shadow-xl hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
+            className="w-full flex items-center justify-center gap-2.5 rounded-3xl bg-forest-700 px-10 py-5 text-white font-bold text-base shadow-lg hover:bg-forest-600 hover:shadow-xl hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
           >
             <Search size={18} strokeWidth={2.5} />
             <span>Poiščite pot</span>
@@ -451,7 +451,7 @@ export function HeroSearch({ dozivetja = [] }: { dozivetja?: DozivetjeOption[] }
           <motion.button
             onClick={() => setSheetOpen(true)}
             whileTap={{ scale: 0.97 }}
-            className="w-full flex items-center gap-3 rounded-full glass px-5 py-4 shadow-xl shadow-black/15 border border-white/30"
+            className="w-full flex items-center gap-3 rounded-full paper-search px-5 py-4 shadow-xl shadow-black/10"
             aria-label="Odpri iskanje"
           >
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-forest-700 text-white flex-shrink-0">

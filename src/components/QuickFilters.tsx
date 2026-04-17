@@ -1,8 +1,8 @@
 "use client";
 
 // =============================================================================
-// NaKmetiji.si — QuickFilters
-// Hitri filtri pod iskalnikom: razširjene oznake za priljubljene destinacije
+// NaKmetiji.si — QuickFilters (Handcrafted Luxury Redesign)
+// Warm-toned filter pills on cream background
 // =============================================================================
 
 import { useRouter } from "next/navigation";
@@ -24,28 +24,32 @@ const QUICK_FILTERS = [
   { label: "Glamping", param: "dozivetje=glamping" },
 ] as const;
 
+const SPRING = { type: "spring" as const, stiffness: 120, damping: 18, mass: 0.8 };
+
 export function QuickFilters() {
   const router = useRouter();
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.7, ease: "easeOut" }}
-      className="flex flex-wrap items-center justify-center gap-2.5 mt-6 max-w-5xl mx-auto"
+      transition={{ duration: 0.5, delay: 0.3 }}
+      className="flex flex-wrap items-center justify-center gap-2 mt-2"
     >
-      <span className="flex items-center gap-1.5 text-white/55 text-xs font-medium mr-1">
-        <Sparkles size={14} />
+      <span className="flex items-center gap-1.5 text-earth-500 text-xs font-semibold mr-1">
+        <Sparkles size={13} className="text-gold-500" />
         Priljubljeno:
       </span>
       {QUICK_FILTERS.map((filter, i) => (
         <motion.button
           key={filter.label}
-          initial={{ opacity: 0, scale: 0.9 }}
+          initial={{ opacity: 0, scale: 0.92 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.8 + i * 0.04, duration: 0.3 }}
+          transition={{ delay: 0.4 + i * 0.03, ...SPRING }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.97 }}
           onClick={() => router.push(`/kmetije?${filter.param}`)}
-          className="rounded-full bg-white/12 backdrop-blur-sm border border-white/18 px-4 py-2 text-sm font-medium text-white/85 hover:bg-white/22 hover:text-white hover:border-white/35 transition-all duration-300 hover:scale-105"
+          className="rounded-full bg-white border border-earth-200/60 px-3.5 py-1.5 text-[13px] font-medium text-forest-800 hover:bg-forest-50 hover:text-forest-700 hover:border-forest-300 shadow-sm shadow-earth-100/50 transition-all duration-200"
         >
           {filter.label}
         </motion.button>

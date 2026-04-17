@@ -36,6 +36,7 @@
   /* Akcentne */
   --color-cream: #F4F1EA;
   --color-cream-warm: #f0e8d8;
+  --color-paper: #FDFBF7;
   --color-gold-500: #d4a853;
   --color-gold-600: #b8912e;
 
@@ -50,6 +51,7 @@
   --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
   --font-display: var(--font-playfair), Georgia, "Times New Roman", serif;
+  --font-script: var(--font-script), "Caveat", cursive;
 }
 
 /* ── Z-index scale ───────────────────────────────────────────────────────── */
@@ -75,7 +77,7 @@ html {
 }
 
 body {
-  background: var(--color-background);
+  background: var(--color-paper);
   color: var(--color-foreground);
   font-family: var(--font-sans);
 }
@@ -83,17 +85,17 @@ body {
 /* ── Scrollbar ───────────────────────────────────────────────────────────── */
 
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-earth-100);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-earth-400);
-  border-radius: 4px;
+  background: var(--color-forest-300);
+  border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-earth-500);
+  background: var(--color-forest-500);
 }
 
 /* ── Selection ───────────────────────────────────────────────────────────── */
@@ -101,6 +103,29 @@ body {
 ::selection {
   background: var(--color-forest-200);
   color: var(--color-forest-900);
+}
+
+/* ── Focus visible — keyboard accessibility ─────────────────────────────── */
+
+*:focus-visible {
+  outline: 2px solid var(--color-forest-600);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Reset outline on elements that have their own focus styles */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-forest-500);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-forest-400);
+  outline-offset: 0;
+  border-radius: inherit;
 }
 
 /* ── Glassmorphism utilities ─────────────────────────────────────────────── */
@@ -366,6 +391,25 @@ body {
 /* Display font utility */
 .font-display {
   font-family: var(--font-display);
+}
+
+/* Script / handwritten font utility */
+.font-script {
+  font-family: var(--font-script);
+}
+
+/* Paper grain — subtle full-page texture overlay */
+.paper-grain::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  opacity: 0.035;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 512px 512px;
+  mix-blend-mode: multiply;
 }
 
 /* Text shadows for hero readability */
@@ -872,4 +916,167 @@ body {
 /* Route animation for roadtrip projection */
 @keyframes dash-flow {
   to { stroke-dashoffset: -20; }
+}
+
+/* ── Glassmorphic Navigation Island ────────────────────────────────────── */
+
+.glass-island {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 32px;
+  box-shadow:
+    0 8px 32px rgba(45, 90, 39, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.glass-island-dark {
+  background: rgba(26, 58, 42, 0.65);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 32px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* ── Noise filter overlay ──────────────────────────────────────────────── */
+/* Usage: add .noise-overlay to a relative parent. Creates a pseudo-element
+   with a subtle grain texture for that handcrafted artisan feel. */
+
+.noise-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* ── Paper Tear effect ─────────────────────────────────────────────────── */
+/* Organic, hand-torn edge between content and footer.
+   Uses an SVG mask with an irregular line to create the illusion of
+   paper ripping away. */
+
+.paper-tear {
+  position: relative;
+  z-index: 1;
+}
+
+.paper-tear::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: var(--color-forest-900);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath d='M0,30 C60,45 120,10 200,28 C280,46 340,12 440,32 C540,52 600,8 720,26 C840,44 900,14 1000,30 C1100,46 1160,10 1260,28 C1340,42 1400,18 1440,30 L1440,60 L0,60 Z' fill='white'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath d='M0,30 C60,45 120,10 200,28 C280,46 340,12 440,32 C540,52 600,8 720,26 C840,44 900,14 1000,30 C1100,46 1160,10 1260,28 C1340,42 1400,18 1440,30 L1440,60 L0,60 Z' fill='white'/%3E%3C/svg%3E");
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+}
+
+/* ── Paper-texture search bar ──────────────────────────────────────────── */
+
+.paper-search {
+  background: var(--color-paper);
+  border-radius: 32px;
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.06),
+    inset 0 1px 2px rgba(0, 0, 0, 0.04),
+    0 1px 0 rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* ── Boutique card (32px radius, forest shadow) ────────────────────────── */
+
+.card-boutique {
+  border-radius: 32px;
+  overflow: hidden;
+  background: white;
+  border: 1px solid rgba(45, 90, 39, 0.08);
+  box-shadow:
+    0 4px 24px rgba(45, 90, 39, 0.07),
+    0 1px 4px rgba(0, 0, 0, 0.03);
+  transition: box-shadow 0.5s ease, transform 0.5s ease;
+}
+
+.card-boutique:hover {
+  box-shadow:
+    0 12px 48px rgba(45, 90, 39, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+/* ── Polaroid card — offset white border, subtle tilt, tape stamp ─────── */
+
+.card-polaroid {
+  border-radius: 4px;
+  overflow: visible;
+  background: white;
+  padding: 10px 10px 40px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.5s ease, transform 0.5s ease;
+}
+
+.card-polaroid:hover {
+  box-shadow:
+    0 16px 48px rgba(45, 90, 39, 0.14),
+    0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* Slight random tilts for Polaroid feel — assign via nth-child or inline */
+.card-polaroid-tilt-1 { transform: rotate(-1.2deg); }
+.card-polaroid-tilt-2 { transform: rotate(0.8deg); }
+.card-polaroid-tilt-3 { transform: rotate(-0.5deg); }
+.card-polaroid-tilt-1:hover,
+.card-polaroid-tilt-2:hover,
+.card-polaroid-tilt-3:hover {
+  transform: rotate(0deg) translateY(-4px);
+}
+
+/* Stamp icon overlay for Polaroid image corner */
+.polaroid-stamp {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(45, 90, 39, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  transform: scale(0.8) rotate(-15deg);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.card-polaroid:hover .polaroid-stamp {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+/* ── Mobile bottom navigation ──────────────────────────────────────────── */
+
+.mobile-bottom-nav {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-top: 1px solid rgba(45, 90, 39, 0.08);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.06);
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
 }

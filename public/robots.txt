@@ -9,4 +9,4 @@ Disallow: /api/
 Disallow: /prijava
 Disallow: /registracija
 
-Sitemap: https://nakmetiji.vercel.app/sitemap.xml
+Sitemap: https://nakmetiji.si/sitemap.xml

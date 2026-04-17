@@ -35,6 +35,36 @@ export const metadata: Metadata = {
 
 const POSTS_PER_PAGE = 9;
 
+function BlogJsonLd({ posts }: { posts: { slug: string; title: string; coverImage: string; date: string; description: string }[] }) {
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "Blog — NaKmetiji",
+    description:
+      "Nasveti, zgodbe in inspiracija za podeželski turizem v Sloveniji.",
+    url: "https://nakmetiji.si/blog",
+    mainEntity: {
+      "@type": "ItemList",
+      itemListElement: posts.map((post, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        url: `https://nakmetiji.si/blog/${post.slug}`,
+        name: post.title,
+        image: post.coverImage,
+        datePublished: post.date,
+        description: post.description,
+      })),
+    },
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
+  );
+}
+
 export default async function BlogPage({
   searchParams,
 }: {
@@ -53,6 +83,7 @@ export default async function BlogPage({
 
   return (
     <div className="min-h-screen bg-cream">
+      <BlogJsonLd posts={posts} />
       {/* ── Hero ── */}
       <div className="bg-forest-900 pt-32 pb-20 px-6 lg:px-8 text-center relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">

@@ -10,7 +10,7 @@ import { REGIJA_LABELS } from "@/types/database";
 import { FarmProfileClient } from "./FarmProfileClient";
 import { createSupabaseServer } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600; // ISR: re-generate at most once per hour
 
 // ─── Dynamic metadata ───────────────────────────────────────────────────────
 

@@ -51,6 +51,18 @@ function getUpstashLimiter(endpoint: string, limit: number, windowSec: number): 
   return limiter;
 }
 
+// ── Production guard — warn if Redis is unavailable ──────────────────────
+
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
+if (IS_PRODUCTION && !process.env.UPSTASH_REDIS_REST_URL) {
+  console.warn(
+    "[rateLimit] ⚠️ UPSTASH_REDIS_REST_URL not set in production! " +
+    "Rate limiting falls back to per-instance in-memory — NOT globally consistent. " +
+    "Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN for proper protection."
+  );
+}
+
 // ── In-memory fallback (development / missing env vars) ───────────────────
 
 interface Bucket {

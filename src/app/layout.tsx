@@ -3,13 +3,14 @@
 // =============================================================================
 
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
+import { Geist, Geist_Mono, Playfair_Display, Caveat } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { OracleConcierge } from "@/components/OracleConcierge";
 import { DemoBanner, DemoFooterStrip } from "@/components/DemoDisclaimer";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
+import { SocialProofToast } from "@/components/SocialProofToast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,6 +26,12 @@ const playfair = Playfair_Display({
   variable: "--font-playfair",
   subsets: ["latin", "latin-ext"],
   weight: ["700", "800", "900"],
+});
+
+const caveat = Caveat({
+  variable: "--font-script",
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -98,7 +105,7 @@ export default function RootLayout({
   return (
     <html
       lang="sl"
-      className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${caveat.variable} h-full antialiased`}
     >
       <head>
         <meta name="theme-color" content="#1a3a2a" />
@@ -108,16 +115,17 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
-      <body className="min-h-full flex flex-col bg-cream text-forest-900">
+      <body className="min-h-full flex flex-col bg-paper text-forest-900 paper-grain">
         {/* Demo mode banner — auto-hides in production (NEXT_PUBLIC_DEMO_MODE=false) */}
         <DemoBanner />
         <Navbar />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 pb-20 md:pb-0">{children}</main>
         <Footer />
         {/* Demo mode footer strip */}
         <DemoFooterStrip />
         <OracleConcierge locale="sl" />
         <ServiceWorkerRegistrar />
+        <SocialProofToast />
       </body>
     </html>
   );

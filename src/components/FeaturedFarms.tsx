@@ -41,7 +41,7 @@ export async function FeaturedFarms() {
   );
 
   return (
-    <section className="py-20 px-6 lg:px-8">
+    <section className="py-24 px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <SectionHeader
           overline="Izbrano za vas"
@@ -63,11 +63,12 @@ export async function FeaturedFarms() {
             <p className="text-earth-500">Kmalu bodo tukaj prikazane kmetije.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {kmetije.map((kmetija, i) => (
               <FarmCard
                 key={kmetija.id}
                 priority={i < 3}
+                index={i}
                 farm={{
                   slug: kmetija.slug,
                   name: kmetija.ime,

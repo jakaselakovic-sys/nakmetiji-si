@@ -53,6 +53,61 @@ import { MockBookingForm } from "@/components/MockBookingForm";
 // Feature flags
 import { MOCK_BOOKING, DEMO_MODE } from "@/lib/config/demo";
 
+function JsonLd() {
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "NaKmetiji",
+    url: "https://nakmetiji.si",
+    description:
+      "NaKmetiji je vodilna platforma za odkrivanje turističnih kmetij po vsej Sloveniji.",
+    inLanguage: "sl",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: "https://nakmetiji.si/kmetije?q={search_term_string}",
+      },
+      "query-input": "required name=search_term_string",
+    },
+  };
+
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "NaKmetiji",
+    url: "https://nakmetiji.si",
+    logo: "https://nakmetiji.si/icons/icon-192.svg",
+    description:
+      "Platforma za odkrivanje turističnih kmetij, kulinarike, vinskega turizma in doživetij na slovenskem podeželju.",
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: "Ljubljana",
+      addressCountry: "SI",
+    },
+    contactPoint: {
+      "@type": "ContactPoint",
+      email: "info@nakmetiji.si",
+      contactType: "customer service",
+      availableLanguage: ["Slovenian", "English"],
+    },
+    sameAs: [],
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
+    </>
+  );
+}
+
 export default async function HomePage() {
   const supabase = await createSupabaseServer();
   const { data: dozivetja } = await supabase
@@ -62,6 +117,8 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd />
+
       {/* ════════════════════════════════════════════════════════════════════
           SECTION 1 — LIQUID SCROLLYTELLING HERO
           800vh sticky container. 4 background layers cross-fade as user
@@ -74,39 +131,46 @@ export default async function HomePage() {
           SECTION 2 — DISCOVERY ENGINE
           Search, filters, categories, featured farms (ISR-cached 60s).
           ════════════════════════════════════════════════════════════════════ */}
-      <div className="relative z-10 w-full overflow-hidden bg-cream">
-        {/* Subtle wood-grain texture overlay */}
-        <div
-          className="absolute inset-0 z-0 opacity-40 mix-blend-multiply bg-[url('/images/wood-texture.webp')] bg-repeat"
-          style={{ backgroundSize: "400px" }}
-          aria-hidden="true"
-        />
-        {/* Shadow transition from hero */}
-        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-forest-950/20 to-transparent z-10 pointer-events-none" />
+      <div className="relative z-10 w-full overflow-hidden bg-paper">
+        {/* Soft top shadow transition from hero */}
+        <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-forest-950/10 to-transparent z-10 pointer-events-none" />
 
         <div className="relative z-20">
-          {/* Search + filters */}
-          <div className="py-20 flex flex-col items-center gap-8 px-6 lg:px-8 max-w-7xl mx-auto">
-            <div className="w-full max-w-5xl group/main">
-              <HeroSearch dozivetja={dozivetja ?? []} />
-              <div className="relative z-10 mt-6 hover:opacity-100 w-full transition-all duration-300 group-focus-within/main:opacity-40">
-                <QuickFilters />
-              </div>
+          {/* ── Search + Category Hub ─────────────────────────────────── */}
+          <div className="pt-16 pb-8 flex flex-col items-center gap-6 px-6 lg:px-8 max-w-7xl mx-auto">
+            {/* Section intro */}
+            <div className="text-center mb-2">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-forest-600/70 mb-3">Odkrijte</p>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-forest-900 font-display tracking-tight">
+                Kam vas kliče narava?
+              </h2>
             </div>
-            <div className="w-full mt-4">
-              <CategoryScroll />
+
+            {/* Search bar */}
+            <div className="w-full max-w-4xl">
+              <HeroSearch dozivetja={dozivetja ?? []} />
+            </div>
+
+            {/* Quick filter pills */}
+            <div className="w-full max-w-4xl">
+              <QuickFilters />
             </div>
           </div>
 
-          {/* Stats bar */}
+          {/* ── Category Cards ────────────────────────────────────────── */}
+          <div className="pb-6 px-6 lg:px-8 max-w-7xl mx-auto">
+            <CategoryScroll />
+          </div>
+
+          {/* ── Stats strip ───────────────────────────────────────────── */}
           <StatsBar />
 
-          {/* Featured farms — ISR cached, Suspense skeleton */}
+          {/* ── Featured farms ────────────────────────────────────────── */}
           <Suspense
             fallback={
-              <section className="py-20 px-6 lg:px-8 bg-cream">
+              <section className="py-20 px-6 lg:px-8">
                 <div className="mx-auto max-w-7xl">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
                   </div>
                 </div>
@@ -129,16 +193,16 @@ export default async function HomePage() {
           MOCK_BOOKING=false → Replace MockBookingForm with real form
           ════════════════════════════════════════════════════════════════════ */}
       {MOCK_BOOKING && (
-        <section className="bg-earth-100 border-t border-earth-200 py-20 px-6">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-10">
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 border border-amber-200 text-amber-800 text-xs font-bold mb-4">
-                ⚗️ Demo rezervacijski sistem
+        <section className="bg-earth-50 border-t border-earth-200/60 py-24 px-6 relative noise-overlay">
+          <div className="max-w-4xl mx-auto relative z-10">
+            <div className="text-center mb-12">
+              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100/80 border border-amber-200 text-amber-800 text-xs font-bold mb-5">
+                Demo rezervacijski sistem
               </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-forest-900 mb-3">
+              <h2 className="text-2xl sm:text-4xl font-black text-forest-900 mb-4 font-display">
                 Preizkusite rezervacijski tok
               </h2>
-              <p className="text-earth-600 max-w-lg mx-auto text-sm">
+              <p className="text-earth-600 max-w-lg mx-auto text-sm leading-relaxed">
                 Vnesite testne podatke in doživite celoten UX — od izbire datuma do lažne potrditve.
                 Noben email ni poslan, nič ni shranjeno.
               </p>
@@ -164,7 +228,7 @@ export default async function HomePage() {
       {/* ════════════════════════════════════════════════════════════════════
           SECTION 4 — GREEN PASSPORT CTA
           ════════════════════════════════════════════════════════════════════ */}
-      <section className="bg-forest-900 relative overflow-hidden">
+      <section className="bg-forest-900 relative overflow-hidden paper-tear">
         <div className="absolute inset-0 opacity-10 pointer-events-none" aria-hidden="true">
           <div className="absolute top-10 left-10 w-64 h-64 rounded-full bg-forest-400 blur-3xl" />
           <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-emerald-300 blur-3xl" />
@@ -173,7 +237,7 @@ export default async function HomePage() {
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold mb-6">
             <Leaf size={12} /> Green Passport
           </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-4 font-display">
+          <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-5 font-display">
             Zbiraj spomine po celi Sloveniji
           </h2>
           <p className="text-base text-white/60 max-w-lg mx-auto mb-8">
@@ -182,13 +246,13 @@ export default async function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/green-passport"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold px-8 py-4 text-sm shadow-lg hover:shadow-xl hover:scale-[1.03] active:scale-[0.98] transition-all"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold px-8 py-4 text-sm shadow-lg hover:shadow-xl hover:scale-[1.03] active:scale-[0.98] transition-all"
             >
               <Leaf size={18} /> Zeleni Potni List
             </Link>
             <Link
               href="/dodaj-kmetijo"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold px-8 py-4 text-sm border border-white/20 transition-all"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-semibold px-8 py-4 text-sm border border-white/20 transition-all"
             >
               Dodajte svojo kmetijo
               <ArrowRight size={18} />
