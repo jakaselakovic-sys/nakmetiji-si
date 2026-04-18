@@ -2,6 +2,7 @@
 
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import * as Sentry from "@sentry/nextjs";
 
 export async function submitVerifiedReview({
   kmetijaId,
@@ -50,7 +51,7 @@ export async function submitVerifiedReview({
     }]);
 
   if (insertError) {
-    console.error("Mnenje Insert Napaka:", insertError);
+    Sentry.captureException(insertError, { tags: { action: "submitVerifiedReview" } });
     return { error: "Napaka pri zapisovanju mnenja v bazo." };
   }
 

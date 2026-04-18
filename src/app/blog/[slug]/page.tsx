@@ -28,6 +28,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${post.title} — Blog | NaKmetiji`,
     description: post.description,
+    keywords: post.tags,
+    alternates: {
+      canonical: `https://nakmetiji.si/blog/${slug}`,
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
     openGraph: {
       title: post.title,
       description: post.description,
@@ -35,6 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       publishedTime: post.date,
       authors: [post.author],
       images: [{ url: post.coverImage, width: 1200, height: 630 }],
+      url: `https://nakmetiji.si/blog/${slug}`,
     },
   };
 }

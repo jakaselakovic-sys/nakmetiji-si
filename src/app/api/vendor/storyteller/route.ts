@@ -59,7 +59,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Ime kmetije je obvezno (max 200 znakov)." }, { status: 400 });
   }
 
-  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! });
+  // Guard: AI service unavailable if GROQ_API_KEY is not configured
+  const groqApiKey = process.env.GROQ_API_KEY;
+  if (!groqApiKey) {
+    return NextResponse.json(
+      { ok: false, error: "AI storitev trenutno ni na voljo (manjka konfiguracija)." },
+      { status: 503 }
+    );
+  }
+  const groq = new Groq({ apiKey: groqApiKey });
 
   const prompt = `You are an award-winning travel copywriter specializing in Slovenian agritourism. Your descriptions appear on NaKmetiji.si, Slovenia's premium farm tourism platform.
 

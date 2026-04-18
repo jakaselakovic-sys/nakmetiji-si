@@ -6,29 +6,15 @@
 "use server";
 
 import { createSupabaseServer } from "@/lib/supabase/server";
+import * as Sentry from "@sentry/nextjs";
 import type {
-  Kmetija,
   KmetijaSDozivetji,
   KmetijaPolna,
   KmetijeFilter,
   PaginiraniRezultat,
   Regija,
 } from "@/types/database";
-
-// ─── Helper: normalizira Supabase JOIN rezultat v KmetijaSDozivetji ──────────
-
-function normalizirajKmetijo(raw: Record<string, unknown>): KmetijaSDozivetji {
-  const { kmetija_dozivetje, ...kmetija } = raw;
-  return {
-    ...(kmetija as unknown as Kmetija),
-    dozivetja: Array.isArray(kmetija_dozivetje)
-      ? (kmetija_dozivetje as Record<string, unknown>[])
-          .filter((kd) => kd.dozivetja)
-          .map((kd) => kd.dozivetja as import("@/types/database").Dozivetje)
-          .sort((a, b) => ((a.vrstni_red ?? 0) - (b.vrstni_red ?? 0)))
-      : [],
-  };
-}
+import { normalizirajKmetijo } from "@/lib/utils/normaliziraj-kmetijo";
 
 // ─── Pridobi vse kmetije s filtri — en sam query (brez N+1) ─────────────────
 
@@ -108,7 +94,7 @@ export async function pridobiKmetije(
   const { data, error, count } = await query;
 
   if (error) {
-    console.error("Napaka pri pridobivanju kmetij:", error);
+    Sentry.captureException(error, { tags: { action: "pridobiKmetije" } });
     return { podatki: [], skupaj: 0, stran, naStran, skupajStrani: 0 };
   }
 

@@ -7,6 +7,7 @@
 // =============================================================================
 
 import { createClient } from "@supabase/supabase-js";
+import * as Sentry from "@sentry/nextjs";
 
 type NapakaTip = "ai_api" | "email" | "rezervacija" | "sistem";
 
@@ -32,7 +33,7 @@ export async function logNapako(input: NapakaInput): Promise<void> {
   const client = getServiceClient();
   if (!client) {
     // Graceful fallback — don't crash production if env vars missing
-    console.error("[logNapako] Service role key not configured. Error not persisted:", input);
+    Sentry.captureMessage("[logNapako] Service role key not configured", { level: "warning", extra: { ...input } });
     return;
   }
 
@@ -46,6 +47,6 @@ export async function logNapako(input: NapakaInput): Promise<void> {
 
   if (error) {
     // Don't throw — logging failure must never break the caller
-    console.error("[logNapako] Insert failed:", error.message);
+    Sentry.captureMessage(`[logNapako] Insert failed: ${error.message}`, "error");
   }
 }

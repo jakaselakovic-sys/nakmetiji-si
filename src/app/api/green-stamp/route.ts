@@ -142,8 +142,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: "success", stamp_id: rpcRes?.stamp_id });
 
   } catch (error: unknown) {
-    console.error("[green-stamp POST]", error);
-    Sentry.captureException(error);
+    Sentry.captureException(error, { tags: { route: "green-stamp" } });
     return NextResponse.json({ status: "error", message: "Prišlo je do sistemske napake." }, { status: 500 });
   }
 }

@@ -3,17 +3,23 @@ import Groq from "groq-sdk";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { Redis } from "@upstash/redis";
+import * as Sentry from "@sentry/nextjs";
 
 export const runtime = "nodejs";
 export const maxDuration = 45;
 
 const MODEL = "llama-3.3-70b-versatile";
 
-// Upstash vmesnik
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-});
+// Upstash vmesnik — lazy init to avoid crash if env vars missing
+let _redis: Redis | null = null;
+function getRedisClient(): Redis | null {
+  if (_redis) return _redis;
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+  _redis = new Redis({ url, token });
+  return _redis;
+}
 
 export async function POST(req: NextRequest) {
   const supabase = await createSupabaseServer();
@@ -48,14 +54,14 @@ export async function POST(req: NextRequest) {
   const cacheKey = `itinerary:v2:${sortedIds.join("-")}`;
 
   // Upstash Caching Guard (1 hour TTL)
+  const redis = getRedisClient();
   try {
-    const cachedMarkdown = await redis.get<string>(cacheKey);
+    const cachedMarkdown = redis ? await redis.get<string>(cacheKey) : null;
     if (cachedMarkdown) {
-       console.log("[ROADTRIP] Served from Edge Cache (Upstash)");
        return NextResponse.json({ ok: true, markdown: cachedMarkdown, cached: true });
     }
   } catch (err) {
-    console.error("Redis Cache check failed:", err);
+    Sentry.captureException(err, { tags: { route: "itinerary", phase: "cache-read" } });
   }
 
   // Pridobi podatke o kmetijah
@@ -68,7 +74,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Napaka pri branju kmetij." }, { status: 404 });
   }
 
-  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! });
+  const groqApiKey = process.env.GROQ_API_KEY;
+  if (!groqApiKey) {
+    return NextResponse.json(
+      { ok: false, error: "AI storitev trenutno ni na voljo (manjka konfiguracija)." },
+      { status: 503 }
+    );
+  }
+  const groq = new Groq({ apiKey: groqApiKey });
   
   const farmList = farms.map(f => `${f.ime} (${f.regija}, Lat: ${f.lat}, Lng: ${f.lng})`).join("\n");
 
@@ -97,15 +110,17 @@ Use H3 (###) for days. Use bold for farm names. Raw Markdown text except for the
     const markdown = completion.choices[0]?.message?.content || "Napaka pri generiranju roadtripa.";
     
     // Save to Cache for 3600 seconds (1 hr)
-    try {
-      await redis.setex(cacheKey, 3600, markdown);
-    } catch (e) {
-      console.error("Failed to commit to Redis:", e);
+    if (redis) {
+      try {
+        await redis.setex(cacheKey, 3600, markdown);
+      } catch (e) {
+        Sentry.captureException(e, { tags: { route: "itinerary", phase: "cache-write" } });
+      }
     }
 
     return NextResponse.json({ ok: true, markdown, cached: false });
   } catch (err) {
-    console.error("Groq Itinerary Error:", err);
+    Sentry.captureException(err, { tags: { route: "itinerary", phase: "groq" } });
     return NextResponse.json(
       { ok: false, error: "AI modul trenutno ni na voljo." },
       { status: 502 }

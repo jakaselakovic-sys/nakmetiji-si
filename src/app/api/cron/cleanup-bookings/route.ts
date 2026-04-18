@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { posljiAvtoPreklic } from "@/lib/email";
+import * as Sentry from "@sentry/nextjs";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -44,11 +45,17 @@ export async function GET(req: NextRequest) {
   }
 
   // ── Service role client (bypasses RLS for system operation) ───────────────
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  );
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    return NextResponse.json(
+      { ok: false, error: "Missing SUPABASE_URL or SERVICE_ROLE_KEY configuration." },
+      { status: 503 }
+    );
+  }
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false },
+  });
 
   const startedAt = new Date().toISOString();
   const log: string[] = [`[${startedAt}] Cron: cleanup-bookings started`];
@@ -133,7 +140,7 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     log.push(`FATAL: ${msg}`);
-    console.error("[cron/cleanup-bookings] Fatal error:", err);
+    Sentry.captureException(err, { tags: { route: "cron/cleanup-bookings" } });
     return NextResponse.json({ ok: false, log, error: msg }, { status: 500 });
   }
 }

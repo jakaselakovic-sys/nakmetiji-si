@@ -16,6 +16,7 @@ import { GuestConfirmed } from "./templates/GuestConfirmed";
 import { GuestRejected } from "./templates/GuestRejected";
 import { AutoCancelled } from "./templates/AutoCancelled";
 import { buildUpn, generateUpnReference, validateUpnQr, PLATFORM_IBAN, PLATFORM_BIC, PLATFORM_IME } from "@/lib/upn";
+import * as Sentry from "@sentry/nextjs";
 import React from "react";
 
 const FROM = "NaKmetiji.si <obvestila@nakmetiji.si>";
@@ -25,7 +26,10 @@ const DASHBOARD_URL = `${BASE_URL}/dashboard`;
 function getResend(): Resend | null {
   const key = process.env.RESEND_API_KEY;
   if (!key) {
-    console.warn("[email] RESEND_API_KEY not set — emails disabled");
+    // Log to Sentry in production so silent email failure is visible
+    if (process.env.NODE_ENV === "production") {
+      Sentry.captureMessage("RESEND_API_KEY not set — emails disabled in production", "warning");
+    }
     return null;
   }
   return new Resend(key);
@@ -85,7 +89,7 @@ export async function posljiEmailLastniku(params: {
       html,
     });
   } catch (err) {
-    console.error("[email] posljiEmailLastniku failed:", err);
+    Sentry.captureException(err, { tags: { email: "posljiEmailLastniku" } });
   }
 }
 
@@ -131,7 +135,7 @@ export async function posljiCakanjeGostu(params: {
       html,
     });
   } catch (err) {
-    console.error("[email] posljiCakanjeGostu failed:", err);
+    Sentry.captureException(err, { tags: { email: "posljiCakanjeGostu" } });
   }
 }
 
@@ -177,7 +181,11 @@ export async function posljiPotrditev(params: {
   // Guard: abort email if QR string is malformed — better to send no slip than a broken one
   const qrValidation = validateUpnQr(upnResult.qr_string);
   if (!qrValidation.valid) {
-    console.error("[email] UPN QR validation failed:", qrValidation.reason, { rezervacija_id: params.rezervacija_id });
+    Sentry.captureMessage(`UPN QR validation failed: ${qrValidation.reason}`, {
+      level: "error",
+      tags: { email: "posljiPotrditev" },
+      extra: { rezervacija_id: params.rezervacija_id },
+    });
     return; // skip sending rather than deliver a broken payment slip
   }
 
@@ -217,7 +225,7 @@ export async function posljiPotrditev(params: {
       html,
     });
   } catch (err) {
-    console.error("[email] posljiPotrditev failed:", err);
+    Sentry.captureException(err, { tags: { email: "posljiPotrditev" } });
   }
 }
 
@@ -252,7 +260,7 @@ export async function posljiZavrnitev(params: {
       html,
     });
   } catch (err) {
-    console.error("[email] posljiZavrnitev failed:", err);
+    Sentry.captureException(err, { tags: { email: "posljiZavrnitev" } });
   }
 }
 
@@ -289,7 +297,7 @@ export async function posljiAvtoPreklic(params: {
       html,
     });
   } catch (err) {
-    console.error("[email] posljiAvtoPreklic failed:", err);
+    Sentry.captureException(err, { tags: { email: "posljiAvtoPreklic" } });
   }
 }
 
@@ -320,7 +328,7 @@ export async function posljiObvestiloAdminuNoviLastnik(params: {
       `,
     });
   } catch (err) {
-    console.error("[email] posljiObvestiloAdminuNoviLastnik failed:", err);
+    Sentry.captureException(err, { tags: { email: "posljiObvestiloAdminuNoviLastnik" } });
   }
 }
 

@@ -10,7 +10,8 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
-import type { Dozivetje, KmetijaSDozivetji } from "@/types/database";
+import type { Dozivetje } from "@/types/database";
+import { normalizirajKmetijo } from "@/lib/utils/normaliziraj-kmetijo";
 import { KmetijeClient } from "./KmetijeClient";
 
 // ISR: revalidate every 60 seconds (stale-while-revalidate semantics)
@@ -41,19 +42,6 @@ export const metadata: Metadata = {
     canonical: "https://nakmetiji.si/kmetije",
   },
 };
-
-function normalizirajKmetijo(raw: Record<string, unknown>): KmetijaSDozivetji {
-  const { kmetija_dozivetje, ...kmetija } = raw;
-  return {
-    ...(kmetija as unknown as import("@/types/database").Kmetija),
-    dozivetja: Array.isArray(kmetija_dozivetje)
-      ? (kmetija_dozivetje as Record<string, unknown>[])
-          .filter((kd) => kd.dozivetja)
-          .map((kd) => kd.dozivetja as Dozivetje)
-          .sort((a, b) => (a.vrstni_red ?? 0) - (b.vrstni_red ?? 0))
-      : [],
-  };
-}
 
 // ─── Cached data fetch (anon client — no cookies needed for public farms) ────
 //

@@ -16,6 +16,7 @@
 
 import { z } from "zod";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import * as Sentry from "@sentry/nextjs";
 import {
   posljiEmailLastniku,
   posljiCakanjeGostu,
@@ -156,7 +157,7 @@ export async function oddajRezervacijo(
   });
 
   if (rpcError) {
-    console.error("[booking] atomic_rezerviraj RPC error:", rpcError);
+    Sentry.captureException(rpcError, { tags: { action: "oddajRezervacijo", phase: "rpc" } });
     return { ok: false, napaka: "Napaka pri rezervaciji. Prosimo poskusite znova." };
   }
 
@@ -286,7 +287,7 @@ export async function potrdiRezervacijo(
     rezervacija_id,
     kmetija_iban:    kmetija.iban ?? null,
     kmetija_bic:     kmetija.bic ?? null,
-  }).catch(console.error);
+  }).catch((err) => Sentry.captureException(err, { tags: { action: "potrdiRezervacijo", phase: "email" } }));
 
   return { ok: true };
 }
@@ -330,7 +331,7 @@ export async function zavrniRezervacijo(
     datum_od:      rez.datum_od,
     datum_do:      rez.datum_do,
     rezervacija_id,
-  }).catch(console.error);
+  }).catch((err) => Sentry.captureException(err, { tags: { action: "zavrniRezervacijo", phase: "email" } }));
 
   return { ok: true };
 }

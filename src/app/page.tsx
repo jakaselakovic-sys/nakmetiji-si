@@ -119,6 +119,12 @@ export default async function HomePage() {
     <>
       <JsonLd />
 
+      {/* SEO: every page needs exactly one <h1>. Visually hidden because the
+          scrollytelling hero handles the visual headline. */}
+      <h1 className="sr-only">
+        NaKmetiji — Turistične kmetije po Sloveniji
+      </h1>
+
       {/* ════════════════════════════════════════════════════════════════════
           SECTION 1 — LIQUID SCROLLYTELLING HERO
           800vh sticky container. 4 background layers cross-fade as user

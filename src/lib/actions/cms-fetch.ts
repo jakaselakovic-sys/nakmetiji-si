@@ -2,6 +2,7 @@
 
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import * as Sentry from "@sentry/nextjs";
 import { storySchema, type StoryInput } from "@/lib/schemas/cms";
 
 export { storySchema, type StoryInput };
@@ -40,7 +41,7 @@ export async function upsertStory(id: string | null, data: StoryInput) {
   }
 
   if (result.error) {
-    console.error("[CMS Error]", result.error);
+    Sentry.captureException(result.error, { tags: { action: "upsertStory" } });
     return { success: false, error: "Napaka pri shranjevanju baze." };
   }
 

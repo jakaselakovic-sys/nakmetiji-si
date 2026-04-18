@@ -5,6 +5,7 @@
 "use server";
 
 import { createSupabaseServer } from "@/lib/supabase/server";
+import * as Sentry from "@sentry/nextjs";
 import type { Mnenje, UstvariMnenjeInput } from "@/types/database";
 
 // ─── Pridobi mnenja za kmetijo ──────────────────────────────────────────────
@@ -30,7 +31,7 @@ export async function pridobiMnenja(
     .range(od, dokončno);
 
   if (error) {
-    console.error("Napaka pri pridobivanju mnenj:", error);
+    Sentry.captureException(error, { tags: { action: "pridobiMnenja" } });
     return { mnenja: [], skupaj: 0 };
   }
 
@@ -70,7 +71,7 @@ export async function oddajMnenje(
   });
 
   if (error) {
-    console.error("Napaka pri oddaji mnenja:", error);
+    Sentry.captureException(error, { tags: { action: "oddajMnenje" } });
     return { uspeh: false, napaka: "Prišlo je do napake. Poskusite znova." };
   }
 

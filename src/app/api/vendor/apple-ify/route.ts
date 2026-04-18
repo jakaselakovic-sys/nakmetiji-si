@@ -48,7 +48,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Neveljaven URL slike (zahteva HTTPS)." }, { status: 400 });
   }
 
-  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! });
+  // Guard: AI service unavailable if GROQ_API_KEY is not configured
+  const groqApiKey = process.env.GROQ_API_KEY;
+  if (!groqApiKey) {
+    return NextResponse.json(
+      { ok: false, error: "AI storitev trenutno ni na voljo (manjka konfiguracija)." },
+      { status: 503 }
+    );
+  }
+  const groq = new Groq({ apiKey: groqApiKey });
 
   // 25-second hard timeout — Groq vision model can be slow on large images
   const controller = new AbortController();

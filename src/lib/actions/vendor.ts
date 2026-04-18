@@ -3,6 +3,7 @@
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import * as Sentry from "@sentry/nextjs";
 
 // Zod schema for translations
 const translationsSchema = z.object({
@@ -18,7 +19,7 @@ export async function saveFarmTranslations(kmetijaId: string, prevodi: Record<st
   // 1. Zod Validation
   const parsed = translationsSchema.safeParse(prevodi);
   if (!parsed.success) {
-    console.error("Zod Validation Failed:", parsed.error.format());
+    Sentry.captureMessage("Zod Validation Failed", { level: "warning", extra: { errors: parsed.error.issues } });
     return { error: "Vsebina prevodov vsebuje nedovoljene znake ali neveljavno dolžino." };
   }
 
@@ -50,7 +51,7 @@ export async function saveFarmTranslations(kmetijaId: string, prevodi: Record<st
     .eq("id", kmetijaId);
 
   if (error) {
-    console.error("Napaka pri shranjevanju prevodov:", error);
+    Sentry.captureException(error, { tags: { action: "saveFarmTranslations" } });
     return { error: "Ni bilo mogoče shraniti prevodov v bazo." };
   }
 

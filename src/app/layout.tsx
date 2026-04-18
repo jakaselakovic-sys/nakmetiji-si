@@ -11,6 +11,7 @@ import { OracleConcierge } from "@/components/OracleConcierge";
 import { DemoBanner, DemoFooterStrip } from "@/components/DemoDisclaimer";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { SocialProofToast } from "@/components/SocialProofToast";
+import { PageTransition } from "@/components/PageTransition";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -116,10 +117,19 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
       <body className="min-h-full flex flex-col bg-paper text-forest-900 paper-grain">
+        {/* Skip navigation — a11y for keyboard users */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[999] focus:rounded-xl focus:bg-forest-700 focus:text-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:shadow-lg"
+        >
+          Preskoči na vsebino
+        </a>
         {/* Demo mode banner — auto-hides in production (NEXT_PUBLIC_DEMO_MODE=false) */}
         <DemoBanner />
         <Navbar />
-        <main className="flex-1 pb-20 md:pb-0">{children}</main>
+        <main id="main-content" className="flex-1 pb-20 md:pb-0">
+          <PageTransition>{children}</PageTransition>
+        </main>
         <Footer />
         {/* Demo mode footer strip */}
         <DemoFooterStrip />

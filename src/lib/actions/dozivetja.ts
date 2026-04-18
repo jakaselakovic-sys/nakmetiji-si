@@ -5,6 +5,7 @@
 "use server";
 
 import { createSupabaseServer } from "@/lib/supabase/server";
+import * as Sentry from "@sentry/nextjs";
 import type { Dozivetje } from "@/types/database";
 
 // ─── Pridobi vsa doživetja ──────────────────────────────────────────────────
@@ -18,7 +19,7 @@ export async function pridobiDozivetja(): Promise<Dozivetje[]> {
     .order("vrstni_red", { ascending: true });
 
   if (error) {
-    console.error("Napaka pri pridobivanju doživetij:", error);
+    Sentry.captureException(error, { tags: { action: "pridobiDozivetja" } });
     return [];
   }
 
@@ -50,28 +51,17 @@ export async function pridobiStatistikoDozivetij(): Promise<
 > {
   const supabase = await createSupabaseServer();
 
-  // Pridobi vsa doživetja
+  // Single query: fetch all doživetja with their farm count via JOIN
   const { data: dozivetja } = await supabase
     .from("dozivetja")
-    .select("*")
+    .select("*, kmetija_dozivetje(count)")
     .order("vrstni_red", { ascending: true });
 
   if (!dozivetja) return [];
 
-  // Za vsako doživetje preštej kmetije
-  const rezultat = await Promise.all(
-    (dozivetja as Dozivetje[]).map(async (doz) => {
-      const { count } = await supabase
-        .from("kmetija_dozivetje")
-        .select("*", { count: "exact", head: true })
-        .eq("dozivetje_id", doz.id);
-
-      return {
-        ...doz,
-        stevilo_kmetij: count ?? 0,
-      };
-    })
-  );
-
-  return rezultat;
+  return (dozivetja as (Dozivetje & { kmetija_dozivetje: { count: number }[] })[]).map((doz) => ({
+    ...doz,
+    stevilo_kmetij: doz.kmetija_dozivetje?.[0]?.count ?? 0,
+    kmetija_dozivetje: undefined,
+  })) as (Dozivetje & { stevilo_kmetij: number })[];
 }

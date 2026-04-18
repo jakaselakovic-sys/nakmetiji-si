@@ -301,7 +301,7 @@ export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
         className="fixed bottom-0 left-0 right-0 md:hidden mobile-bottom-nav"
         style={{ zIndex: "var(--z-nav)" }}
       >
-        <div className="flex items-center justify-around px-2 pt-2">
+        <div className="flex items-center justify-around px-2 pt-1 pb-[env(safe-area-inset-bottom)]">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -309,7 +309,7 @@ export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-2xl transition-all duration-300 ${
+                className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[44px] px-3 py-2 rounded-2xl transition-all duration-300 ${
                   active
                     ? "text-forest-700"
                     : "text-earth-500 hover:text-forest-600"
