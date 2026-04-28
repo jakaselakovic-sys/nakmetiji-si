@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Leaf, Award, Share2, Camera, Network, HeartHandshake } from "lucide-react";
 import html2canvas from "html2canvas";
 import { QRCodeSVG } from "qrcode.react";
+import * as Sentry from "@sentry/nextjs";
 
 export function GreenPassportShare() {
   const BADGES = [
@@ -55,7 +56,7 @@ export function GreenPassportShare() {
       a.download = `NaKmetiji-GreenPassport-${badgeId}.png`;
       a.click();
     } catch (err) {
-      console.error("Napaka pri generiranju PNG:", err);
+      Sentry.captureException(err, { tags: { feature: "vendor", action: "generate_badge_png" } });
       alert("Napaka pri ustvarjanju slike.");
     }
   };

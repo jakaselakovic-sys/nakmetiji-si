@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 
 // Allowlist of safe redirect prefixes to prevent open redirect attacks
-const SAFE_PREFIXES = ["/dashboard", "/kmetije", "/shramba", "/moj-potni-list", "/green-passport", "/zemljevid", "/blog", "/dodaj-kmetijo"];
+const SAFE_PREFIXES = ["/dashboard", "/kmetije", "/shramba", "/moj-potni-list", "/green-passport", "/zemljevid", "/blog", "/dodaj-kmetijo", "/pot"];
 
 function getSafeRedirect(raw: string | null, origin: string): string {
   if (!raw) return `${origin}/dashboard`;

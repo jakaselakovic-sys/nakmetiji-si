@@ -5,7 +5,6 @@ import { checkRateLimit } from "@/lib/rateLimit";
 import { Redis } from "@upstash/redis";
 import * as Sentry from "@sentry/nextjs";
 
-export const runtime = "nodejs";
 export const maxDuration = 45;
 
 const MODEL = "llama-3.3-70b-versatile";

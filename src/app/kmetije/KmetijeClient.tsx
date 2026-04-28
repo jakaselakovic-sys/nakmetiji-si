@@ -17,9 +17,13 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Feather,
+  Route,
 } from "lucide-react";
+import Link from "next/link";
 import { Input, Button, Badge } from "@/components/ui";
 import { FarmCard } from "@/components/FarmCard";
+import { useOracleStore } from "@/lib/oracleStore";
 import {
   REGIJE,
   REGIJA_LABELS,
@@ -514,21 +518,7 @@ export function KmetijeClient({ initialKmetije, dozivetja }: Props) {
 
         {/* ── Results grid / empty state ── */}
         {filteredKmetije.length === 0 ? (
-          <div className="text-center py-24 bg-white rounded-3xl border border-earth-200">
-            <div className="mx-auto w-16 h-16 bg-earth-100 rounded-full flex items-center justify-center mb-4 text-earth-400">
-              <Search size={28} />
-            </div>
-            <h3 className="text-xl font-bold text-forest-900 mb-2">
-              Trenutno ni ujemanj
-            </h3>
-            <p className="text-earth-600 max-w-sm mx-auto mb-6">
-              Žal nismo našli nobene kmetije, ki bi ustrezala vašim iskalnim
-              pogojem. Poskusite zmehčati filtre.
-            </p>
-            <Button onClick={clearFilters} variant="secondary">
-              Počisti filtre
-            </Button>
-          </div>
+          <EmptyResultsState onClear={clearFilters} />
         ) : (
           <motion.div
             layout
@@ -571,6 +561,63 @@ export function KmetijeClient({ initialKmetije, dozivetja }: Props) {
           </motion.div>
         )}
       </main>
+    </div>
+  );
+}
+
+// ─── Empty results — guide user to alternate discovery paths ────────────────
+
+function EmptyResultsState({ onClear }: { onClear: () => void }) {
+  const openOracle = useOracleStore((s) => s.openOracle);
+  return (
+    <div className="bg-white rounded-3xl border border-earth-200 p-8 sm:p-12">
+      <div className="max-w-xl mx-auto text-center mb-8">
+        <div className="mx-auto w-16 h-16 bg-earth-100 rounded-full flex items-center justify-center mb-4 text-earth-400">
+          <Search size={28} />
+        </div>
+        <h3 className="text-xl font-bold text-forest-900 mb-2">
+          Trenutno ni ujemanj
+        </h3>
+        <p className="text-earth-600 mb-5">
+          Filtri so morda preozki — počistite jih ali poskusite enega od dveh
+          drugačnih načinov, kako najti pravo kmetijo:
+        </p>
+        <Button onClick={onClear} variant="secondary">
+          Počisti filtre
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl mx-auto">
+        <button
+          onClick={() => openOracle("Pomagaj mi najti pravo kmetijo")}
+          className="group flex items-start gap-3 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200 hover:border-amber-300 p-4 text-left transition-all"
+        >
+          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-amber-200/60 flex items-center justify-center">
+            <Feather size={18} className="text-amber-700" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-forest-900">Vprašaj Jožeta</p>
+            <p className="text-[11px] text-earth-600 mt-0.5 leading-snug">
+              Opiši, kakšno kmetijo iščeš, in naš AI ti predlaga najboljše.
+            </p>
+          </div>
+        </button>
+
+        <Link
+          href="/pot"
+          className="group flex items-start gap-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 hover:border-emerald-300 p-4 text-left transition-all"
+        >
+          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-emerald-200/60 flex items-center justify-center">
+            <Route size={18} className="text-emerald-700" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-forest-900">Načrtuj road trip</p>
+            <p className="text-[11px] text-earth-600 mt-0.5 leading-snug">
+              Več regij, več dni — sestavimo ti optimalno pot z znamenitostmi.
+            </p>
+          </div>
+        </Link>
+      </div>
     </div>
   );
 }

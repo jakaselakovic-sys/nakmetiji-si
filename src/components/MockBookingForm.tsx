@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Users, MessageSquare, CheckCircle, Loader2, ArrowRight, ShoppingBag } from "lucide-react";
 import { MOCK_BOOKING } from "@/lib/config/demo";
 import { DemoBadge, DemoBookingNotice } from "@/components/DemoDisclaimer";
+import { hapticLight } from "@/lib/haptics";
 
 export interface BookingFormProps {
   kmetijaId: string;
@@ -113,6 +114,7 @@ function MockFormInner({
       gostEmail: gostEmail.trim(),
       dodatki: izbraniDodatki.map(id => DODATKI_MOCK.find(d => d.id === id)!),
     });
+    hapticLight();
     setLoading(false);
   }
 

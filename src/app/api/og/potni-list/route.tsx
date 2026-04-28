@@ -16,7 +16,6 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 
-export const runtime = "edge";
 
 // Palette — must match design system (can't import Tailwind vars in edge)
 const C = {

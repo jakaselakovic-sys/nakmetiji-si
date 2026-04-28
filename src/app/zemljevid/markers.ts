@@ -22,13 +22,18 @@ const STATUS_LABELS: Record<FarmLiveStatus, string> = {
 
 // ─── Existing markers ──────────────────────────────────────────────────────
 
+// Cross-OS consistent vector glyphs. Emoji rendered inconsistently between
+// Windows/Android and iOS — a map full of dancing style variants felt cheap.
+const STAR_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5l2.9 6.25 6.85.59-5.2 4.56 1.55 6.7L12 17.1 5.9 20.6l1.55-6.7-5.2-4.56 6.85-.59z" fill="currentColor" stroke="none"/></svg>`;
+const FARM_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13V10.5"/><path d="M10 20v-4.5h4V20"/></svg>`;
+
 /** Premium farm marker — gold with pulse animation */
 export function createPremiumMarker(): HTMLDivElement {
   const el = document.createElement("div");
   el.className = "marker-premium";
   el.innerHTML = `
     <div class="marker-premium-pulse"></div>
-    <div class="marker-premium-core">⭐</div>
+    <div class="marker-premium-core">${STAR_SVG}</div>
   `;
   return el;
 }
@@ -37,7 +42,7 @@ export function createPremiumMarker(): HTMLDivElement {
 export function createMediumMarker(): HTMLDivElement {
   const el = document.createElement("div");
   el.className = "marker-medium";
-  el.innerHTML = `<div class="marker-medium-core">🏡</div>`;
+  el.innerHTML = `<div class="marker-medium-core">${FARM_SVG}</div>`;
   return el;
 }
 
@@ -45,7 +50,7 @@ export function createMediumMarker(): HTMLDivElement {
 export function createStandardMarker(): HTMLDivElement {
   const el = document.createElement("div");
   el.className = "marker-standard";
-  el.innerHTML = `<div class="marker-standard-core">🏡</div>`;
+  el.innerHTML = `<div class="marker-standard-core">${FARM_SVG}</div>`;
   return el;
 }
 

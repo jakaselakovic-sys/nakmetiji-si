@@ -3,10 +3,12 @@ import { get, set } from "idb-keyval";
 export interface PendingStamp {
   id: string;
   farmSlug: string;
-  sig?: string; // QR signature
+  sig: string;       // HMAC from /api/green-stamp/init
+  ts: number;        // server-issued ticket timestamp (ms)
   lat: number;
   lng: number;
-  timestamp: number;
+  accuracy: number;  // GPS accuracy in meters
+  timestamp: number; // client enqueue time (ms) — used for UI only
 }
 
 const QUEUE_KEY = "nakmetiji_offline_stamps";

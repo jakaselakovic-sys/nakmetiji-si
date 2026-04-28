@@ -53,6 +53,7 @@ interface MapboxMapProps {
   farms: Farm[];
   landmarks: Znamenitost[];
   activeFarmSlug: string | null;
+  hoveredFarmSlug?: string | null;
   onFarmSelect: (slug: string | null) => void;
   onLandmarkSelect: (id: string | null) => void;
   showWeather: boolean;
@@ -152,12 +153,93 @@ function clearRouteFromMap(map: mapboxgl.Map) {
   if (map.getSource("route")) map.removeSource("route");
 }
 
+// ─── Discovery Circle ──────────────────────────────────────────────────────
+// 30 km radius drawn as a soft amber wash around the active farm. It visually
+// answers "what's reachable from here?" without forcing the user to read.
+// Built with turf-style ring polygon (no turf dep — 64 segments is enough).
+
+const DISCOVERY_SOURCE_ID = "discovery-circle";
+const DISCOVERY_FILL_ID = "discovery-circle-fill";
+const DISCOVERY_LINE_ID = "discovery-circle-line";
+
+function buildCirclePolygon(
+  centerLng: number,
+  centerLat: number,
+  radiusKm: number,
+  segments = 64,
+): GeoJSON.Feature<GeoJSON.Polygon> {
+  // Approximate: 1° latitude ≈ 111 km; 1° longitude ≈ 111 * cos(lat) km.
+  // Good enough for a 30 km visualization at Slovenian latitudes.
+  const coords: [number, number][] = [];
+  const latPerKm = 1 / 111;
+  const lngPerKm = 1 / (111 * Math.cos((centerLat * Math.PI) / 180));
+  for (let i = 0; i <= segments; i++) {
+    const t = (i / segments) * Math.PI * 2;
+    const dx = Math.cos(t) * radiusKm * lngPerKm;
+    const dy = Math.sin(t) * radiusKm * latPerKm;
+    coords.push([centerLng + dx, centerLat + dy]);
+  }
+  return {
+    type: "Feature",
+    properties: {},
+    geometry: { type: "Polygon", coordinates: [coords] },
+  };
+}
+
+function drawDiscoveryCircle(
+  map: mapboxgl.Map,
+  centerLng: number,
+  centerLat: number,
+  radiusKm = 30,
+) {
+  const feature = buildCirclePolygon(centerLng, centerLat, radiusKm);
+  const existing = map.getSource(DISCOVERY_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+  if (existing) {
+    existing.setData(feature);
+    return;
+  }
+  map.addSource(DISCOVERY_SOURCE_ID, { type: "geojson", data: feature });
+
+  // Fill — very subtle warm wash so the circle doesn't fight markers.
+  map.addLayer({
+    id: DISCOVERY_FILL_ID,
+    type: "fill",
+    source: DISCOVERY_SOURCE_ID,
+    paint: {
+      "fill-color": "#d4a04a",
+      "fill-opacity": 0.06,
+    },
+  });
+
+  // Dashed boundary line — clearly defined edge, atmospheric not loud.
+  map.addLayer({
+    id: DISCOVERY_LINE_ID,
+    type: "line",
+    source: DISCOVERY_SOURCE_ID,
+    layout: { "line-join": "round", "line-cap": "round" },
+    paint: {
+      "line-color": "#b87f2a",
+      "line-width": 1.5,
+      "line-dasharray": [3, 3],
+      "line-opacity": 0.55,
+    },
+  });
+}
+
+function clearDiscoveryCircle(map: mapboxgl.Map) {
+  [DISCOVERY_LINE_ID, DISCOVERY_FILL_ID].forEach((id) => {
+    if (map.getLayer(id)) map.removeLayer(id);
+  });
+  if (map.getSource(DISCOVERY_SOURCE_ID)) map.removeSource(DISCOVERY_SOURCE_ID);
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────
 
 export function MapboxMap({
   farms,
   landmarks,
   activeFarmSlug,
+  hoveredFarmSlug,
   onFarmSelect,
   onLandmarkSelect,
   showWeather,
@@ -299,6 +381,7 @@ export function MapboxMap({
     // --- Farm markers (tier-based zoom visibility) ---
     farms.forEach((farm) => {
       if (!farm.location) return;
+      const loc = farm.location; // capture for click handler closure — TS can't narrow through it otherwise
 
       const isPremium = farm.isPremium;
       const isMedium = farm.isMedium ?? false;
@@ -328,14 +411,14 @@ export function MapboxMap({
       }
 
       const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
-        .setLngLat([farm.location.longitude, farm.location.latitude])
+        .setLngLat([loc.longitude, loc.latitude])
         .addTo(map);
 
       el.addEventListener("click", (e) => {
         e.stopPropagation();
         onFarmSelect(farm.slug);
         map.flyTo({
-          center: [farm.location!.longitude, farm.location!.latitude],
+          center: [loc.longitude, loc.latitude],
           zoom: Math.max(zoom, 12),
           pitch: 0,
           bearing: 0,
@@ -396,20 +479,49 @@ export function MapboxMap({
     };
   }, [updateMarkers]);
 
-  // ── Fly to active farm ──────────────────────────────────────────────
+  // ── Cross-highlight: toggle .marker-hover when list row is hovered ──
   useEffect(() => {
-    if (!activeFarmSlug || !mapRef.current) return;
+    markersRef.current.forEach((marker, key) => {
+      if (!key.startsWith("farm-")) return;
+      const slug = key.slice(5);
+      const el = marker.getElement();
+      if (slug === hoveredFarmSlug) {
+        el.classList.add("marker-hover");
+      } else {
+        el.classList.remove("marker-hover");
+      }
+    });
+  }, [hoveredFarmSlug]);
+
+  // ── Fly to active farm + draw discovery circle ─────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!activeFarmSlug) {
+      // Selection cleared — wipe the circle if it's showing.
+      // map.isStyleLoaded() guard: removing sources before style ready throws.
+      if (map.isStyleLoaded()) clearDiscoveryCircle(map);
+      return;
+    }
     const farm = farms.find((f) => f.slug === activeFarmSlug);
     if (!farm?.location) return;
+    const loc = farm.location; // capture so the closure doesn't need !
 
-    mapRef.current.flyTo({
-      center: [farm.location.longitude, farm.location.latitude],
-      zoom: 14,
+    map.flyTo({
+      center: [loc.longitude, loc.latitude],
+      zoom: 11.5, // pull back slightly so the 30km circle fits in viewport
       pitch: 0,
       bearing: 0,
       duration: 1600,
       essential: true,
     });
+
+    // Draw on `idle` so layers settle before we add ours.
+    const draw = () => {
+      drawDiscoveryCircle(map, loc.longitude, loc.latitude, 30);
+    };
+    if (map.isStyleLoaded()) draw();
+    else map.once("idle", draw);
   }, [activeFarmSlug, farms]);
 
   // ── User location marker ────────────────────────────────────────────
@@ -484,33 +596,40 @@ export function MapboxMap({
 
     let cancelled = false;
 
-    const addBadges = () => {
+    const addBadges = async () => {
       clearBadges();
       if (cancelled) return;
 
       const farmsWithLocation = farms.filter((f) => f.location);
 
-      farmsWithLocation.forEach((farm) => {
-        if (!farm.location) return;
-        const { latitude, longitude } = farm.location;
+      // Cap concurrent Open-Meteo requests at 4 — avoid a burst when the
+      // weather overlay is toggled on with many markers visible.
+      const CHUNK = 4;
+      for (let i = 0; i < farmsWithLocation.length; i += CHUNK) {
+        if (cancelled) return;
+        const chunk = farmsWithLocation.slice(i, i + CHUNK);
+        await Promise.all(
+          chunk.map(async (farm) => {
+            if (!farm.location) return;
+            const { latitude, longitude } = farm.location;
+            const w = await fetchWeather(latitude, longitude);
+            if (cancelled || !w || !mapRef.current) return;
 
-        fetchWeather(latitude, longitude).then((w) => {
-          if (cancelled || !w || !mapRef.current) return;
+            const el = document.createElement("div");
+            el.className = `weather-badge${w.current.isGood ? " weather-badge-good" : ""}`;
+            el.innerHTML = `
+              <span class="weather-badge-emoji">${w.current.emoji}</span>
+              <span class="weather-badge-temp">${w.current.temp}°C</span>
+            `;
 
-          const el = document.createElement("div");
-          el.className = `weather-badge${w.current.isGood ? " weather-badge-good" : ""}`;
-          el.innerHTML = `
-            <span class="weather-badge-emoji">${w.current.emoji}</span>
-            <span class="weather-badge-temp">${w.current.temp}°C</span>
-          `;
+            const marker = new mapboxgl.Marker({ element: el, anchor: "bottom", offset: [0, -44] })
+              .setLngLat([longitude, latitude])
+              .addTo(mapRef.current);
 
-          const marker = new mapboxgl.Marker({ element: el, anchor: "bottom", offset: [0, -44] })
-            .setLngLat([longitude, latitude])
-            .addTo(mapRef.current);
-
-          weatherMarkersRef.current.push(marker);
-        });
-      });
+            weatherMarkersRef.current.push(marker);
+          })
+        );
+      }
     };
 
     if (map?.isStyleLoaded()) {

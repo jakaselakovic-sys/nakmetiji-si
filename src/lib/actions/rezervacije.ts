@@ -23,6 +23,8 @@ import {
   posljiPotrditev,
   posljiZavrnitev,
 } from "@/lib/email";
+import { signApprovalToken } from "@/lib/jws";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -100,6 +102,14 @@ export async function oddajRezervacijo(
     return { ok: false, napaka: firstError };
   }
   const input = parsed.data;
+
+  // ── Rate limit: max 10 bookings / hour / email ────────────────────────────
+  const rl = await checkRateLimit(
+    input.gost_email.toLowerCase(), "booking", 10, 3600
+  );
+  if (!rl.ok) {
+    return { ok: false, napaka: "Preveč rezervacij v kratkem času. Poskusite čez nekaj minut." };
+  }
 
   const supabase = await createSupabaseServer();
 
@@ -188,6 +198,26 @@ export async function oddajRezervacijo(
   };
 
   if (lastnikEmail) {
+    // Generate tamper-proof magic link for one-tap approval
+    let approvalUrl: string | undefined;
+    try {
+      const token = await signApprovalToken({
+        bid: rezervacija_id,
+        fid: input.kmetija_id,
+        price: skupaj_cena,
+        guest: input.gost_ime,
+        email: input.gost_email,
+        guests: input.stevilo_oseb,
+        dateFrom: input.datum_od,
+        dateTo: input.datum_do,
+        farmName: kmetija.ime,
+      });
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://nakmetiji.si";
+      approvalUrl = `${baseUrl}/potrdi?token=${encodeURIComponent(token)}`;
+    } catch {
+      // JWS_SECRET not configured — fall back to dashboard-only flow
+    }
+
     posljiEmailLastniku({
       lastnik_email: lastnikEmail,
       lastnik_ime:   lastnikIme,
@@ -201,6 +231,7 @@ export async function oddajRezervacijo(
       opombe:        input.opombe ?? null,
       rezervacija_id,
       skupaj_cena,
+      approval_url:  approvalUrl,
     }).catch(logEmailError("rezervacije/oddaj/owner-email"));
   }
 

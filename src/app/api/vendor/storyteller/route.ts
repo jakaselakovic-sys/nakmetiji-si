@@ -11,7 +11,6 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { logNapako } from "@/lib/logNapako";
 import { checkRateLimit } from "@/lib/rateLimit";
 
-export const runtime = "nodejs";
 export const maxDuration = 30;
 
 const MODEL = "llama-3.3-70b-versatile";

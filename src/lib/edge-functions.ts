@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { createSupabaseBrowser } from "@/lib/supabase/client";
+import * as Sentry from "@sentry/nextjs";
 
 // ─── Tipi ──────────────────────────────────────────────────────────────────
 
@@ -41,14 +42,20 @@ async function invokeEdgeFunction<TResponse = unknown>(
     );
 
     if (error) {
-      console.error(`Edge Function "${functionName}" napaka:`, error);
+      Sentry.captureMessage(`Edge Function "${functionName}" napaka: ${error.message}`, {
+        level: "error",
+        tags: { feature: "edge_function" },
+        extra: { error },
+      });
       return { data: null, error: error.message };
     }
 
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Neznana napaka";
-    console.error(`Edge Function "${functionName}" izjema:`, message);
+    Sentry.captureException(err, {
+      tags: { feature: "edge_function", functionName },
+    });
     return { data: null, error: message };
   }
 }

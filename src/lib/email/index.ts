@@ -57,6 +57,7 @@ export async function posljiEmailLastniku(params: {
   opombe: string | null;
   rezervacija_id: string;
   skupaj_cena?: number | null;
+  approval_url?: string;
 }): Promise<void> {
   const resend = getResend();
   if (!resend) return;
@@ -79,6 +80,7 @@ export async function posljiEmailLastniku(params: {
         opombe: params.opombe,
         rezervacija_id: params.rezervacija_id,
         dashboard_url: DASHBOARD_URL,
+        approval_url: params.approval_url,
       })
     );
 

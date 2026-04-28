@@ -18,7 +18,6 @@ import {
 import { PassportShareButton } from "@/components/PassportShareButton";
 import { ClaimRewardButton } from "@/components/ClaimRewardButton";
 
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Moj Zeleni Potni List | NaKmetiji",

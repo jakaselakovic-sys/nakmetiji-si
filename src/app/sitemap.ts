@@ -9,7 +9,6 @@ import type { MetadataRoute } from "next";
 import { createClient } from "@supabase/supabase-js";
 import { REGIJE } from "@/types/database";
 
-export const revalidate = 43_200; // 12 hours
 
 const BASE_URL = "https://nakmetiji.si";
 

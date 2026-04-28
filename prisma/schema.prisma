@@ -1,0 +1,424 @@
+// =============================================================================
+// NaKmetiji.si — Prisma Schema
+// Connects to Supabase PostgreSQL via pgBouncer (transaction mode)
+// Used for: type generation + migrations (NOT as runtime query client — use Supabase SDK)
+//
+// Setup:
+//   1. Add to .env.local:
+//      DATABASE_URL="postgresql://postgres.[ref]:[password]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+//      DIRECT_URL="postgresql://postgres.[ref]:[password]@aws-0-eu-central-1.pooler.supabase.com:5432/postgres"
+//   2. npx prisma generate   → generates @prisma/client
+//   3. npx prisma db pull    → introspects existing Supabase tables
+// =============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  directUrl         = env("DIRECT_URL")
+  extensions        = [vector, pg_trgm, unaccent]
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum Regija {
+  gorenjska
+  primorska
+  stajerska
+  dolenjska
+  koroska
+  savinjska
+  pomurska
+  notranjska
+  zasavska
+  posavska
+  jugovzhodna_slovenija
+  osrednjeslovenska
+
+  @@map("regija_enum")
+}
+
+enum IzdelekKategorija {
+  mlecni_izdelki
+  mesni_izdelki
+  sadje_zelenjava
+  med_cebelji_izdelki
+  vino_pijace
+  pekovski_izdelki
+  olja_kis
+  domaca_kosmerika
+  ostalo
+
+  @@map("izdelek_kategorija_enum")
+}
+
+enum RezervacijaStatus {
+  cakanje
+  potrjena
+  zavrnjena
+  preklicana
+  zakljucena
+
+  @@map("rezervacija_status_enum")
+}
+
+enum MnenjeStatus {
+  cakanje
+  odobreno
+  zavrnjeno
+
+  @@map("mnenje_status_enum")
+}
+
+enum Vloga {
+  gost
+  lastnik
+  super_admin
+
+  @@map("vloga_enum")
+}
+
+enum ZnackaTip {
+  regija
+  dosezek
+  sezonska
+  posebna
+
+  @@map("znacka_tip")
+}
+
+enum JezikEnum {
+  sl
+  en
+  de
+  it
+
+  @@map("jezik_enum")
+}
+
+enum TransakcijaTip {
+  komisija
+  izplacilo
+  ai_agencija
+  vracilo
+  premium_narocnina
+
+  @@map("transakcija_tip")
+}
+
+enum TransakcijaStatus {
+  cakanje
+  obdelana
+  neuspesna
+  vrnjena
+
+  @@map("transakcija_status")
+}
+
+// =============================================================================
+// CORE TABLES
+// =============================================================================
+
+/// User profile — mirrors auth.users via trigger
+model Profil {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email               String    @unique
+  ime                 String?
+  priimek             String?
+  vloga               Vloga     @default(gost)
+  avatar_url          String?
+
+  // Green Passport gamification
+  xp_tocke            Int       @default(0)
+  nivo                Int       @default(1)
+  potni_list_aktiven  Boolean   @default(false)
+  skupaj_obiskov      Int       @default(0)
+
+  ustvarjeno          DateTime  @default(now()) @db.Timestamptz
+  posodobljeno        DateTime  @default(now()) @updatedAt @db.Timestamptz
+
+  // Relations
+  kmetije             Kmetija[]
+  transakcije         Transakcija[]
+  potni_list_zigi     PotniListZig[]
+  dosezki             UporabnikDosezek[]
+
+  @@map("profili")
+}
+
+/// Farm listing — core entity
+model Kmetija {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug                String    @unique
+  ime                 String
+  kratki_opis         String?
+  opis                String
+  ai_opis             String?   // AI-generated marketing copy
+
+  // Location
+  regija              Regija
+  naslov              String?
+  obcina              String?
+  postna_stevilka     String?
+  lat                 Float?
+  lng                 Float?
+
+  // Media
+  naslovna_slika      String    @default("")
+  slike               String[]  @default([])
+  video_url           String?
+
+  // Contact (JSONB — stored as Json)
+  kontaktni_podatki   Json      @default("{}")
+
+  // Business
+  cena_noc            Float?
+  max_gostov          Int?
+
+  // Ratings & Status
+  ocena               Float?
+  stevilo_ocen        Int       @default(0)
+  premium             Boolean   @default(false)
+  aktivna             Boolean   @default(false)
+
+  // AI semantic layer
+  // Note: vector type not natively supported in Prisma — managed via raw SQL
+  // embedding         Unsupported("vector(1536)")?
+  vibe_tags           String[]  @default([])
+  embedding_updated_at DateTime? @db.Timestamptz
+
+  lastnik_id          String?   @db.Uuid
+  ustvarjeno          DateTime  @default(now()) @db.Timestamptz
+  posodobljeno        DateTime  @default(now()) @updatedAt @db.Timestamptz
+
+  // Relations
+  lastnik             Profil?         @relation(fields: [lastnik_id], references: [id], onDelete: SetNull)
+  dozivetja           KmetijaDozivetje[]
+  mnenja              Mnenje[]
+  izdelki             Izdelek[]
+  rezervacije         Rezervacija[]
+  transakcije         Transakcija[]
+  potni_list_zigi     PotniListZig[]
+
+  @@index([regija])
+  @@index([aktivna, ocena(sort: Desc)])
+  @@index([lastnik_id])
+  @@map("kmetije")
+}
+
+/// Experience category (vino, prenocisce, druzine...)
+model Dozivetje {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ime         String
+  slug        String    @unique
+  ikona       String
+  opis        String?
+  vrstni_red  Int       @default(0)
+  ustvarjeno  DateTime  @default(now()) @db.Timestamptz
+  posodobljeno DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  kmetije     KmetijaDozivetje[]
+
+  @@map("dozivetja")
+}
+
+/// Many-to-many pivot
+model KmetijaDozivetje {
+  kmetija_id    String  @db.Uuid
+  dozivetje_id  String  @db.Uuid
+
+  kmetija   Kmetija   @relation(fields: [kmetija_id], references: [id], onDelete: Cascade)
+  dozivetje Dozivetje @relation(fields: [dozivetje_id], references: [id], onDelete: Cascade)
+
+  @@id([kmetija_id, dozivetje_id])
+  @@map("kmetija_dozivetje")
+}
+
+model Mnenje {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kmetija_id      String        @db.Uuid
+  uporabnik_id    String?       @db.Uuid
+  uporabnik_ime   String
+  uporabnik_email String?
+  ocena           Int           // 1–5
+  komentar        String?
+  status          MnenjeStatus  @default(cakanje)
+  datum           DateTime      @default(now()) @db.Timestamptz
+
+  kmetija         Kmetija       @relation(fields: [kmetija_id], references: [id], onDelete: Cascade)
+
+  @@index([kmetija_id, status])
+  @@map("mnenja")
+}
+
+model Izdelek {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kmetija_id  String            @db.Uuid
+  ime         String
+  opis        String?
+  cena        Float
+  enota       String
+  kategorija  IzdelekKategorija
+  zaloga      Int               @default(0)
+  na_voljo    Boolean           @default(true)
+  slika_url   String?
+  ustvarjeno  DateTime          @default(now()) @db.Timestamptz
+  posodobljeno DateTime         @default(now()) @updatedAt @db.Timestamptz
+
+  kmetija     Kmetija           @relation(fields: [kmetija_id], references: [id], onDelete: Cascade)
+
+  @@index([kmetija_id, na_voljo])
+  @@map("izdelki")
+}
+
+model Rezervacija {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kmetija_id      String            @db.Uuid
+  gost_ime        String
+  gost_email      String
+  gost_telefon    String?
+  stevilo_oseb    Int
+  datum_od        DateTime          @db.Date
+  datum_do        DateTime          @db.Date
+  skupaj_cena     Float             @default(0)
+  opombe          String?
+  status          RezervacijaStatus @default(cakanje)
+  ustvarjeno      DateTime          @default(now()) @db.Timestamptz
+  posodobljeno    DateTime          @default(now()) @updatedAt @db.Timestamptz
+
+  kmetija         Kmetija           @relation(fields: [kmetija_id], references: [id], onDelete: Cascade)
+  transakcije     Transakcija[]
+  potni_list_zigi PotniListZig[]
+  dosezki         UporabnikDosezek[]
+
+  @@index([kmetija_id, status])
+  @@index([gost_email])
+  @@map("rezervacije")
+}
+
+// =============================================================================
+// GREEN PASSPORT SYSTEM
+// =============================================================================
+
+model PotniListRegija {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug             String   @unique
+  ime              String
+  opis             String?
+  emoji            String?
+  barva_hex        String   @default("#2D5A27")
+  zahteva_regija   String   // matches Regija enum value
+  xp_nagrada       Int      @default(50)
+  ustvarjeno       DateTime @default(now()) @db.Timestamptz
+
+  zigi             PotniListZig[]
+
+  @@map("potni_list_regije")
+}
+
+model Znacka {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug        String     @unique
+  ime         String
+  opis        String?
+  ikona_url   String?
+  tip         ZnackaTip  @default(dosezek)
+  pogoj_json  Json       @default("{}")
+  xp_vrednost Int        @default(10)
+  ustvarjeno  DateTime   @default(now()) @db.Timestamptz
+
+  dosezki     UporabnikDosezek[]
+
+  @@map("znacke")
+}
+
+model PotniListZig {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profil_id        String   @db.Uuid
+  regija_id        String   @db.Uuid
+  kmetija_id       String   @db.Uuid
+  rezervacija_id   String?  @db.Uuid
+  datum_prisluzeno DateTime @default(now()) @db.Timestamptz
+
+  profil      Profil           @relation(fields: [profil_id], references: [id], onDelete: Cascade)
+  regija      PotniListRegija  @relation(fields: [regija_id], references: [id], onDelete: Cascade)
+  kmetija     Kmetija          @relation(fields: [kmetija_id], references: [id], onDelete: Cascade)
+  rezervacija Rezervacija?     @relation(fields: [rezervacija_id], references: [id], onDelete: SetNull)
+
+  @@unique([profil_id, regija_id])  // one stamp per region per user
+  @@index([profil_id])
+  @@map("potni_list_zigi")
+}
+
+model UporabnikDosezek {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profil_id      String   @db.Uuid
+  znacka_id      String   @db.Uuid
+  rezervacija_id String?  @db.Uuid
+  prisluzeno     DateTime @default(now()) @db.Timestamptz
+
+  profil      Profil       @relation(fields: [profil_id], references: [id], onDelete: Cascade)
+  znacka      Znacka       @relation(fields: [znacka_id], references: [id], onDelete: Cascade)
+  rezervacija Rezervacija? @relation(fields: [rezervacija_id], references: [id], onDelete: SetNull)
+
+  @@unique([profil_id, znacka_id])
+  @@index([profil_id])
+  @@map("uporabnik_dosezki")
+}
+
+// =============================================================================
+// MULTILINGUAL TRANSLATIONS
+// =============================================================================
+
+model Prevod {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tabela       String    // 'kmetije' | 'dozivetja' | 'izdelki'
+  vrstica_id   String    @db.Uuid
+  jezik        JezikEnum
+  polje        String    // 'ime' | 'opis' | 'kratki_opis'
+  vsebina      String
+  ai_prevod    Boolean   @default(true)
+  ustvarjeno   DateTime  @default(now()) @db.Timestamptz
+  posodobljeno DateTime  @default(now()) @updatedAt @db.Timestamptz
+
+  @@unique([tabela, vrstica_id, jezik, polje])
+  @@index([tabela, jezik, polje])
+  @@index([vrstica_id, jezik])
+  @@map("prevodi")
+}
+
+// =============================================================================
+// REVENUE TRACKING
+// =============================================================================
+
+model Transakcija {
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rezervacija_id      String?            @db.Uuid
+  lastnik_id          String?            @db.Uuid
+  tip                 TransakcijaTip
+  bruto_znesek        Decimal            @db.Decimal(10, 2)
+  komisija_odstotek   Decimal            @default(12.00) @db.Decimal(5, 2)
+  komisija_znesek     Decimal            @db.Decimal(10, 2)
+  neto_znesek         Decimal            @db.Decimal(10, 2)
+  status              TransakcijaStatus  @default(cakanje)
+  stripe_payment_id   String?
+  stripe_transfer_id  String?
+  opombe              String?
+  ustvarjeno          DateTime           @default(now()) @db.Timestamptz
+  obdelano            DateTime?          @db.Timestamptz
+
+  rezervacija         Rezervacija?       @relation(fields: [rezervacija_id], references: [id], onDelete: SetNull)
+  lastnik             Profil?            @relation(fields: [lastnik_id], references: [id], onDelete: SetNull)
+  kmetija             Kmetija?           @relation(fields: [lastnik_id], references: [lastnik_id], onDelete: SetNull)
+
+  @@index([lastnik_id, ustvarjeno(sort: Desc)])
+  @@index([status, ustvarjeno(sort: Desc)])
+  @@index([rezervacija_id])
+  @@map("transakcije")
+}

@@ -17,12 +17,7 @@ interface ErrorPageProps {
 
 export default function ErrorPage({ error, reset }: ErrorPageProps) {
   useEffect(() => {
-    // Log to console (always)
-    console.error("[NaKmetiji Error Boundary]", {
-      message: error.message,
-      digest: error.digest,
-      stack: error.stack,
-    });
+    // Log removed, we rely on Sentry below
 
     // Report to Sentry
     Sentry.captureException(error);

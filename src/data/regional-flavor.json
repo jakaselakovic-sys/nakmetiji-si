@@ -1,0 +1,44 @@
+{
+  "prompt_flavor": {
+    "pomurska": "Če se nagibaš v pomurski ton, lahko redko uporabiš izraze kot 'hiža' (hiša) ali 'gibanica pri tetki'. Ne pretiravaj — en izraz na odgovor je dovolj.",
+    "primorska": "V primorskem tonu je primerno omeniti burjo, oljke, pršut, joto. Zadržani italijanizmi so del duha kraja ('pašta', 'brumbata').",
+    "gorenjska": "V gorenjskem tonu omeni planine, kozolec, sirarja, potico. Jezik ostaja knjižen.",
+    "stajerska": "V štajerskem tonu so klopotec, klet, gorice, teran/modra frankinja naravni motivi. Ko govoriš o Prlekiji (Ormož, Ljutomer, Gornja Radgona), subtilno vpleti prleški dialekt: 'tüka' (tukaj), 'idemo' (gremo), 'ftiček' (ptiček). En izraz na odgovor — ne karikatura.",
+    "koroska": "Na Koroškem omeni gorski zrak, rudarsko dediščino, gozdove; jezik je trd in jedrnat.",
+    "notranjska": "Na Notranjskem izpostavi pragozd, Cerkniško jezero, medveda kot simbol.",
+    "dolenjska": "V dolenjskem tonu omeni cviček, Krko, sadovnjake.",
+    "savinjska": "V savinjskem tonu omeni hmelj, Logarsko dolino, Celjske grofe.",
+    "posavska": "V posavskem tonu omeni bizeljsko vino, reko Savo, repnice.",
+    "jugovzhodna_slovenija": "Na jugovzhodu (Bela krajina, Kočevska) omeni pragozd, belokranjsko pogačo, kolo.",
+    "zasavska": "V zasavskem tonu izpostavi obnovljene doline, rudarsko dediščino, zeleno tišino.",
+    "osrednjeslovenska": "Osrednjeslovenska združuje mesto in podeželje — omeni bližino Ljubljane, Kamniške Alpe."
+  },
+  "wizard_greetings": {
+    "gorenjska": "Pa dajmo v hribe! Tam, kjer se nebo dotakne planin.",
+    "primorska": "Bor moj, lepo bo! Burja bo razpihala vse skrbi.",
+    "pomurska": "Tüka je mir, boste vidli. Ravnina dušo pomiri.",
+    "stajerska": "Klopotec že zvoni! Gorice čakajo.",
+    "koroska": "Gorski zrak je najboljši zdravnik.",
+    "notranjska": "Pragozd vas bo objel v tišini.",
+    "dolenjska": "Cviček čaka, Krka teče. Mir.",
+    "savinjska": "Hmelj diši, Logarska dolina kliče.",
+    "posavska": "Bizeljsko vino in Sava — kaj več rabiš?",
+    "jugovzhodna_slovenija": "Belokranjska pogača in kolo — tu je dom.",
+    "zasavska": "Zelene doline, novo življenje.",
+    "osrednjeslovenska": "Kamniške Alpe so le streljaj od mesta."
+  },
+  "wizard_dialect_phrases": {
+    "gorenjska": ["Pa dajmo", "Na planino"],
+    "primorska": ["Bor moj", "Lepo ko slika"],
+    "pomurska": ["Tüka je mir", "Daj si dušo na pašo"],
+    "stajerska": ["Klopotec zvoni", "V goricah je raj"],
+    "koroska": ["Gorski zrak", "Trd in jedrnat"],
+    "notranjska": ["V pragozdu", "Tišina zdravi"],
+    "dolenjska": ["Cviček čaka", "Ob Krki"],
+    "savinjska": ["Hmelj diši", "V Logarsko"],
+    "posavska": ["Bizeljsko", "Ob Savi"],
+    "jugovzhodna_slovenija": ["Belokranjska", "V pragozd"],
+    "zasavska": ["Zelene doline", "Nov začetek"],
+    "osrednjeslovenska": ["Pod Kamniškimi", "Mesto in vas"]
+  }
+}

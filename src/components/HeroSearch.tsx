@@ -1,21 +1,22 @@
 "use client";
 
 // =============================================================================
-// NaKmetiji.si — HeroSearch
-// Desktop: glassmorphism horizontal bar
-// Mobile: Smart Trigger pill → AnimatePresence Bottom Sheet drawer
+// NaKmetiji.si — HeroSearch v4
+// Hero: single inviting trigger pill.
+// Overlay: Jože-first discovery — primary AI input + secondary filters + road trip.
 // =============================================================================
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Layers, CalendarDays, Search, X, SlidersHorizontal } from "lucide-react";
-import { REGIJA_LABELS } from "@/types/database";
+import {
+  Search, X, MapPin, Layers, CalendarDays, Route, Feather, Sparkles, ArrowRight, ChevronDown,
+} from "lucide-react";
+import { REGIJA_LABELS, REGIJE } from "@/types/database";
+import { useOracleStore } from "@/lib/oracleStore";
 
-const REGIJE_OPTIONS = Object.entries(REGIJA_LABELS).map(([value, label]) => ({
-  value,
-  label,
-}));
+const REGIJE_OPTIONS = REGIJE.map((value) => ({ value, label: REGIJA_LABELS[value] }));
 
 interface DozivetjeOption {
   id: string;
@@ -24,53 +25,10 @@ interface DozivetjeOption {
 }
 
 // ---------------------------------------------------------------------------
-// Shared search field state hook
+// Discovery Overlay — Jože-first
 // ---------------------------------------------------------------------------
-function useSearchState(dozivetja: DozivetjeOption[]) {
-  const router = useRouter();
-  const [kje, setKje] = useState("");
-  const [kaj, setKaj] = useState("");
-  const [kdaj, setKdaj] = useState("");
-  const [showKjeDropdown, setShowKjeDropdown] = useState(false);
-  const [showKajDropdown, setShowKajDropdown] = useState(false);
 
-  const filteredRegije = REGIJE_OPTIONS.filter((r) =>
-    r.label.toLowerCase().includes(kje.toLowerCase())
-  );
-  const filteredDozivetja = dozivetja.filter((d) =>
-    d.ime.toLowerCase().includes(kaj.toLowerCase())
-  );
-
-  function handleSearch() {
-    const params = new URLSearchParams();
-    const matchedRegija = REGIJE_OPTIONS.find(
-      (r) => r.label.toLowerCase() === kje.toLowerCase()
-    );
-    if (matchedRegija) params.set("regija", matchedRegija.value);
-    const matchedDoz = dozivetja.find(
-      (d) => d.ime.toLowerCase() === kaj.toLowerCase()
-    );
-    if (matchedDoz) params.set("dozivetje", matchedDoz.slug);
-    if (kdaj) params.set("datum", kdaj);
-    if (!matchedRegija && kje) params.set("q", kje);
-    router.push(`/kmetije?${params.toString()}`);
-  }
-
-  return {
-    kje, setKje, kaj, setKaj, kdaj, setKdaj,
-    showKjeDropdown, setShowKjeDropdown,
-    showKajDropdown, setShowKajDropdown,
-    filteredRegije, filteredDozivetja,
-    handleSearch,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Bottom sheet — mobile only
-// Physics: stiffness 380 / damping 38 → fast snap with zero overshoot.
-// Drag-to-dismiss: if dragged >100px down, close.
-// ---------------------------------------------------------------------------
-function MobileBottomSheet({
+function SearchOverlay({
   open,
   onClose,
   dozivetja,
@@ -79,205 +37,300 @@ function MobileBottomSheet({
   onClose: () => void;
   dozivetja: DozivetjeOption[];
 }) {
-  const {
-    kje, setKje, kaj, setKaj, kdaj, setKdaj,
-    showKjeDropdown, setShowKjeDropdown,
-    showKajDropdown, setShowKajDropdown,
-    filteredRegije, filteredDozivetja,
-    handleSearch,
-  } = useSearchState(dozivetja);
+  const router = useRouter();
+  const openOracle = useOracleStore((s) => s.openOracle);
 
-  const kjeRef = useRef<HTMLDivElement>(null);
-  const kajRef = useRef<HTMLDivElement>(null);
+  const [aiQuery, setAiQuery] = useState("");
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [regija, setRegija] = useState<string>("");
+  const [doz, setDoz] = useState<string>("");
+  const [datum, setDatum] = useState<string>("");
 
+  const aiInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Close on Escape
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (kjeRef.current && !kjeRef.current.contains(event.target as Node))
-        setShowKjeDropdown(false);
-      if (kajRef.current && !kajRef.current.contains(event.target as Node))
-        setShowKajDropdown(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [setShowKjeDropdown, setShowKajDropdown]);
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
 
-  function onSearch() {
-    handleSearch();
+  // Focus AI input when overlay opens
+  useEffect(() => {
+    if (open) setTimeout(() => aiInputRef.current?.focus(), 250);
+  }, [open]);
+
+  // Reset transient state on close
+  useEffect(() => {
+    if (!open) setFiltersExpanded(false);
+  }, [open]);
+
+  // Auto-resize AI textarea
+  useEffect(() => {
+    if (aiInputRef.current) {
+      aiInputRef.current.style.height = "auto";
+      aiInputRef.current.style.height = `${aiInputRef.current.scrollHeight}px`;
+    }
+  }, [aiQuery]);
+
+  const handleAskJoze = useCallback(() => {
+    const seed = aiQuery.trim();
     onClose();
+    setTimeout(() => openOracle(seed || undefined), 150);
+  }, [aiQuery, onClose, openOracle]);
+
+  const handleAiKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleAskJoze();
+    }
+  };
+
+  function handleFilterSearch() {
+    const params = new URLSearchParams();
+    if (regija) params.set("regija", regija);
+    if (doz) params.set("dozivetje", doz);
+    if (datum) params.set("datum", datum);
+    onClose();
+    router.push(`/kmetije${params.toString() ? `?${params.toString()}` : ""}`);
   }
+
+  // Quick-pick chips for inspiration
+  const QUICK_SEEDS = [
+    "Tih konec tedna z dobro kuhinjo",
+    "Romantična kmetija z vinom",
+    "Družina z otroki in živali",
+    "Eko kmetija v gorah",
+  ];
 
   return (
     <AnimatePresence>
       {open && (
         <>
-          {/* Backdrop */}
           <motion.div
-            key="sheet-backdrop"
+            key="overlay-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
-            onClick={onClose}
+            transition={{ duration: 0.22 }}
+            className="fixed inset-0 z-[60] bg-black/55 backdrop-blur-sm"
             aria-hidden="true"
+            onClick={onClose}
           />
 
-          {/* Drawer */}
           <motion.div
-            key="sheet-drawer"
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", stiffness: 380, damping: 38 }}
-            drag="y"
-            dragConstraints={{ top: 0 }}
-            dragElastic={0.15}
-            onDragEnd={(_, info) => {
-              if (info.offset.y > 100) onClose();
-            }}
-            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl bg-cream shadow-2xl"
-            // touchAction must NOT be "none" on the whole drawer — that blocks
-            // scrolling of dropdowns inside the sheet. Set it only on the drag
-            // handle (the only element that should intercept vertical panning).
+            key="overlay-panel"
+            initial={{ opacity: 0, y: -28, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 340, damping: 28 }}
+            className="fixed inset-x-4 top-[6vh] z-[61] mx-auto max-w-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Iskanje kmetij"
           >
-            {/* Drag handle — only THIS element intercepts touch for dragging */}
-            <div
-              className="flex justify-center pt-4 pb-2"
-              style={{ touchAction: "none" }}
-            >
-              <div className="h-1.5 w-12 rounded-full bg-earth-300" />
-            </div>
+            <div className="rounded-3xl bg-[#fdf9f2] shadow-[0_32px_80px_rgba(0,0,0,0.28)] overflow-hidden max-h-[88vh] flex flex-col">
 
-            {/* pb accounts for iOS home-indicator (safe-area-inset-bottom) */}
-            <div className="px-5 pt-2 pb-[max(40px,calc(env(safe-area-inset-bottom)+24px))]">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-forest-900">Poiščite svoj košček miru</h2>
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 pt-6 pb-2 flex-shrink-0">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-forest-600/60 mb-0.5">
+                    NaKmetiji.si
+                  </p>
+                  <h2 className="font-display text-xl font-black text-forest-900 tracking-tight leading-none">
+                    Kako naj ti pomagam?
+                  </h2>
+                </div>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-full hover:bg-earth-100 transition-colors"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-earth-100 hover:bg-earth-200 text-earth-600 hover:text-forest-800 transition-all"
                   aria-label="Zapri"
                 >
-                  <X size={20} className="text-earth-500" />
+                  <X size={17} />
                 </button>
               </div>
 
-              <div className="flex flex-col gap-4">
-                {/* Kje */}
-                <div ref={kjeRef} className="relative">
-                  <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-forest-800/60 mb-1.5 ml-1">
-                    Kje
-                  </label>
-                  <div className="flex items-center gap-3 rounded-2xl bg-white border border-earth-200 px-4 py-3.5 shadow-sm">
-                    <MapPin size={18} className="text-forest-600 flex-shrink-0" strokeWidth={2} />
-                    <input
-                      type="text"
-                      placeholder="Gorenjska, Primorska..."
-                      value={kje}
-                      onChange={(e) => { setKje(e.target.value); setShowKjeDropdown(true); }}
-                      onFocus={() => setShowKjeDropdown(true)}
-                      className="flex-1 bg-transparent text-sm text-forest-900 placeholder:text-earth-400 focus:outline-none"
-                    />
-                    {kje && (
-                      <button onClick={() => setKje("")} className="text-earth-400 hover:text-earth-600" aria-label="Počisti">
-                        <X size={14} />
-                      </button>
-                    )}
+              <div className="flex-1 overflow-y-auto px-6 pb-6 pt-3">
+                {/* ── PRIMARY: Ask Jože ── */}
+                <div className="rounded-2xl bg-gradient-to-br from-amber-50 via-white to-amber-50/40 border border-amber-200/80 p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/15 text-amber-700">
+                      <Feather size={15} />
+                    </span>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-700">Priporočeno</p>
+                      <p className="font-display font-black text-forest-900 text-base leading-none mt-0.5">
+                        Povej Jožetu, kakšno kmetijo iščeš
+                      </p>
+                    </div>
                   </div>
-                  <AnimatePresence>
-                    {showKjeDropdown && filteredRegije.length > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        className="absolute top-full left-0 right-0 z-10 mt-1 bg-white rounded-xl shadow-xl border border-earth-200 max-h-44 overflow-y-auto"
+
+                  <div className="rounded-xl bg-white border border-amber-200 focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-200 px-3 py-2.5 transition-all">
+                    <textarea
+                      ref={aiInputRef}
+                      value={aiQuery}
+                      onChange={(e) => setAiQuery(e.target.value)}
+                      onKeyDown={handleAiKey}
+                      rows={2}
+                      placeholder="Npr. tiha kmetija z vinom in zajtrkom za par, blizu Bleda, prvi vikend junija…"
+                      className="w-full resize-none bg-transparent text-sm text-forest-900 placeholder:text-earth-400 focus:outline-none leading-relaxed max-h-32 overflow-y-auto"
+                      style={{ scrollbarWidth: "none" }}
+                    />
+                  </div>
+
+                  {/* Quick seed chips */}
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {QUICK_SEEDS.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setAiQuery(s)}
+                        className="rounded-full bg-white hover:bg-amber-100 border border-amber-200/70 hover:border-amber-300 px-3 py-1 text-[11px] text-earth-700 hover:text-amber-800 font-medium transition-colors"
                       >
-                        {filteredRegije.map((r) => (
-                          <button
-                            key={r.value}
-                            className="w-full text-left px-4 py-2.5 text-sm text-forest-800 hover:bg-forest-50 transition-colors flex items-center gap-2"
-                            onMouseDown={(e) => { e.preventDefault(); setKje(r.label); setShowKjeDropdown(false); }}
-                          >
-                            <MapPin size={13} className="text-forest-500" /> {r.label}
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* Kaj */}
-                <div ref={kajRef} className="relative">
-                  <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-forest-800/60 mb-1.5 ml-1">
-                    Kaj
-                  </label>
-                  <div className="flex items-center gap-3 rounded-2xl bg-white border border-earth-200 px-4 py-3.5 shadow-sm">
-                    <Layers size={18} className="text-forest-600 flex-shrink-0" strokeWidth={2} />
-                    <input
-                      type="text"
-                      placeholder="Vino, Kulinarika..."
-                      value={kaj}
-                      onChange={(e) => { setKaj(e.target.value); setShowKajDropdown(true); }}
-                      onFocus={() => setShowKajDropdown(true)}
-                      className="flex-1 bg-transparent text-sm text-forest-900 placeholder:text-earth-400 focus:outline-none"
-                    />
-                    {kaj && (
-                      <button onClick={() => setKaj("")} className="text-earth-400 hover:text-earth-600" aria-label="Počisti">
-                        <X size={14} />
+                        {s}
                       </button>
-                    )}
+                    ))}
                   </div>
-                  <AnimatePresence>
-                    {showKajDropdown && filteredDozivetja.length > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        className="absolute top-full left-0 right-0 z-10 mt-1 bg-white rounded-xl shadow-xl border border-earth-200 max-h-44 overflow-y-auto"
-                      >
-                        {filteredDozivetja.map((d) => (
-                          <button
-                            key={d.id}
-                            className="w-full text-left px-4 py-2.5 text-sm text-forest-800 hover:bg-forest-50 transition-colors flex items-center gap-2"
-                            onMouseDown={(e) => { e.preventDefault(); setKaj(d.ime); setShowKajDropdown(false); }}
-                          >
-                            <Layers size={13} className="text-forest-500" /> {d.ime}
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+
+                  <button
+                    onClick={handleAskJoze}
+                    className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm py-3 shadow-md hover:shadow-lg transition-all"
+                  >
+                    <Sparkles size={15} />
+                    {aiQuery.trim() ? "Vprašaj Jožeta" : "Začni pogovor z Jožetom"}
+                    <ArrowRight size={14} />
+                  </button>
                 </div>
 
-                {/* Kdaj */}
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-forest-800/60 mb-1.5 ml-1">
-                    Kdaj
-                  </label>
-                  <div className="flex items-center gap-3 rounded-2xl bg-white border border-earth-200 px-4 py-3.5 shadow-sm">
-                    <CalendarDays size={18} className="text-forest-600 flex-shrink-0" strokeWidth={2} />
-                    <input
-                      type="date"
-                      value={kdaj}
-                      onChange={(e) => setKdaj(e.target.value)}
-                      className="flex-1 bg-transparent text-sm text-forest-900 focus:outline-none"
-                    />
-                    {kdaj && (
-                      <button onClick={() => setKdaj("")} className="text-earth-400 hover:text-earth-600" aria-label="Počisti">
-                        <X size={14} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Search button */}
-                <motion.button
-                  onClick={onSearch}
-                  whileTap={{ scale: 0.97 }}
-                  className="mt-2 w-full flex items-center justify-center gap-2.5 rounded-3xl bg-forest-700 px-8 py-4 text-white font-bold text-base shadow-lg hover:bg-forest-600 transition-colors duration-200"
+                {/* ── Secondary: Manual filters (collapsed by default) ── */}
+                <button
+                  onClick={() => setFiltersExpanded((v) => !v)}
+                  className="w-full mt-4 flex items-center justify-between rounded-2xl bg-white border border-earth-200 hover:border-forest-300 px-4 py-3 transition-colors"
                 >
-                  <Search size={18} strokeWidth={2.5} />
-                  Išči kmetije
-                </motion.button>
+                  <span className="flex items-center gap-2 text-sm font-bold text-forest-900">
+                    <Search size={14} className="text-forest-600" />
+                    Iskanje po filtrih
+                    <span className="text-[10px] font-medium text-earth-500">(regija · doživetje · datum)</span>
+                  </span>
+                  <ChevronDown
+                    size={15}
+                    className={`text-earth-400 transition-transform ${filtersExpanded ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                <AnimatePresence initial={false}>
+                  {filtersExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="rounded-2xl bg-white border border-earth-200 mt-2 p-4 space-y-3">
+                        {/* Regija */}
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-forest-700/60 mb-1.5">
+                            <MapPin size={11} className="inline -mt-0.5 mr-1" />
+                            Regija
+                          </label>
+                          <div className="flex flex-wrap gap-1.5">
+                            <button
+                              onClick={() => setRegija("")}
+                              className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+                                regija === "" ? "bg-forest-700 text-white" : "bg-earth-50 text-earth-700 hover:bg-earth-100"
+                              }`}
+                            >
+                              Vse
+                            </button>
+                            {REGIJE_OPTIONS.map((r) => (
+                              <button
+                                key={r.value}
+                                onClick={() => setRegija(r.value)}
+                                className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+                                  regija === r.value ? "bg-forest-700 text-white" : "bg-earth-50 text-earth-700 hover:bg-earth-100"
+                                }`}
+                              >
+                                {r.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Doživetje */}
+                        {dozivetja.length > 0 && (
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-forest-700/60 mb-1.5">
+                              <Layers size={11} className="inline -mt-0.5 mr-1" />
+                              Doživetje
+                            </label>
+                            <div className="flex flex-wrap gap-1.5">
+                              <button
+                                onClick={() => setDoz("")}
+                                className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+                                  doz === "" ? "bg-forest-700 text-white" : "bg-earth-50 text-earth-700 hover:bg-earth-100"
+                                }`}
+                              >
+                                Vse
+                              </button>
+                              {dozivetja.map((d) => (
+                                <button
+                                  key={d.id}
+                                  onClick={() => setDoz(d.slug)}
+                                  className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+                                    doz === d.slug ? "bg-forest-700 text-white" : "bg-earth-50 text-earth-700 hover:bg-earth-100"
+                                  }`}
+                                >
+                                  {d.ime}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Datum */}
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-forest-700/60 mb-1.5">
+                            <CalendarDays size={11} className="inline -mt-0.5 mr-1" />
+                            Datum (neobvezno)
+                          </label>
+                          <input
+                            type="date"
+                            value={datum}
+                            onChange={(e) => setDatum(e.target.value)}
+                            className="w-full rounded-xl border border-earth-200 bg-white px-3 py-2 text-sm text-forest-900 focus:outline-none focus:border-forest-400 focus:ring-2 focus:ring-forest-200"
+                          />
+                        </div>
+
+                        <button
+                          onClick={handleFilterSearch}
+                          className="w-full flex items-center justify-center gap-2 rounded-xl bg-forest-700 hover:bg-forest-600 text-white font-bold text-sm py-2.5 shadow-sm transition-all"
+                        >
+                          <Search size={14} />
+                          Prikaži kmetije
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* ── Tertiary: Road trip ── */}
+                <Link
+                  href="/pot"
+                  onClick={onClose}
+                  className="group mt-4 flex items-center gap-3 rounded-2xl bg-white border border-emerald-200/70 hover:border-emerald-300 hover:bg-emerald-50/50 p-4 transition-all"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 group-hover:bg-emerald-200 transition-colors">
+                    <Route size={17} className="text-emerald-700" />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-forest-900 text-sm">Načrtuj večdnevno pot</p>
+                    <p className="text-[11px] text-earth-600 mt-0.5 leading-snug">
+                      Več regij, več dni — sestavimo optimalen road trip s znamenitostmi.
+                    </p>
+                  </div>
+                  <ArrowRight size={14} className="text-earth-400 group-hover:text-emerald-700 group-hover:translate-x-0.5 transition-all" />
+                </Link>
               </div>
             </div>
           </motion.div>
@@ -288,195 +341,54 @@ function MobileBottomSheet({
 }
 
 // ---------------------------------------------------------------------------
-// Desktop horizontal bar (unchanged logic, cleaner markup)
-// ---------------------------------------------------------------------------
-function DesktopSearchBar({ dozivetja }: { dozivetja: DozivetjeOption[] }) {
-  const {
-    kje, setKje, kaj, setKaj, kdaj, setKdaj,
-    showKjeDropdown, setShowKjeDropdown,
-    showKajDropdown, setShowKajDropdown,
-    filteredRegije, filteredDozivetja,
-    handleSearch,
-  } = useSearchState(dozivetja);
-
-  const kjeRef = useRef<HTMLDivElement>(null);
-  const kajRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (kjeRef.current && !kjeRef.current.contains(event.target as Node))
-        setShowKjeDropdown(false);
-      if (kajRef.current && !kajRef.current.contains(event.target as Node))
-        setShowKajDropdown(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [setShowKjeDropdown, setShowKajDropdown]);
-
-  return (
-    <div className="paper-search relative z-20 p-3 shadow-2xl shadow-black/10 transition-all duration-500 hover:shadow-[0_20px_60px_rgba(45,90,39,0.12)] hover:scale-[1.005]">
-      <div className="flex flex-row group/search">
-        {/* Kje */}
-        <div ref={kjeRef} className="relative flex-1 opacity-100 transition-opacity duration-300 group-focus-within/search:opacity-40 focus-within:!opacity-100">
-          <div className="flex items-center gap-3 px-5 py-4">
-            <MapPin size={20} className="text-forest-600 flex-shrink-0" strokeWidth={2} />
-            <div className="flex-1">
-              <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-forest-800/60 mb-0.5">Kje</label>
-              <input
-                type="text"
-                placeholder="Gorenjska, Primorska..."
-                value={kje}
-                onChange={(e) => { setKje(e.target.value); setShowKjeDropdown(true); }}
-                onFocus={() => setShowKjeDropdown(true)}
-                className="w-full bg-transparent text-sm text-forest-900 placeholder:text-earth-400 focus:outline-none"
-              />
-            </div>
-            {kje && (
-              <button onClick={() => setKje("")} aria-label="Počisti lokacijo" className="text-earth-400 hover:text-earth-600 p-1">
-                <X size={14} />
-              </button>
-            )}
-          </div>
-          {showKjeDropdown && filteredRegije.length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-forest-50/95 backdrop-blur-md rounded-2xl shadow-2xl border border-forest-200/60 max-h-48 overflow-y-auto">
-              {filteredRegije.map((r) => (
-                <button
-                  key={r.value}
-                  className="w-full text-left px-5 py-2.5 text-sm text-forest-800 hover:bg-forest-100 transition-colors flex items-center gap-2"
-                  onMouseDown={(e) => { e.preventDefault(); setKje(r.label); setShowKjeDropdown(false); }}
-                >
-                  <MapPin size={14} className="text-forest-500" /> {r.label}
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="absolute right-0 top-3 bottom-3 w-px bg-earth-200" />
-        </div>
-
-        {/* Kaj */}
-        <div ref={kajRef} className="relative flex-1 opacity-100 transition-opacity duration-300 group-focus-within/search:opacity-40 focus-within:!opacity-100">
-          <div className="flex items-center gap-3 px-5 py-4">
-            <Layers size={20} className="text-forest-600 flex-shrink-0" strokeWidth={2} />
-            <div className="flex-1">
-              <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-forest-800/60 mb-0.5">Kaj</label>
-              <input
-                type="text"
-                placeholder="Vino, Kulinarika..."
-                value={kaj}
-                onChange={(e) => { setKaj(e.target.value); setShowKajDropdown(true); }}
-                onFocus={() => setShowKajDropdown(true)}
-                className="w-full bg-transparent text-sm text-forest-900 placeholder:text-earth-400 focus:outline-none"
-              />
-            </div>
-            {kaj && (
-              <button onClick={() => setKaj("")} aria-label="Počisti doživetje" className="text-earth-400 hover:text-earth-600 p-1">
-                <X size={14} />
-              </button>
-            )}
-          </div>
-          {showKajDropdown && filteredDozivetja.length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-forest-50/95 backdrop-blur-md rounded-2xl shadow-2xl border border-forest-200/60 max-h-48 overflow-y-auto">
-              {filteredDozivetja.map((d) => (
-                <button
-                  key={d.id}
-                  className="w-full text-left px-5 py-2.5 text-sm text-forest-800 hover:bg-forest-100 transition-colors flex items-center gap-2"
-                  onMouseDown={(e) => { e.preventDefault(); setKaj(d.ime); setShowKajDropdown(false); }}
-                >
-                  <Layers size={14} className="text-forest-500" /> {d.ime}
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="absolute right-0 top-3 bottom-3 w-px bg-earth-200" />
-        </div>
-
-        {/* Kdaj */}
-        <div className="relative flex-1 opacity-100 transition-opacity duration-300 group-focus-within/search:opacity-40 focus-within:!opacity-100">
-          <div className="flex items-center gap-3 px-5 py-4">
-            <CalendarDays size={20} className="text-forest-600 flex-shrink-0" strokeWidth={2} />
-            <div className="flex-1">
-              <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-forest-800/60 mb-0.5">Kdaj</label>
-              <input
-                type="date"
-                value={kdaj}
-                onChange={(e) => setKdaj(e.target.value)}
-                className="w-full bg-transparent text-sm text-forest-900 placeholder:text-earth-400 focus:outline-none"
-              />
-            </div>
-            {kdaj && (
-              <button onClick={() => setKdaj("")} aria-label="Počisti datum" className="text-earth-400 hover:text-earth-600 p-1">
-                <X size={14} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Search button */}
-        <div className="p-2 pl-0 transition-opacity duration-300 group-focus-within/search:opacity-80">
-          <button
-            onClick={handleSearch}
-            className="w-full flex items-center justify-center gap-2.5 rounded-3xl bg-forest-700 px-10 py-5 text-white font-bold text-base shadow-lg hover:bg-forest-600 hover:shadow-xl hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
-          >
-            <Search size={18} strokeWidth={2.5} />
-            <span>Poiščite pot</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Main export — renders Smart Trigger on mobile, full bar on desktop
+// Main export — clean hero trigger
 // ---------------------------------------------------------------------------
 export function HeroSearch({ dozivetja = [] }: { dozivetja?: DozivetjeOption[] }) {
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [overlayOpen, setOverlayOpen] = useState(false);
 
-  // Lock body scroll when sheet is open
   useEffect(() => {
-    document.body.style.overflow = sheetOpen ? "hidden" : "";
+    document.body.style.overflow = overlayOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
-  }, [sheetOpen]);
+  }, [overlayOpen]);
 
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
+        initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, delay: 0.4, ease: "easeOut" }}
-        className="w-full mx-auto"
+        transition={{ duration: 0.65, delay: 0.35, ease: "easeOut" }}
+        className="flex flex-col items-center gap-4"
       >
-        {/* ── Mobile Smart Trigger (< 640px) ── */}
-        <div className="sm:hidden">
-          <motion.button
-            onClick={() => setSheetOpen(true)}
-            whileTap={{ scale: 0.97 }}
-            className="w-full flex items-center gap-3 rounded-full paper-search px-5 py-4 shadow-xl shadow-black/10"
-            aria-label="Odpri iskanje"
-          >
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-forest-700 text-white flex-shrink-0">
-              <Search size={16} strokeWidth={2.5} />
-            </div>
-            <div className="flex-1 text-left">
-              <p className="text-sm font-semibold text-forest-900">Kam vas kliče duša?</p>
-              <p className="text-xs text-earth-500">Regija · Doživetje · Datum</p>
-            </div>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-earth-100 text-earth-600 flex-shrink-0">
-              <SlidersHorizontal size={15} />
-            </div>
-          </motion.button>
-        </div>
+        <motion.button
+          onClick={() => setOverlayOpen(true)}
+          whileHover={{ scale: 1.025 }}
+          whileTap={{ scale: 0.98 }}
+          className="group relative flex items-center gap-3 rounded-full paper-search px-5 py-3.5 sm:px-7 sm:py-4 shadow-xl shadow-black/12 hover:shadow-2xl hover:shadow-black/18 transition-shadow duration-300"
+          aria-label="Odpri iskanje"
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-forest-700 text-white flex-shrink-0 group-hover:bg-forest-600 transition-colors">
+            <Search size={16} strokeWidth={2.5} />
+          </div>
 
-        {/* ── Desktop full bar (≥ 640px) ── */}
-        <div className="hidden sm:block">
-          <DesktopSearchBar dozivetja={dozivetja} />
-        </div>
+          <div className="text-left pr-2">
+            <p className="text-sm font-bold text-forest-900 leading-none">Poiščite svojo kmetijo</p>
+            <p className="text-xs text-earth-500 mt-0.5">Vprašaj Jožeta · Filtri · Road trip</p>
+          </div>
+
+          <motion.span
+            className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-white shadow-sm"
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+            aria-hidden="true"
+          >
+            <Sparkles size={10} />
+          </motion.span>
+        </motion.button>
       </motion.div>
 
-      {/* Bottom sheet — rendered outside motion wrapper so z-index works */}
-      <MobileBottomSheet
-        open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
+      <SearchOverlay
+        open={overlayOpen}
+        onClose={() => setOverlayOpen(false)}
         dozivetja={dozivetja}
       />
     </>

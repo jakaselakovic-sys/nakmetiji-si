@@ -59,6 +59,8 @@ export const MOCK_KMETIJE: Kmetija[] = [
 
     bic: null,
 
+    lastnosti: [],
+    posebne_ponudbe: null,
     lastnik_id: null,
     ustvarjeno: "2024-01-15",
     posodobljeno: "2024-12-01",
@@ -91,6 +93,8 @@ export const MOCK_KMETIJE: Kmetija[] = [
 
     bic: null,
 
+    lastnosti: [],
+    posebne_ponudbe: null,
     lastnik_id: null,
     ustvarjeno: "2024-02-10",
     posodobljeno: "2024-11-15",
@@ -123,6 +127,8 @@ export const MOCK_KMETIJE: Kmetija[] = [
 
     bic: null,
 
+    lastnosti: [],
+    posebne_ponudbe: null,
     lastnik_id: null,
     ustvarjeno: "2024-03-05",
     posodobljeno: "2024-10-20",
@@ -155,6 +161,8 @@ export const MOCK_KMETIJE: Kmetija[] = [
 
     bic: null,
 
+    lastnosti: [],
+    posebne_ponudbe: null,
     lastnik_id: null,
     ustvarjeno: "2024-01-20",
     posodobljeno: "2024-12-10",
@@ -187,6 +195,8 @@ export const MOCK_KMETIJE: Kmetija[] = [
 
     bic: null,
 
+    lastnosti: [],
+    posebne_ponudbe: null,
     lastnik_id: null,
     ustvarjeno: "2024-04-12",
     posodobljeno: "2024-11-30",
@@ -219,6 +229,8 @@ export const MOCK_KMETIJE: Kmetija[] = [
 
     bic: null,
 
+    lastnosti: [],
+    posebne_ponudbe: null,
     lastnik_id: null,
     ustvarjeno: "2024-05-01",
     posodobljeno: "2024-09-15",
@@ -251,6 +263,8 @@ export const MOCK_KMETIJE: Kmetija[] = [
 
     bic: null,
 
+    lastnosti: [],
+    posebne_ponudbe: null,
     lastnik_id: null,
     ustvarjeno: "2024-02-28",
     posodobljeno: "2024-12-05",
@@ -283,6 +297,8 @@ export const MOCK_KMETIJE: Kmetija[] = [
 
     bic: null,
 
+    lastnosti: [],
+    posebne_ponudbe: null,
     lastnik_id: null,
     ustvarjeno: "2024-06-10",
     posodobljeno: "2024-10-01",
@@ -315,6 +331,8 @@ export const MOCK_KMETIJE: Kmetija[] = [
 
     bic: null,
 
+    lastnosti: [],
+    posebne_ponudbe: null,
     lastnik_id: null,
     ustvarjeno: "2024-01-05",
     posodobljeno: "2024-12-12",
@@ -347,6 +365,8 @@ export const MOCK_KMETIJE: Kmetija[] = [
 
     bic: null,
 
+    lastnosti: [],
+    posebne_ponudbe: null,
     lastnik_id: null,
     ustvarjeno: "2024-03-18",
     posodobljeno: "2024-11-20",

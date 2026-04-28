@@ -63,6 +63,51 @@ export interface Dozivetje {
 
 // ─── Kmetija (Farm listing) ─────────────────────────────────────────────────
 
+/** Lastnosti — owner-defined feature tags. Used by Jože to answer specific
+ *  questions ("ali imajo bazen?") instead of guessing from prose. */
+export type LastnostKey =
+  | "bazen"
+  | "wifi"
+  | "parkirisce"
+  | "dostop_invalidi"
+  | "domace_zivali"
+  | "pse_dovoljeni"
+  | "razgled"
+  | "krusna_pec"
+  | "klet_vino"
+  | "sauna"
+  | "otroska_igrala"
+  | "kolesa_najem"
+  | "klimatizacija"
+  | "ogrevanje_drva"
+  | "ekoloska_pridelava"
+  | "domaca_kuhinja"
+  | "vegetarijanska"
+  | "brezgluten";
+
+export const LASTNOSTI_LABELS: Record<LastnostKey, { label: string; icon: string }> = {
+  bazen:              { label: "Bazen",                 icon: "🏊" },
+  wifi:               { label: "Brezplačen Wi-Fi",      icon: "📶" },
+  parkirisce:         { label: "Parkirišče",            icon: "🅿️" },
+  dostop_invalidi:    { label: "Dostop za invalide",    icon: "♿" },
+  domace_zivali:      { label: "Domače živali",         icon: "🐄" },
+  pse_dovoljeni:      { label: "Pse dovoljeni",         icon: "🐕" },
+  razgled:            { label: "Lep razgled",           icon: "🏔️" },
+  krusna_pec:         { label: "Krušna peč",            icon: "🍞" },
+  klet_vino:          { label: "Vinska klet",           icon: "🍷" },
+  sauna:              { label: "Sauna",                 icon: "🧖" },
+  otroska_igrala:     { label: "Otroška igrala",        icon: "🎠" },
+  kolesa_najem:       { label: "Najem koles",           icon: "🚲" },
+  klimatizacija:      { label: "Klimatizacija",         icon: "❄️" },
+  ogrevanje_drva:     { label: "Ogrevanje na drva",     icon: "🪵" },
+  ekoloska_pridelava: { label: "Ekološka pridelava",    icon: "🌿" },
+  domaca_kuhinja:     { label: "Domača kuhinja",        icon: "🍽️" },
+  vegetarijanska:     { label: "Vegetarijanska ponudba", icon: "🥗" },
+  brezgluten:         { label: "Brez glutena",          icon: "🌾" },
+};
+
+export const LASTNOSTI: LastnostKey[] = Object.keys(LASTNOSTI_LABELS) as LastnostKey[];
+
 export interface Kmetija {
   // Identiteta
   id: string;
@@ -72,6 +117,8 @@ export interface Kmetija {
   ime: string;
   kratki_opis: string | null;
   opis: string;
+  lastnosti: LastnostKey[];        // owner-picked features (gin index in DB)
+  posebne_ponudbe: string | null;  // owner free-text current promos
 
   // Lokacija
   regija: Regija;

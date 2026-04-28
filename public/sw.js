@@ -82,7 +82,13 @@ async function syncOfflineStamps() {
 
   const synced = [];
 
+  const now = Date.now();
   for (const item of queue) {
+    // Drop tickets older than 5 min — server will reject them anyway
+    if (!item.ts || now - item.ts > 5 * 60 * 1000) {
+      synced.push(item.id);
+      continue;
+    }
     try {
       const res = await fetch("/api/green-stamp", {
         method: "POST",
@@ -91,7 +97,9 @@ async function syncOfflineStamps() {
           farm: item.farmSlug,
           lat: item.lat,
           lng: item.lng,
-          sig: item.sig || undefined,
+          accuracy: item.accuracy,
+          ts: item.ts,
+          sig: item.sig,
         }),
       });
 

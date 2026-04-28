@@ -8,7 +8,6 @@ import type { Metadata } from "next";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { AdminClient } from "./AdminClient";
 
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Admin plošča | NaKmetiji",

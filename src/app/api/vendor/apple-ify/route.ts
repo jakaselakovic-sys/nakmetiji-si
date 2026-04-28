@@ -11,7 +11,6 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { logNapako } from "@/lib/logNapako";
 import { checkRateLimit } from "@/lib/rateLimit";
 
-export const runtime = "nodejs";
 export const maxDuration = 30;
 
 const VISION_MODEL = "llama-3.2-11b-vision-preview";

@@ -21,16 +21,33 @@ import {
   ChevronRight,
 } from "lucide-react";
 
+// Two-tone palette — forest for nature/farming categories, amber for
+// hospitality/food/sensory categories. The 8 random colors on the previous
+// version (purple/blue/orange/pink/teal …) were visual noise without any
+// taxonomy. Two tones map naturally to the brand and let the eye scan.
 const CATEGORIES = [
-  { slug: "vino",       label: "Vino & Degustacija", icon: Wine,     bg: "bg-purple-100",  iconColor: "text-purple-600",  ring: "ring-purple-200/60" },
-  { slug: "prenocisce", label: "Prenočišče",          icon: Bed,      bg: "bg-blue-100",    iconColor: "text-blue-600",    ring: "ring-blue-200/60" },
-  { slug: "druzine",    label: "Za družine",          icon: Users,    bg: "bg-orange-100",  iconColor: "text-orange-600",  ring: "ring-orange-200/60" },
-  { slug: "kulinarika", label: "Kulinarika",          icon: ChefHat,  bg: "bg-amber-100",   iconColor: "text-amber-700",   ring: "ring-amber-200/60" },
-  { slug: "wellness",   label: "Wellness",            icon: Sparkles, bg: "bg-pink-100",    iconColor: "text-pink-600",    ring: "ring-pink-200/60" },
-  { slug: "narava",     label: "Naravni parki",       icon: Trees,    bg: "bg-emerald-100", iconColor: "text-emerald-600", ring: "ring-emerald-200/60" },
-  { slug: "glamping",   label: "Glamping",            icon: Tent,     bg: "bg-teal-100",    iconColor: "text-teal-600",    ring: "ring-teal-200/60" },
-  { slug: "ekologija",  label: "Ekološko",            icon: Leaf,     bg: "bg-green-100",   iconColor: "text-green-700",   ring: "ring-green-200/60" },
+  { slug: "vino",       label: "Vino & Degustacija", icon: Wine,     tone: "amber"  },
+  { slug: "prenocisce", label: "Prenočišče",          icon: Bed,      tone: "forest" },
+  { slug: "druzine",    label: "Za družine",          icon: Users,    tone: "amber"  },
+  { slug: "kulinarika", label: "Kulinarika",          icon: ChefHat,  tone: "amber"  },
+  { slug: "wellness",   label: "Wellness",            icon: Sparkles, tone: "amber"  },
+  { slug: "narava",     label: "Naravni parki",       icon: Trees,    tone: "forest" },
+  { slug: "glamping",   label: "Glamping",            icon: Tent,     tone: "forest" },
+  { slug: "ekologija",  label: "Ekološko",            icon: Leaf,     tone: "forest" },
 ] as const;
+
+const TONE_STYLES = {
+  forest: {
+    bg: "bg-forest-50",
+    iconColor: "text-forest-700",
+    ring: "ring-forest-200/60",
+  },
+  amber: {
+    bg: "bg-amber-50",
+    iconColor: "text-amber-700",
+    ring: "ring-amber-200/60",
+  },
+} as const;
 
 const SPRING = { type: "spring" as const, stiffness: 120, damping: 18, mass: 0.8 };
 
@@ -82,6 +99,7 @@ export function CategoryScroll() {
       >
         {CATEGORIES.map((cat, i) => {
           const Icon = cat.icon;
+          const styles = TONE_STYLES[cat.tone];
           return (
             <motion.button
               key={cat.slug}
@@ -92,11 +110,11 @@ export function CategoryScroll() {
               whileHover={{ y: -4 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => router.push(`/kmetije?dozivetje=${cat.slug}`)}
-              className={`flex flex-col items-center gap-3 min-w-[120px] px-5 py-5 bg-white border border-earth-200/50 shadow-sm hover:shadow-md hover:border-forest-200/60 transition-all duration-300 snap-start group ring-1 ${cat.ring}`}
+              className={`flex flex-col items-center gap-3 min-w-[120px] px-5 py-5 bg-white border border-earth-200/50 shadow-sm hover:shadow-md hover:border-forest-200/60 transition-all duration-300 snap-start group ring-1 ${styles.ring}`}
               style={{ borderRadius: "38% 62% 52% 48% / 45% 55% 45% 55%" }}
             >
-              <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${cat.bg} group-hover:scale-110 transition-transform duration-300`}>
-                <Icon size={26} className={cat.iconColor} strokeWidth={1.8} />
+              <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${styles.bg} group-hover:scale-110 transition-transform duration-300`}>
+                <Icon size={26} className={styles.iconColor} strokeWidth={1.8} />
               </div>
               <span className="text-[13px] font-semibold text-forest-800 whitespace-nowrap">
                 {cat.label}

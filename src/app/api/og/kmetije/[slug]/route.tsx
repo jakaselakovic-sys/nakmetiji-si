@@ -12,7 +12,6 @@ import { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { REGIJA_LABELS } from "@/types/database";
 
-export const runtime = "edge";
 
 export async function GET(
   _req: NextRequest,

@@ -22,6 +22,7 @@ export interface OwnerNewBookingProps {
   opombe: string | null;
   rezervacija_id: string;
   dashboard_url: string;
+  approval_url?: string;
 }
 
 export function OwnerNewBooking({
@@ -38,6 +39,7 @@ export function OwnerNewBooking({
   opombe,
   rezervacija_id,
   dashboard_url,
+  approval_url,
 }: OwnerNewBookingProps) {
   const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString("sl-SI", { day: "numeric", month: "long", year: "numeric" });
@@ -108,14 +110,26 @@ export function OwnerNewBooking({
 
             {/* Action buttons */}
             <Section style={{ textAlign: "center" as const, marginTop: 32 }}>
-              <Button href={dashboard_url} style={styles.btnPrimary}>
-                Potrdi ali zavrni rezervacijo →
+              {approval_url && (
+                <>
+                  <Button href={approval_url} style={styles.btnPrimary}>
+                    Odpri zahtevo in potrdi →
+                  </Button>
+                  <Text style={{ fontSize: 12, color: "#9aab98", marginTop: 12, marginBottom: 8 }}>
+                    ali
+                  </Text>
+                </>
+              )}
+              <Button href={dashboard_url} style={approval_url ? styles.btnSecondary : styles.btnPrimary}>
+                {approval_url ? "Odpri dashboard" : "Potrdi ali zavrni rezervacijo →"}
               </Button>
             </Section>
 
             <Text style={styles.hint}>
-              Za hitro potrditev ali zavrnitev se prijavite v vaš dashboard.
-              ID rezervacije: <code style={styles.code}>{rezervacija_id.slice(0, 8)}</code>
+              {approval_url
+                ? "Povezava za potrditev je veljavna 48 ur."
+                : "Za hitro potrditev ali zavrnitev se prijavite v vaš dashboard."}
+              {" "}ID rezervacije: <code style={styles.code}>{rezervacija_id.slice(0, 8)}</code>
             </Text>
           </Section>
 
@@ -156,6 +170,7 @@ const styles = {
   tableLabel: { fontSize: 13, color: "#7a8a78", margin: "4px 0", fontWeight: "500" as const },
   tableValue: { fontSize: 13, color: "#1a2e18", margin: "4px 0", fontWeight: "600" as const },
   btnPrimary: { backgroundColor: "#2D5A27", color: "#ffffff", fontSize: 15, fontWeight: "700" as const, padding: "14px 28px", borderRadius: 10, textDecoration: "none", display: "inline-block" as const },
+  btnSecondary: { backgroundColor: "transparent", color: "#2D5A27", fontSize: 13, fontWeight: "600" as const, padding: "10px 20px", borderRadius: 8, textDecoration: "none", display: "inline-block" as const, border: "1.5px solid #2D5A27" },
   hint: { fontSize: 12, color: "#9aab98", marginTop: 20, textAlign: "center" as const },
   code: { backgroundColor: "#f0ede8", padding: "2px 6px", borderRadius: 4, fontFamily: "monospace", fontSize: 11 },
   footer: { padding: "0 40px 32px" },

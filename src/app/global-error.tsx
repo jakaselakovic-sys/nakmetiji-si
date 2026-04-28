@@ -7,6 +7,7 @@
 // =============================================================================
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 
 interface GlobalErrorProps {
   error: Error & { digest?: string };
@@ -15,9 +16,8 @@ interface GlobalErrorProps {
 
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   useEffect(() => {
-    console.error("[NaKmetiji GLOBAL Error]", {
-      message: error.message,
-      digest: error.digest,
+    Sentry.captureException(error, {
+      tags: { feature: "global_error_boundary" },
     });
   }, [error]);
 

@@ -9,6 +9,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { TreePine, Mail, Lock, User, Eye, EyeOff, Loader2, CheckCircle } from "lucide-react";
 import { createSupabaseBrowser } from "@/lib/supabase/client";
+import * as Sentry from "@sentry/nextjs";
 
 type Vloga = "gost" | "lastnik";
 
@@ -67,7 +68,7 @@ export default function RegistracijaPage() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ ime, email: email.trim() }),
-          }).catch(console.error);
+          }).catch((err) => Sentry.captureException(err, { tags: { feature: "auth", action: "notify_admin_registration" } }));
         }
       }
 

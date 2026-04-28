@@ -38,7 +38,7 @@ export function InfoCard(props: InfoCardProps) {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 40, scale: 0.95 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
-        className="absolute bottom-24 sm:bottom-6 right-6 w-[340px] max-w-[calc(100vw-2rem)] rounded-2xl overflow-hidden glass-card shadow-2xl"
+        className="absolute bottom-6 left-6 w-[340px] max-w-[calc(100vw-2rem)] rounded-2xl overflow-hidden glass-card shadow-2xl"
         style={{ zIndex: "var(--z-map-card)" }}
       >
         {props.type === "farm" ? (

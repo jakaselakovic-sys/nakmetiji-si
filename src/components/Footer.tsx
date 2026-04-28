@@ -1,74 +1,172 @@
 // =============================================================================
 // NaKmetiji.si — Footer
-// Zeleno-zemeljski footer z lucide ikonami
+// Deep forest footer with paper grain texture, botanical silhouettes and a
+// handwritten sign-off. Feels like the last page of a travel journal.
 // =============================================================================
 
 import Link from "next/link";
-import { Leaf, Mail, Phone, MapPin } from "lucide-react";
+import { Leaf, Mail, MapPin, Phone } from "lucide-react";
+import { KronikaSubscribeWidget } from "@/components/KronikaSubscribeWidget";
+
+const NAV_SECTIONS = [
+  {
+    title: "Odkrijte",
+    links: [
+      { href: "/kmetije", label: "Vse kmetije" },
+      { href: "/zemljevid", label: "Zemljevid" },
+      { href: "/pot", label: "Jožetov Road Trip" },
+      { href: "/green-passport", label: "Zeleni Potni List" },
+    ],
+  },
+  {
+    title: "Za lastnike",
+    links: [
+      { href: "/dodaj-kmetijo", label: "Dodaj kmetijo" },
+      { href: "/dashboard", label: "Nadzorna plošča" },
+    ],
+  },
+  {
+    title: "O nas",
+    links: [
+      { href: "/o-nas", label: "Naša zgodba" },
+      { href: "/pogoji-demo", label: "Pogoji uporabe" },
+    ],
+  },
+];
 
 export function Footer() {
   return (
-    <footer className="bg-forest-900 text-white/80">
+    <footer className="relative overflow-hidden bg-forest-950 text-white/80 texture-paper">
+      {/* Botanical SVG silhouettes */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-24 opacity-50"
+        aria-hidden="true"
+        style={{
+          background:
+            "linear-gradient(180deg, transparent, rgba(45,90,39,0.35))",
+        }}
+      />
+      <WheatSilhouette className="pointer-events-none absolute -top-10 right-10 w-44 text-emerald-300/10 hidden md:block" />
+      <PineBranchSilhouette className="pointer-events-none absolute bottom-6 left-6 w-56 text-emerald-300/10 hidden md:block" />
+
       {/* ── Main footer ── */}
-      <div className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8">
-          {/* Brand */}
+      <div className="relative mx-auto max-w-7xl px-6 py-20 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-[1.2fr_repeat(3,1fr)] gap-12">
+          {/* Brand + sign-off */}
           <div>
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-forest-700 text-white">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/90 text-white shadow-lg shadow-emerald-500/20">
                 <Leaf size={18} strokeWidth={2.5} />
               </div>
-              <span className="text-xl font-bold tracking-tight text-white">
+              <span className="text-xl font-bold tracking-tight text-white font-display">
                 NaKmetiji
               </span>
             </div>
-            <p className="text-sm leading-relaxed text-white/70 max-w-xs">
+            <p className="text-sm leading-relaxed text-white/70 max-w-xs mb-6">
               Vonj sveže pokošene trave, topel kruh iz krušne peči, ptičje
               petje ob zori. To je Slovenija, ki jo varujemo.
             </p>
-          </div>
-
-          {/* Kontakt */}
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-white/35 mb-5">
-              Kontakt
-            </h3>
-            <ul className="space-y-3 text-sm text-white/70">
-              <li className="flex items-center gap-2.5">
-                <Mail size={14} className="text-white/35 flex-shrink-0" />
-                <a href="mailto:info@nakmetiji.si" className="hover:text-white transition-colors">
-                  info@nakmetiji.si
-                </a>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <MapPin size={14} className="text-white/35 flex-shrink-0" />
-                Ljubljana, Slovenija
-              </li>
-            </ul>
-            <div className="mt-6">
-              <Link
-                href="/o-nas"
-                className="inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white transition-colors"
-              >
-                <Phone size={13} className="text-white/30" />
-                Kontaktirajte nas
-              </Link>
+            <p className="handwritten text-2xl text-emerald-200/80 leading-snug max-w-xs mb-6">
+              Se vidimo med griči —
+              <span className="block text-emerald-300/90">Ekipa NaKmetiji</span>
+            </p>
+            <div className="max-w-xs">
+              <KronikaSubscribeWidget variant="dark" />
             </div>
           </div>
+
+          {/* Navigation columns */}
+          {NAV_SECTIONS.map((section) => (
+            <div key={section.title}>
+              <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-emerald-300/70 mb-5">
+                {section.title}
+              </h3>
+              <ul className="space-y-3 text-sm">
+                {section.links.map((l) => (
+                  <li key={l.href}>
+                    <Link
+                      href={l.href}
+                      className="text-white/70 hover:text-white transition-colors"
+                    >
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* Contact row */}
+        <div className="mt-14 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <ul className="flex flex-wrap gap-x-8 gap-y-3 text-sm text-white/70">
+            <li className="flex items-center gap-2">
+              <Mail size={14} className="text-emerald-300/70" />
+              <a href="mailto:info@nakmetiji.si" className="hover:text-white transition-colors">
+                info@nakmetiji.si
+              </a>
+            </li>
+            <li className="flex items-center gap-2">
+              <MapPin size={14} className="text-emerald-300/70" />
+              Ljubljana, Slovenija
+            </li>
+            <li className="flex items-center gap-2">
+              <Phone size={14} className="text-emerald-300/70" />
+              <Link href="/o-nas" className="hover:text-white transition-colors">
+                Kontakt
+              </Link>
+            </li>
+          </ul>
         </div>
       </div>
 
       {/* ── Bottom bar ── */}
-      <div className="border-t border-white/8">
+      <div className="relative border-t border-white/10">
         <div className="mx-auto max-w-7xl px-6 py-5 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-xs text-white/30">
-            © {new Date().getFullYear()} NaKmetiji. Vse pravice pridržane.
+          <p className="text-xs text-white/40">
+            © 2026 NaKmetiji. Vse pravice pridržane.
           </p>
-          <p className="text-xs text-white/30">
-            Narejeno z ❤️ v Sloveniji
+          <p className="text-xs text-white/40">
+            Narejeno z ljubeznijo v Sloveniji
           </p>
         </div>
       </div>
     </footer>
+  );
+}
+
+// ── Botanical silhouettes ────────────────────────────────────────────────────
+
+function WheatSilhouette({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 120 160" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M60 160 L60 30" />
+      {[50, 70, 90, 110, 130].map((y, i) => (
+        <g key={i}>
+          <ellipse cx={48 - i * 1.5} cy={y} rx="6" ry="12" transform={`rotate(-30 ${48 - i * 1.5} ${y})`} />
+          <ellipse cx={72 + i * 1.5} cy={y} rx="6" ry="12" transform={`rotate(30 ${72 + i * 1.5} ${y})`} />
+        </g>
+      ))}
+      <ellipse cx="60" cy="20" rx="6" ry="14" />
+    </svg>
+  );
+}
+
+function PineBranchSilhouette({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 200 120" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <path d="M5 60 Q80 55 195 58" />
+      {Array.from({ length: 14 }).map((_, i) => {
+        const x = 15 + i * 13;
+        return (
+          <g key={i}>
+            <path d={`M${x} 58 L${x - 8} ${40 - (i % 2) * 4}`} />
+            <path d={`M${x} 60 L${x - 6} ${78 + (i % 2) * 4}`} />
+            <path d={`M${x} 58 L${x - 4} ${44}`} />
+            <path d={`M${x} 60 L${x - 2} ${74}`} />
+          </g>
+        );
+      })}
+    </svg>
   );
 }

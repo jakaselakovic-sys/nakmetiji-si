@@ -2,6 +2,7 @@
 // NaKmetiji.si — Root Layout
 // =============================================================================
 
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Playfair_Display, Caveat } from "next/font/google";
 import "./globals.css";
@@ -128,7 +129,9 @@ export default function RootLayout({
         <DemoBanner />
         <Navbar />
         <main id="main-content" className="flex-1 pb-20 md:pb-0">
-          <PageTransition>{children}</PageTransition>
+          <Suspense fallback={null}>
+            <PageTransition>{children}</PageTransition>
+          </Suspense>
         </main>
         <Footer />
         {/* Demo mode footer strip */}

@@ -82,6 +82,10 @@ export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
   const isActive = (href: string) =>
     pathname === href || (href !== "/" && pathname.startsWith(href));
 
+  // /zemljevid uses an edge-to-edge app-bar layout instead of the floating pill,
+  // so the nav blends with the sidebar + map seams instead of hovering over them.
+  const isMapPage = pathname?.startsWith("/zemljevid") ?? false;
+
   // Mobile bottom nav items
   const mobileNavItems = [
     { label: "Domov", href: "/", icon: Home },
@@ -111,12 +115,20 @@ export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
           aria-hidden="true"
         />
 
-        <div className={`mx-auto max-w-5xl px-4 transition-all duration-700 ${
-          scrolled ? "pt-2" : "pt-4"
-        }`}>
-          <nav className={`glass-island flex items-center justify-between transition-all duration-500 ${
-            scrolled ? "px-4 py-2" : "px-6 py-3"
-          }`}>
+        <div
+          className={
+            isMapPage
+              ? "w-full"
+              : `mx-auto max-w-5xl px-4 transition-all duration-700 ${scrolled ? "pt-2" : "pt-4"}`
+          }
+        >
+          <nav
+            className={
+              isMapPage
+                ? "relative flex items-center justify-between px-6 h-[60px] bg-white/85 backdrop-blur-xl border-b border-earth-200/60 shadow-[0_1px_0_rgba(0,0,0,0.03),0_8px_24px_-16px_rgba(45,90,39,0.18)] before:pointer-events-none before:absolute before:inset-x-0 before:-bottom-px before:h-px before:bg-gradient-to-r before:from-transparent before:via-forest-200/60 before:to-transparent"
+                : `glass-island flex items-center justify-between transition-all duration-500 ${scrolled ? "px-4 py-2" : "px-6 py-3"}`
+            }
+          >
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
               <div
@@ -190,26 +202,32 @@ export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
                         className="absolute right-0 top-full mt-3 w-56 bg-white rounded-3xl shadow-xl border border-earth-200/60 overflow-hidden"
                       >
                         <Link
-                          href="/dashboard"
+                          href="/moj-racun"
                           onClick={() => setUserMenuOpen(false)}
                           className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-earth-700 hover:bg-earth-50 transition-colors"
                         >
                           <LayoutDashboard size={16} className="text-forest-600" />
-                          Nadzorna plošča
+                          Moj račun
                         </Link>
 
+                        {vloga === "lastnik" && (
+                          <Link
+                            href="/dashboard"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-earth-700 hover:bg-earth-50 transition-colors"
+                          >
+                            <LayoutDashboard size={16} className="text-forest-600" />
+                            Vodstvo kmetije
+                          </Link>
+                        )}
+
                         <Link
-                          href="/moj-potni-list"
+                          href="/moj-racun?tab=passport"
                           onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-emerald-700 hover:bg-emerald-50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-emerald-700 hover:bg-emerald-50 transition-colors"
                         >
-                          <span className="flex items-center gap-3">
-                            <Stamp size={16} className="text-emerald-500" />
-                            Zeleni Potni List
-                          </span>
-                          <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase tracking-wide">
-                            Novo
-                          </span>
+                          <Stamp size={16} className="text-emerald-500" />
+                          Zeleni potni list
                         </Link>
 
                         {vloga === "super_admin" && (
@@ -386,16 +404,24 @@ export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
                 {isPrijavljen ? (
                   <>
                     <Link
-                      href="/moj-potni-list"
-                      className="rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-center py-3 font-semibold text-sm hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Stamp size={16} /> Zeleni Potni List
-                    </Link>
-                    <Link
-                      href="/dashboard"
+                      href="/moj-racun"
                       className="rounded-2xl border border-forest-200 text-forest-800 text-center py-3 font-semibold text-sm hover:bg-forest-50 transition-colors flex items-center justify-center gap-2"
                     >
-                      <LayoutDashboard size={16} /> Nadzorna plošča
+                      <LayoutDashboard size={16} /> Moj račun
+                    </Link>
+                    {vloga === "lastnik" && (
+                      <Link
+                        href="/dashboard"
+                        className="rounded-2xl border border-forest-200 text-forest-800 text-center py-3 font-semibold text-sm hover:bg-forest-50 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <LayoutDashboard size={16} /> Vodstvo kmetije
+                      </Link>
+                    )}
+                    <Link
+                      href="/moj-racun?tab=passport"
+                      className="rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-center py-3 font-semibold text-sm hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Stamp size={16} /> Zeleni potni list
                     </Link>
                     {vloga === "super_admin" && (
                       <Link

@@ -18,7 +18,7 @@ import { Redis } from "@upstash/redis";
 import * as Sentry from "@sentry/nextjs";
 import crypto from "crypto";
 
-export const runtime = "nodejs"; // Because of crypto node module
+ // Because of crypto node module
 
 // Redis Rate Limiter (Fallback if ENV variables are missing for development)
 let ratelimit: Ratelimit | null = null;
@@ -37,6 +37,10 @@ if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) 
 
 // Tolerance in kilometers (200 meters)
 const GEOFENCE_RADIUS_KM = 0.200;
+// Ticket TTL — sig from /init must be used within 5 minutes
+const TICKET_TTL_MS = 5 * 60 * 1000;
+// Reject GPS fixes coarser than 50 m — indoor/VPN GPS typically reports >50 m
+const MAX_GPS_ACCURACY_M = 50;
 
 export async function POST(req: NextRequest) {
   try {
@@ -58,7 +62,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { farm: farmSlug, lat, lng, sig } = body;
+    const { farm: farmSlug, lat, lng, sig, ts, accuracy } = body;
 
     if (!farmSlug) {
       return NextResponse.json({ status: "error", message: "Kmetija ni določena." }, { status: 400 });
@@ -66,6 +70,30 @@ export async function POST(req: NextRequest) {
 
     if (typeof lat !== "number" || typeof lng !== "number") {
       return NextResponse.json({ status: "error", message: "Vaša GPS lokacija je obvezna." }, { status: 400 });
+    }
+
+    // V3 — GPS accuracy gate. navigator.geolocation.coords.accuracy is the 68%
+    // confidence radius; >50 m usually means IP-geo fallback or indoor fix.
+    if (typeof accuracy !== "number" || accuracy <= 0 || accuracy > MAX_GPS_ACCURACY_M) {
+      Sentry.captureMessage("GPS accuracy too coarse", { extra: { userId: user.id, accuracy } });
+      return NextResponse.json({
+        status: "error",
+        message: `Natančnost GPS signala je prenizka (${Math.round(accuracy ?? 0)}m). Premaknite se na prosto in poskusite znova.`,
+      }, { status: 403 });
+    }
+
+    // V2 — ticket freshness gate. ts is issued by /api/green-stamp/init and
+    // must be consumed within 5 min; prevents offline-queue replay and sig reuse.
+    if (typeof ts !== "number" || !Number.isFinite(ts)) {
+      return NextResponse.json({ status: "error", message: "Manjka časovni žig zahteve." }, { status: 400 });
+    }
+    const ticketAge = Date.now() - ts;
+    if (ticketAge < -30_000 || ticketAge > TICKET_TTL_MS) {
+      Sentry.captureMessage("Stale or future-dated stamp ticket", { extra: { userId: user.id, ticketAge } });
+      return NextResponse.json({
+        status: "error",
+        message: "Povezava za žig je potekla. Skenirajte QR kodo znova.",
+      }, { status: 403 });
     }
 
     // Look up farm details including secrets and coordinates
@@ -80,18 +108,20 @@ export async function POST(req: NextRequest) {
        return NextResponse.json({ status: "error", message: "Kmetija ni najdena." }, { status: 404 });
     }
 
-    // 2. HMAC QR SIGNATURE VALIDATION — always required (QR-only stamps)
+    // 2. HMAC SIGNATURE VALIDATION — sig binds slug to the ticket timestamp.
     if (!sig) {
-      Sentry.captureMessage("Missing QR signature", { extra: { userId: user.id, farmId: farm.id } });
+      Sentry.captureMessage("Missing stamp signature", { extra: { userId: user.id, farmId: farm.id } });
       return NextResponse.json({ status: "error", message: "Žig je mogoče pridobiti samo s skeniranjem QR kode na kmetiji." }, { status: 403 });
     }
     if (!farm.qr_secret_key) {
       Sentry.captureMessage("Farm missing qr_secret_key", { extra: { farmSlug } });
       return NextResponse.json({ status: "error", message: "Kmetija nima aktivirane QR kode. Obrnite se na gostitelja." }, { status: 403 });
     }
-    const expectedSig = crypto.createHmac("sha256", farm.qr_secret_key).update(farm.slug).digest("hex");
-    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) {
-      Sentry.captureMessage("Invalid QR signature", { extra: { userId: user.id, farmId: farm.id, sig } });
+    const expectedSig = crypto.createHmac("sha256", farm.qr_secret_key).update(`${farm.slug}|${ts}`).digest("hex");
+    const sigBuf = Buffer.from(String(sig), "hex");
+    const expectedBuf = Buffer.from(expectedSig, "hex");
+    if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
+      Sentry.captureMessage("Invalid stamp signature", { extra: { userId: user.id, farmId: farm.id } });
       return NextResponse.json({ status: "error", message: "Neveljavna ali zastarela QR koda." }, { status: 403 });
     }
 
@@ -107,6 +137,37 @@ export async function POST(req: NextRequest) {
           message: `Niste na lokaciji kmetije. (Razdalja: ${Math.round(distance * 1000)}m. Dovoljeno: 200m)` 
         }, { status: 403 });
       }
+
+      // ── VELOCITY CHECK (Anti-Spoofing) ─────────────────────────────────────
+      // Check the user's last stamp. If they moved faster than 150 km/h, it's likely a spoof.
+      const { data: lastStamp } = await supabase
+        .from("green_stamps")
+        .select("ustvarjeno, kmetija:kmetija_id(lat, lng)")
+        .eq("gost_id", user.id)
+        .order("ustvarjeno", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (lastStamp?.kmetija) {
+        const lastKmetija = Array.isArray(lastStamp.kmetija) ? lastStamp.kmetija[0] : lastStamp.kmetija;
+        if (lastKmetija?.lat && lastKmetija?.lng) {
+          const timeDiffHours = (Date.now() - new Date(lastStamp.ustvarjeno).getTime()) / 3_600_000;
+          if (timeDiffHours > 0 && timeDiffHours < 24) {
+            const distKm = haversineKm(farm.lat, farm.lng, lastKmetija.lat, lastKmetija.lng);
+            const speedKmh = distKm / timeDiffHours;
+            
+            if (speedKmh > 150) {
+              Sentry.captureMessage("Velocity check failed - spoofing likely", { 
+                extra: { userId: user.id, speedKmh, distKm, timeDiffHours, farmId: farm.id } 
+              });
+              return NextResponse.json({ 
+                status: "error", 
+                message: "Zaznana je bila nenavadna lokacijska dejavnost (nemogoča hitrost potovanja). Zaradi zaščite proti zlorabam smo zahtevo zavrnili." 
+              }, { status: 403 });
+            }
+          }
+        }
+      }
     } else {
         // If farm has no coords in DB, we skip strict geofencing, but we log a warning
         Sentry.captureMessage("Farm missing coordinates for geofencing", { extra: { farmSlug }});
@@ -120,23 +181,31 @@ export async function POST(req: NextRequest) {
     });
 
     if (rpcError) {
-      // Fallback to normal upsert if RPC doesn't exist yet (for demo)
-      console.warn("RPC failed or missing, falling back to manual upsert:", rpcError);
-      const { error: upsertErr } = await supabase
+      // Fallback to direct insert. With the new per-week unique constraint
+      // (uniq_green_stamp_per_week), a duplicate insert in the same week
+      // raises 23505 — translate that to {duplicate} so the UI can react.
+      console.warn("RPC failed or missing, falling back to manual insert:", rpcError);
+      const { error: insertErr } = await supabase
         .from("green_stamps")
-        .upsert(
-          { gost_id: user.id, kmetija_id: farm.id },
-          { onConflict: "gost_id,kmetija_id", ignoreDuplicates: true }
-        );
+        .insert({ gost_id: user.id, kmetija_id: farm.id });
 
-      if (upsertErr) {
-        throw upsertErr;
+      if (insertErr) {
+        if (insertErr.code === "23505") {
+          return NextResponse.json({
+            status: "duplicate",
+            message: "Žig za to kmetijo si že zbral ta teden. Ponovi obisk naslednji teden.",
+          });
+        }
+        throw insertErr;
       }
-      return NextResponse.json({ status: "success", message: "Fallback" });
+      return NextResponse.json({ status: "success", message: "Žig dodan." });
     }
 
     if (rpcRes?.status === "duplicate") {
-       return NextResponse.json({ status: "duplicate", message: "Žig je bil že zbran." });
+       return NextResponse.json({
+         status: "duplicate",
+         message: "Žig za to kmetijo si že zbral ta teden.",
+       });
     }
 
     return NextResponse.json({ status: "success", stamp_id: rpcRes?.stamp_id });

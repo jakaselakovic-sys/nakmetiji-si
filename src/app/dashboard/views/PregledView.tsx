@@ -12,6 +12,7 @@ import { posodobiSlikeKmetije, togglePremium } from "@/lib/actions/kmetije";
 import { compressImage, formatBytes } from "@/lib/compress";
 import type { Rezervacija, RezervacijaStatus } from "@/types/database";
 import { REZERVACIJA_STATUS_LABELS } from "@/types/database";
+import * as Sentry from "@sentry/nextjs";
 
 interface Props {
   kmetijaId: string | null;
@@ -282,7 +283,7 @@ export function PregledView({ kmetijaId, rezervacije: initialRez, naslovnaSlika,
         const json = await res.json() as { url?: string; error?: string };
         if (json.url) {
           setUploadedImages(prev => [...prev, json.url!]);
-          posodobiSlikeKmetije(kmetijaId, json.url).catch(console.error);
+          posodobiSlikeKmetije(kmetijaId, json.url).catch((err) => Sentry.captureException(err, { tags: { feature: "dashboard", action: "update_farm_images" } }));
         } else {
           setUploadError(json.error ?? "Napaka pri nalaganju.");
         }

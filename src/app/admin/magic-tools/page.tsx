@@ -10,7 +10,6 @@ import { ChevronLeft, Sparkles } from "lucide-react";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { MagicVendorSuite } from "@/components/vendor/MagicVendorSuite";
 
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Magic Tools | Admin",

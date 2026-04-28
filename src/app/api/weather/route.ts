@@ -12,7 +12,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = "nodejs";
 
 // Round to 2 decimal places (~1.1 km) for cache sharing between nearby viewers
 function round2(n: number): string {

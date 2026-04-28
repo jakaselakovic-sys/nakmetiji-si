@@ -13,6 +13,8 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Stamp, CheckCircle2, Loader2, QrCode, Hourglass } from "lucide-react";
 import { addStampToQueue, getStampQueue, removeFromQueue } from "@/lib/indexedDB";
+import { hapticMedium } from "@/lib/haptics";
+import * as Sentry from "@sentry/nextjs";
 
 interface Props {
   farmSlug: string;
@@ -37,19 +39,32 @@ export function GreenStampButton({ farmSlug, isLoggedIn, isAlreadyStamped }: Pro
       try {
         const queue = await getStampQueue();
         for (const item of queue) {
+          // Tickets expire after 5 min — drop stale offline entries instead of
+          // hammering the server with guaranteed-403 replays.
+          if (Date.now() - item.ts > 5 * 60 * 1000) {
+            await removeFromQueue(item.id);
+            continue;
+          }
           const res = await fetch("/api/green-stamp", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ farm: item.farmSlug, lat: item.lat, lng: item.lng, sig: item.sig }),
+            body: JSON.stringify({
+              farm: item.farmSlug,
+              lat: item.lat,
+              lng: item.lng,
+              accuracy: item.accuracy,
+              ts: item.ts,
+              sig: item.sig,
+            }),
           });
-          
+
           if (res.ok) {
             await removeFromQueue(item.id);
           }
         }
         if (state === "offline_saved") setState("done");
       } catch (err) {
-        console.error("Background sync failed", err);
+        Sentry.captureException(err, { tags: { feature: "green_stamp", action: "background_sync" } });
       }
     }
 
@@ -87,39 +102,53 @@ export function GreenStampButton({ farmSlug, isLoggedIn, isAlreadyStamped }: Pro
 
     let lat = 0;
     let lng = 0;
+    let accuracy = 0;
 
     // 1. Get Geolocation
     try {
       const pos = await getPosition();
       lat = pos.coords.latitude;
       lng = pos.coords.longitude;
+      accuracy = pos.coords.accuracy;
     } catch (err: unknown) {
-      console.warn("GPS zavrnjen ali napaka:", err);
-      // For demo we might proceed with 0,0, but backend will reject it if strict geofencing is on.
-      // Let's pass it to backend and let backend decide (or show error immediately).
+      Sentry.captureException(err, { tags: { feature: "green_stamp", action: "geolocation" } });
       setErrorMsg("Za potrditev žiga morate dovoliti dostop do lokacije.");
       setState("error");
       setTimeout(() => setState("idle"), 4000);
       return;
     }
 
-    // 2. Check offline status
-    if (!navigator.onLine) {
+    // 2. Fetch fresh ticket (ts + sig) — server signs slug|ts with qr_secret_key.
+    // Must happen online; offline queue reuses the last issued ticket.
+    let ts = 0;
+    let sig = "";
+    if (navigator.onLine) {
       try {
-        await addStampToQueue({ farmSlug, lat, lng, timestamp: Date.now() });
-        setState("offline_saved");
+        const initRes = await fetch(`/api/green-stamp/init?farm=${encodeURIComponent(farmSlug)}`);
+        if (!initRes.ok) throw new Error("init_failed");
+        const initJson = (await initRes.json()) as { ts: number; sig: string };
+        ts = initJson.ts;
+        sig = initJson.sig;
       } catch {
-        setErrorMsg("Napaka pri shranjevanju (Offline).");
+        setErrorMsg("Povezava za žig ni na voljo. Poskusite znova.");
         setState("error");
-        setTimeout(() => setState("idle"), 3000);
+        setTimeout(() => setState("idle"), 4000);
+        return;
       }
+    }
+
+    // 3. Check offline status
+    if (!navigator.onLine) {
+      setErrorMsg("Za žig je potrebna internetna povezava.");
+      setState("error");
+      setTimeout(() => setState("idle"), 4000);
       return;
     }
 
-    // 3. Optimistic UI - Pretend it worked immediately!
+    // 4. Optimistic UI - Pretend it worked immediately!
     setState("optimistic");
 
-    // 4. API Request with 500ms timeout logic (we don't literally abort, but if it fails we rollback)
+    // 5. API Request
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
@@ -127,7 +156,7 @@ export function GreenStampButton({ farmSlug, isLoggedIn, isAlreadyStamped }: Pro
       const res = await fetch("/api/green-stamp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ farm: farmSlug, lat, lng }),
+        body: JSON.stringify({ farm: farmSlug, lat, lng, accuracy, ts, sig }),
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
@@ -136,6 +165,7 @@ export function GreenStampButton({ farmSlug, isLoggedIn, isAlreadyStamped }: Pro
 
       if (res.ok && (json.status === "success" || json.status === "duplicate")) {
         setState("done");
+        hapticMedium();
         if (json.status === "success") {
           setTimeout(() => {
             router.push(`/green-passport/potrditev?farm=${farmSlug}`);
@@ -148,10 +178,9 @@ export function GreenStampButton({ farmSlug, isLoggedIn, isAlreadyStamped }: Pro
         setTimeout(() => setState("idle"), 5000);
       }
     } catch (err: unknown) {
-      // Rollback on network failure
-      if ((err instanceof Error && err.name === "AbortError") || !navigator.onLine) {
-         // Network died during request, save offline
-         await addStampToQueue({ farmSlug, lat, lng, timestamp: Date.now() });
+      // Rollback on network failure — save offline only if we have a valid ticket
+      if (((err instanceof Error && err.name === "AbortError") || !navigator.onLine) && sig && ts) {
+         await addStampToQueue({ farmSlug, lat, lng, accuracy, sig, ts, timestamp: Date.now() });
          setState("offline_saved");
       } else {
         setErrorMsg("Napaka pri povezavi. Poskusi znova.");

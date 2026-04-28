@@ -18,7 +18,7 @@ import { createClient } from "@supabase/supabase-js";
 import { REGIJA_LABELS, REGIJE, type Regija } from "@/types/database";
 import { BLUR_DATA_URL } from "@/lib/blur";
 
-export const revalidate = 3600; // Re-generate at most once per hour
+ // Re-generate at most once per hour
 
 const BASE_URL = "https://nakmetiji.si";
 

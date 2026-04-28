@@ -16,7 +16,6 @@ import {
   POINTS_BONUS_NEW_REGION,
 } from "@/lib/greenPassport";
 
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Žig zbran! | Green Passport | NaKmetiji",

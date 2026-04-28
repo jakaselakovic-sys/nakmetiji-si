@@ -15,7 +15,6 @@ import { normalizirajKmetijo } from "@/lib/utils/normaliziraj-kmetijo";
 import { KmetijeClient } from "./KmetijeClient";
 
 // ISR: revalidate every 60 seconds (stale-while-revalidate semantics)
-export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Vse turistične kmetije v Sloveniji | NaKmetiji",

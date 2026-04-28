@@ -87,9 +87,10 @@ html {
 }
 
 body {
-  background: var(--color-paper);
+  background: var(--vibe-bg-tint, var(--color-paper));
   color: var(--color-foreground);
   font-family: var(--font-sans);
+  transition: background-color 1.5s ease-in-out;
 }
 
 /* ── Scrollbar ───────────────────────────────────────────────────────────── */
@@ -513,13 +514,17 @@ select:focus-visible {
   border-radius: 50%;
   background: linear-gradient(135deg, #d4a853, #b8912e);
   border: 3px solid white;
-  box-shadow: 0 3px 12px rgba(212, 168, 83, 0.4);
+  box-shadow: 0 3px 12px rgba(212, 168, 83, 0.4), 0 1px 2px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  line-height: 1;
+  color: #fff;
   transition: transform 0.2s;
+}
+.marker-premium-core svg {
+  width: 18px;
+  height: 18px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
 }
 .marker-premium:hover .marker-premium-core {
   transform: scale(1.15);
@@ -527,6 +532,10 @@ select:focus-visible {
 .marker-premium.marker-active .marker-premium-core {
   transform: scale(1.2);
   box-shadow: 0 4px 20px rgba(212, 168, 83, 0.6);
+}
+.marker-premium.marker-hover .marker-premium-core {
+  transform: scale(1.18);
+  box-shadow: 0 0 0 4px rgba(212, 168, 83, 0.35), 0 4px 16px rgba(212, 168, 83, 0.5);
 }
 
 /* Medium tier farm marker */
@@ -542,13 +551,16 @@ select:focus-visible {
   border-radius: 50%;
   background: linear-gradient(135deg, #7BAEAD, #5A8E8C);
   border: 2.5px solid white;
-  box-shadow: 0 3px 10px rgba(91, 142, 140, 0.4);
+  box-shadow: 0 3px 10px rgba(91, 142, 140, 0.4), 0 1px 2px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  line-height: 1;
+  color: #fff;
   transition: transform 0.2s;
+}
+.marker-medium-core svg {
+  width: 18px;
+  height: 18px;
 }
 .marker-medium:hover .marker-medium-core {
   transform: scale(1.15);
@@ -556,6 +568,10 @@ select:focus-visible {
 .marker-medium.marker-active .marker-medium-core {
   transform: scale(1.2);
   box-shadow: 0 4px 16px rgba(91, 142, 140, 0.55);
+}
+.marker-medium.marker-hover .marker-medium-core {
+  transform: scale(1.18);
+  box-shadow: 0 0 0 4px rgba(91, 142, 140, 0.3), 0 4px 14px rgba(91, 142, 140, 0.45);
 }
 
 /* Standard farm marker */
@@ -571,13 +587,16 @@ select:focus-visible {
   border-radius: 50%;
   background: linear-gradient(135deg, #2D5A27, #1f4d35);
   border: 2.5px solid white;
-  box-shadow: 0 3px 10px rgba(45, 90, 39, 0.35);
+  box-shadow: 0 3px 10px rgba(45, 90, 39, 0.35), 0 1px 2px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
-  line-height: 1;
+  color: #fff;
   transition: transform 0.2s;
+}
+.marker-standard-core svg {
+  width: 16px;
+  height: 16px;
 }
 .marker-standard:hover .marker-standard-core {
   transform: scale(1.15);
@@ -585,6 +604,10 @@ select:focus-visible {
 .marker-standard.marker-active .marker-standard-core {
   transform: scale(1.2);
   box-shadow: 0 4px 16px rgba(45, 90, 39, 0.5);
+}
+.marker-standard.marker-hover .marker-standard-core {
+  transform: scale(1.18);
+  box-shadow: 0 0 0 4px rgba(45, 90, 39, 0.28), 0 4px 14px rgba(45, 90, 39, 0.42);
 }
 
 /* POI marker */
@@ -1078,6 +1101,209 @@ select:focus-visible {
 .card-polaroid:hover .polaroid-stamp {
   opacity: 1;
   transform: scale(1) rotate(0deg);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   NATURE-TONE UTILITIES
+   Tactile, hand-crafted textures that ground elements in the page so they
+   stop floating in empty white space.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Paper grain — sits over any section as a subtle linen texture ─────── */
+/* Stronger than .noise-overlay. Use for hero flats, Green Passport, etc.   */
+
+.texture-paper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.08;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.3 0 0 0 0 0.2 0 0 0 0.7 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
+  mix-blend-mode: multiply;
+}
+
+/* ── Topographic lines watermark — evokes hiking maps, regional depth ─── */
+/* Use behind Green Passport / Featured sections for geographical feel.     */
+
+.texture-topo {
+  background-image:
+    radial-gradient(ellipse 800px 500px at 50% 30%, rgba(45, 90, 39, 0.04) 0%, transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600' viewBox='0 0 600 600'%3E%3Cg fill='none' stroke='%232d5a27' stroke-width='0.7' opacity='0.16'%3E%3Cpath d='M0,300 Q150,220 300,290 T600,280'/%3E%3Cpath d='M0,350 Q150,270 300,330 T600,320'/%3E%3Cpath d='M0,400 Q150,340 300,380 T600,370'/%3E%3Cpath d='M0,250 Q150,160 300,240 T600,230'/%3E%3Cpath d='M0,200 Q150,100 300,200 T600,185'/%3E%3Cpath d='M0,450 Q150,420 300,440 T600,430'/%3E%3Cpath d='M0,500 Q150,480 300,500 T600,490'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: auto, 600px 600px;
+  background-repeat: no-repeat, repeat;
+}
+
+/* ── Watercolor wash — soft organic blob, no hard edges ───────────────── */
+
+.watercolor-wash {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.35;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+.watercolor-forest { background: radial-gradient(circle, #68d391 0%, transparent 70%); }
+.watercolor-earth  { background: radial-gradient(circle, #c8b49a 0%, transparent 70%); }
+.watercolor-gold   { background: radial-gradient(circle, #d4a853 0%, transparent 70%); }
+.watercolor-sky    { background: radial-gradient(circle, #bae6fd 0%, transparent 70%); }
+
+/* ── Organic torn-paper divider (more rustic than .paper-tear) ─────────── */
+
+.divider-torn {
+  position: relative;
+  height: 44px;
+  overflow: hidden;
+}
+
+.divider-torn::before,
+.divider-torn::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 44px;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath d='M0,8 C80,40 180,5 280,22 C380,42 460,4 560,24 C660,48 740,2 860,20 C980,42 1040,6 1160,26 C1280,44 1360,10 1440,22 L1440,60 L0,60 Z' fill='black'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath d='M0,8 C80,40 180,5 280,22 C380,42 460,4 560,24 C660,48 740,2 860,20 C980,42 1040,6 1160,26 C1280,44 1360,10 1440,22 L1440,60 L0,60 Z' fill='black'/%3E%3C/svg%3E");
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+}
+
+.divider-torn::before { top: 0; background: var(--divider-from, #fdfbf7); }
+.divider-torn::after  { bottom: 0; background: var(--divider-to, #f4f1ea); transform: scaleY(-1); }
+
+/* ── Wood-grain badge — for stats and numeric highlights ───────────────── */
+
+.wood-badge {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent 40%),
+    linear-gradient(90deg, #e8d9c0 0%, #d8c4a1 40%, #c8ae82 100%);
+  border: 1px solid rgba(139, 94, 52, 0.25);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.5),
+    inset 0 -1px 2px rgba(80, 50, 20, 0.2),
+    0 2px 6px rgba(80, 50, 20, 0.15),
+    0 8px 18px -8px rgba(80, 50, 20, 0.2);
+  position: relative;
+}
+
+.wood-badge::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='100' viewBox='0 0 200 100'%3E%3Cg fill='none' stroke='%235c4033' stroke-width='0.5' opacity='0.14'%3E%3Cpath d='M0,20 C50,15 100,25 200,18'/%3E%3Cpath d='M0,45 C60,52 120,40 200,48'/%3E%3Cpath d='M0,70 C40,65 110,78 200,72'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 200px 100px;
+}
+
+/* ── Washi tape — decorative strip, place in corners of polaroids ──────── */
+
+.tape-strip {
+  position: absolute;
+  width: 60px;
+  height: 16px;
+  background: linear-gradient(135deg, rgba(212, 168, 83, 0.65) 0%, rgba(190, 145, 60, 0.5) 100%);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  opacity: 0.85;
+  /* Dashed edges for torn-tape feel */
+  mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%);
+}
+
+.tape-strip-tl { top: -8px; left: 20%; transform: rotate(-6deg); }
+.tape-strip-tr { top: -8px; right: 20%; transform: rotate(5deg); }
+
+/* ── Handwritten note — for testimonials & margin scribbles ────────────── */
+
+.handwritten {
+  font-family: var(--font-script), "Caveat", cursive;
+  color: var(--color-earth-800);
+  line-height: 1.3;
+}
+
+.handwritten-tilt { transform: rotate(-2deg); }
+
+/* ── Firefly glow — warm amber hover bloom for categories & CTAs ──────── */
+
+.firefly-glow {
+  position: relative;
+  transition: transform 0.4s ease;
+}
+
+.firefly-glow::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at center, rgba(212, 168, 83, 0.55) 0%, rgba(212, 168, 83, 0) 60%);
+  filter: blur(8px);
+  transition: opacity 0.5s ease;
+  z-index: -1;
+}
+
+.firefly-glow:hover::after { opacity: 1; }
+.firefly-glow:hover { transform: translateY(-2px); }
+
+/* ── Postage stamp border — 12 region stamps ──────────────────────────── */
+
+.stamp-border {
+  position: relative;
+  background: white;
+  padding: 10px;
+  filter: drop-shadow(0 3px 8px rgba(80, 50, 20, 0.18));
+}
+
+/* Perforated edge via radial gradients (classic postage stamp) */
+.stamp-border {
+  --stamp-r: 5px;
+  mask-image:
+    radial-gradient(circle var(--stamp-r) at 10px 0,      transparent 98%, black 100%),
+    radial-gradient(circle var(--stamp-r) at 30px 0,      transparent 98%, black 100%),
+    radial-gradient(circle var(--stamp-r) at 50px 0,      transparent 98%, black 100%),
+    radial-gradient(circle var(--stamp-r) at 70px 0,      transparent 98%, black 100%),
+    radial-gradient(circle var(--stamp-r) at 90px 0,      transparent 98%, black 100%),
+    radial-gradient(circle var(--stamp-r) at 110px 0,     transparent 98%, black 100%),
+    linear-gradient(#000, #000);
+  mask-composite: subtract;
+  -webkit-mask-composite: source-out;
+}
+
+.stamp-faded {
+  filter: grayscale(0.8) brightness(1.05) opacity(0.55) drop-shadow(0 2px 4px rgba(80, 50, 20, 0.1));
+}
+
+/* ── Journal tilt — subtle off-axis for "pinned to board" feel ────────── */
+
+.journal-tilt-l { transform: rotate(-1.3deg); }
+.journal-tilt-r { transform: rotate(1.6deg); }
+.journal-tilt-l:hover,
+.journal-tilt-r:hover { transform: rotate(0deg); transition: transform 0.4s ease; }
+
+/* ── Ink stamp "VISITED" — impression effect for Green Passport ───────── */
+
+.ink-stamp {
+  font-family: var(--font-display), serif;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: #9c2c2c;
+  border: 3px solid #9c2c2c;
+  padding: 4px 12px;
+  border-radius: 4px;
+  transform: rotate(-8deg);
+  opacity: 0.7;
+  filter: url('#ink-rough');
+  mix-blend-mode: multiply;
+  background: rgba(255, 245, 235, 0.4);
 }
 
 /* ── Mobile bottom navigation ──────────────────────────────────────────── */

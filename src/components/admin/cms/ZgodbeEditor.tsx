@@ -13,6 +13,7 @@ import { Loader2, Sparkles, Wand2, Save } from "lucide-react";
 import { storySchema, type StoryInput } from "@/lib/schemas/cms";
 import { upsertStory } from "@/lib/actions/cms-fetch";
 import { enhanceDraft, generateSEO } from "@/lib/actions/joze-cms";
+import * as Sentry from "@sentry/nextjs";
 
 export function ZgodbeEditor() {
   const [isSaving, setIsSaving] = useState(false);
@@ -90,7 +91,7 @@ export function ZgodbeEditor() {
         });
       }
     } catch (e) {
-      console.error(e);
+      Sentry.captureException(e, { tags: { feature: "cms", action: "enhance_draft" } });
     } finally {
       setIsJozeThinking(false);
     }

@@ -6,7 +6,7 @@
 // Fire-and-forget: never await in hot paths.
 // =============================================================================
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import * as Sentry from "@sentry/nextjs";
 
 type NapakaTip = "ai_api" | "email" | "rezervacija" | "sistem";
@@ -18,9 +18,16 @@ interface NapakaInput {
   kontekst?: Record<string, unknown>;
 }
 
-let _serviceClient: ReturnType<typeof createClient> | null = null;
+interface NapakaLogInsert {
+  tip: NapakaTip;
+  vir: string;
+  sporocilo: string;
+  kontekst: Record<string, unknown> | null;
+}
 
-function getServiceClient() {
+let _serviceClient: SupabaseClient | null = null;
+
+function getServiceClient(): SupabaseClient | null {
   if (_serviceClient) return _serviceClient;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -32,21 +39,20 @@ function getServiceClient() {
 export async function logNapako(input: NapakaInput): Promise<void> {
   const client = getServiceClient();
   if (!client) {
-    // Graceful fallback — don't crash production if env vars missing
     Sentry.captureMessage("[logNapako] Service role key not configured", { level: "warning", extra: { ...input } });
     return;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (client.from("napake_log") as any).insert({
+  const row: NapakaLogInsert = {
     tip:       input.tip,
     vir:       input.vir,
     sporocilo: input.sporocilo,
     kontekst:  input.kontekst ?? null,
-  });
+  };
+
+  const { error } = await client.from("napake_log").insert(row);
 
   if (error) {
-    // Don't throw — logging failure must never break the caller
     Sentry.captureMessage(`[logNapako] Insert failed: ${error.message}`, "error");
   }
 }

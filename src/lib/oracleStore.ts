@@ -20,12 +20,19 @@ interface OracleStore {
   addMessage: (msg: OracleMessage) => void;
   replaceLastAssistant: (content: string) => void;
   clearMessages: () => void;
+  // Magic Fold trigger — call openOracle() from anywhere; OracleConcierge consumes it
+  pendingOpen: boolean;
+  pendingMessage: string | null;
+  openOracle: (seedMessage?: string) => void;
+  consumePending: () => { message: string | null };
 }
 
 export const useOracleStore = create<OracleStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       messages: [],
+      pendingOpen: false,
+      pendingMessage: null,
 
       addMessage: (msg) =>
         set((state) => ({
@@ -43,6 +50,15 @@ export const useOracleStore = create<OracleStore>()(
         }),
 
       clearMessages: () => set({ messages: [] }),
+
+      openOracle: (seedMessage) =>
+        set({ pendingOpen: true, pendingMessage: seedMessage ?? null }),
+
+      consumePending: () => {
+        const { pendingMessage } = get();
+        set({ pendingOpen: false, pendingMessage: null });
+        return { message: pendingMessage };
+      },
     }),
     {
       name: "nakmetiji-oracle-chat",
@@ -53,6 +69,7 @@ export const useOracleStore = create<OracleStore>()(
           removeItem: () => {},
         }
       ),
+      partialize: (state) => ({ messages: state.messages }),
     }
   )
 );

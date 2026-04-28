@@ -15,6 +15,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { BLUR_DATA_URL } from "@/lib/blur";
+import { useVibeStore } from "@/lib/vibeStore";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -43,6 +44,10 @@ import type { Kmetija, Dozivetje, Mnenje, Izdelek } from "@/types/database";
 import { oddajRezervacijo } from "@/lib/actions/rezervacije";
 import { createSupabaseBrowser } from "@/lib/supabase/client";
 import { FarmVideoModal } from "@/components/FarmVideoModal";
+import { JozeSidebar } from "@/components/JozeSidebar";
+import { WeatherWidget } from "@/components/WeatherWidget";
+import { FarmRewardsDisplay } from "@/components/FarmRewardsDisplay";
+import * as Sentry from "@sentry/nextjs";
 
 // ─── Share buttons ──────────────────────────────────────────────────────────
 
@@ -100,8 +105,7 @@ interface Props {
     izdelki: Izdelek[];
   };
   regionLabel: string;
-  isLoggedIn: boolean;
-  isAlreadyStamped: boolean;
+  stampWidget: React.ReactNode;
 }
 
 // ─── Experience icons ───────────────────────────────────────────────────────
@@ -116,7 +120,7 @@ const EXPERIENCE_ICONS: Record<string, string> = {
 // MAIN COMPONENT
 // =============================================================================
 
-export function FarmProfileClient({ kmetija, regionLabel, isAlreadyStamped }: Props) {
+export function FarmProfileClient({ kmetija, regionLabel, stampWidget }: Props) {
   // ── Lightbox state ──
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -156,22 +160,59 @@ export function FarmProfileClient({ kmetija, regionLabel, isAlreadyStamped }: Pr
   const inquiryCount = Object.values(inquiryItems).reduce((a, b) => a + b, 0);
 
 
-  // ── Fetch zasedenih datumov ob mount ──
+  // ── Real-time availability — initial fetch + 30s polling + Supabase Realtime ──
+  const [availLastSync, setAvailLastSync] = useState<Date | null>(null);
   useEffect(() => {
     const supabase = createSupabaseBrowser();
-    (async () => {
+    let active = true;
+
+    async function loadOccupied() {
       try {
         const { data } = await supabase
           .from("rezervacije")
           .select("datum_od, datum_do")
           .eq("kmetija_id", kmetija.id)
           .in("status", ["cakanje", "potrjena"]);
-        if (data) setZasedeniDatumi(data.map((r) => ({ od: r.datum_od, do: r.datum_do })));
+        if (active && data) {
+          setZasedeniDatumi(data.map((r) => ({ od: r.datum_od, do: r.datum_do })));
+          setAvailLastSync(new Date());
+        }
       } catch (err) {
-        console.error("[booking] failed to load occupied dates:", err);
+        Sentry.captureException(err, { tags: { feature: "farm_profile", action: "load_occupied_dates" } });
       }
-    })();
+    }
+
+    loadOccupied();
+    // Poll every 30s as a baseline — works even if Realtime is not enabled on the table
+    const pollId = setInterval(loadOccupied, 30_000);
+
+    // Try Supabase Realtime subscription too — instant updates if owner confirms a booking
+    const channel = supabase
+      .channel(`rezervacije-${kmetija.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "rezervacije", filter: `kmetija_id=eq.${kmetija.id}` },
+        () => loadOccupied(),
+      )
+      .subscribe();
+
+    return () => {
+      active = false;
+      clearInterval(pollId);
+      supabase.removeChannel(channel);
+    };
   }, [kmetija.id]);
+
+  // ── Vibe Engine — track farm view for personalization ──
+  const trackView = useVibeStore((s) => s.trackView);
+  useEffect(() => {
+    const vibeTags = (kmetija as { vibe_tags?: string[] }).vibe_tags ?? [];
+    trackView({
+      slug: kmetija.slug,
+      vibeTags,
+      dozivetkaSlugs: kmetija.dozivetja.map((d) => d.slug),
+    });
+  }, [kmetija.slug, kmetija.dozivetja, trackView]);
 
   // Helper: ali je datum zaseden
   function isDatumZaseden(datum: string): boolean {
@@ -584,6 +625,19 @@ export function FarmProfileClient({ kmetija, regionLabel, isAlreadyStamped }: Pr
               </div>
             )}
 
+            {/* ── Weather + Location ── */}
+            {kmetija.lat && kmetija.lng && (
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-forest-900 mb-4 flex items-center gap-2">
+                  <span className="text-2xl">🌤️</span>
+                  Vreme na kmetiji
+                </h2>
+                <div className="rounded-2xl bg-white border border-earth-200/60 shadow-sm p-5">
+                  <WeatherWidget lat={kmetija.lat} lng={kmetija.lng} />
+                </div>
+              </div>
+            )}
+
             {/* ── Location ── */}
             <div className="mb-12">
               <h2 className="text-2xl font-bold text-forest-900 mb-4 flex items-center gap-2">
@@ -636,15 +690,36 @@ export function FarmProfileClient({ kmetija, regionLabel, isAlreadyStamped }: Pr
                   4. BOOKING CALENDAR
                   ═════════════════════════════════════════════════════════ */}
               <div className="rounded-2xl bg-white border border-earth-200/60 shadow-md p-6">
-                <h3 className="text-lg font-bold text-forest-900 mb-1 flex items-center gap-2">
-                  <CalendarDays size={20} className="text-forest-600" />
-                  Rezervacija
-                </h3>
-                <p className="text-xs text-earth-500 mb-3">Izberite datume in pošljite povpraševanje</p>
+                <div className="flex items-start justify-between mb-1 gap-2">
+                  <h3 className="text-lg font-bold text-forest-900 flex items-center gap-2">
+                    <CalendarDays size={20} className="text-forest-600" />
+                    Rezervacija
+                  </h3>
+                  {availLastSync && (
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5"
+                      title={`Sinhronizirano: ${availLastSync.toLocaleTimeString("sl-SI")}`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      V živo
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-earth-500 mb-3">
+                  Razpoložljivost se osvežuje samodejno, sinhronizirana je z lastnikom.
+                </p>
+
+                {/* Mini availability calendar — next 30 days */}
+                <AvailabilityStrip
+                  zasedeni={zasedeniDatumi}
+                  selectedFrom={bookingFrom}
+                  selectedTo={bookingTo}
+                />
+
                 {zasedeniDatumi.length > 0 && (
                   <div className="mb-4 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-700">
                     <CalendarDays size={13} className="flex-shrink-0 mt-0.5" />
-                    <span>Nekateri termini so že zasedeni. Preverite razpoložljivost pred rezervacijo.</span>
+                    <span>Rdeče označeni datumi so že zasedeni — izberite druge.</span>
                   </div>
                 )}
 
@@ -835,33 +910,18 @@ export function FarmProfileClient({ kmetija, regionLabel, isAlreadyStamped }: Pr
                 </ul>
               </div>
 
-              {/* Green Passport stamp — QR only */}
-              <div className="rounded-2xl bg-white border border-emerald-200/70 shadow-sm p-5">
-                <h4 className="text-sm font-bold text-forest-900 mb-1 flex items-center gap-2">
-                  🌿 Zeleni Potni List
-                </h4>
-                {isAlreadyStamped ? (
-                  <div className="flex items-center gap-2.5 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-emerald-700 mt-2">
-                    <span className="text-lg">✅</span>
-                    <div>
-                      <p className="font-bold text-sm">Žig zbran!</p>
-                      <p className="text-xs text-emerald-600">Ta kmetija je v tvojem potnem listu.</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2 mt-2">
-                    <div className="flex items-start gap-3 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3">
-                      <span className="text-2xl mt-0.5">📱</span>
-                      <div>
-                        <p className="text-xs font-bold text-forest-800 mb-0.5">Skeniraj QR kodo na kmetiji</p>
-                        <p className="text-[11px] text-earth-500 leading-relaxed">
-                          Žig lahko pridobite le fizično na lokaciji kmetije — poiščite QR kodo pri gostitelju in jo skenirajte s telefonom.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* Green Passport stamp — streaming via PPR */}
+              {stampWidget}
+
+              {/* Per-farm rewards */}
+              <FarmRewardsDisplay kmetijaId={kmetija.id} kmetijaIme={kmetija.ime} />
+
+              {/* Jože inline concierge */}
+              <JozeSidebar
+                farmSlug={kmetija.slug}
+                farmName={kmetija.ime}
+                farmRegija={regionLabel}
+              />
 
               {/* Share */}
               <ShareButtons kmetijaIme={kmetija.ime} />
@@ -952,19 +1012,114 @@ export function FarmProfileClient({ kmetija, regionLabel, isAlreadyStamped }: Pr
         )}
       </AnimatePresence>
       {/* ═══════════════════════════════════════════════════════════════════
-          MOBILE FAB — Rezerviraj (samo na mobilnih napravah)
+          MOBILE STICKY CTA BAR — full-width, thumb-zone optimized
+          Airbnb pattern: rating left, primary CTA right, 56px tall + safe area.
           ═══════════════════════════════════════════════════════════════════ */}
       {!bookingSubmitted && (
-        <div className="lg:hidden fixed bottom-6 inset-x-0 z-40 flex justify-center px-4 pointer-events-none">
-          <button
-            onClick={() => bookingFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-            className="pointer-events-auto flex items-center gap-2.5 rounded-full bg-forest-700 text-white font-bold px-7 py-4 text-sm shadow-2xl shadow-forest-900/30 hover:bg-forest-600 active:scale-95 transition-all duration-200"
-          >
-            <CalendarDays size={18} />
-            Rezerviraj
-          </button>
+        <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-earth-200 shadow-[0_-8px_24px_-12px_rgba(45,90,39,0.18)] pb-[env(safe-area-inset-bottom)]">
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="flex-1 min-w-0">
+              {kmetija.ocena ? (
+                <>
+                  <div className="flex items-center gap-1 text-sm font-bold text-forest-900">
+                    <Star size={14} className="text-gold-500 fill-gold-500" />
+                    {kmetija.ocena.toFixed(1)}
+                    {kmetija.stevilo_ocen ? (
+                      <span className="text-earth-400 font-medium"> · {kmetija.stevilo_ocen} ocen</span>
+                    ) : null}
+                  </div>
+                  <p className="text-[11px] text-earth-500 truncate">Preverjena kmetija v {kmetija.regija}</p>
+                </>
+              ) : (
+                <p className="text-sm font-semibold text-forest-900 truncate">{kmetija.ime}</p>
+              )}
+            </div>
+            <button
+              onClick={() => bookingFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className="flex items-center gap-1.5 rounded-[22px] bg-forest-700 text-white font-bold px-5 h-11 text-sm shadow-md shadow-forest-900/20 hover:bg-forest-600 active:scale-[0.98] transition-all duration-200"
+            >
+              <CalendarDays size={16} />
+              Rezerviraj
+            </button>
+          </div>
         </div>
       )}
     </>
+  );
+}
+
+// ─── Availability Strip — mini calendar showing next 30 days ──────────────
+//
+// Renders 30 day-cells side-by-side. Red = booked, green = free, blue =
+// selected range. Real-time data comes from the parent via props; the strip
+// itself is purely presentational.
+//
+function AvailabilityStrip({
+  zasedeni,
+  selectedFrom,
+  selectedTo,
+}: {
+  zasedeni: { od: string; do: string }[];
+  selectedFrom: string;
+  selectedTo: string;
+}) {
+  const days = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+
+  function isBooked(d: Date): boolean {
+    const iso = d.toISOString().split("T")[0];
+    return zasedeni.some((r) => iso >= r.od && iso < r.do);
+  }
+  function isInSelection(d: Date): boolean {
+    if (!selectedFrom || !selectedTo) return false;
+    const iso = d.toISOString().split("T")[0];
+    return iso >= selectedFrom && iso < selectedTo;
+  }
+
+  const bookedCount = days.filter(isBooked).length;
+
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-earth-500">
+          Prihajajočih 30 dni
+        </p>
+        <p className="text-[10px] text-earth-500">
+          <span className="text-emerald-600 font-bold">{30 - bookedCount}</span> prostih ·{" "}
+          <span className="text-red-600 font-bold">{bookedCount}</span> zasedenih
+        </p>
+      </div>
+      <div className="grid grid-cols-[repeat(30,minmax(0,1fr))] gap-px bg-earth-100 rounded-lg overflow-hidden">
+        {days.map((d, i) => {
+          const booked = isBooked(d);
+          const selected = isInSelection(d);
+          const isToday = i === 0;
+          return (
+            <div
+              key={i}
+              title={d.toLocaleDateString("sl-SI", { day: "numeric", month: "short" }) + (booked ? " — zasedeno" : " — prosto")}
+              className={`relative h-7 flex items-center justify-center text-[8px] font-bold transition-colors ${
+                selected
+                  ? "bg-blue-500 text-white"
+                  : booked
+                  ? "bg-red-200 text-red-900"
+                  : "bg-emerald-50 text-emerald-700"
+              } ${isToday ? "ring-1 ring-forest-700 ring-inset z-10" : ""}`}
+            >
+              {d.getDate()}
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-3 mt-1.5 text-[10px] text-earth-500">
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-50 border border-emerald-300" /> Prosto</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-200" /> Zasedeno</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-blue-500" /> Vaša izbira</span>
+      </div>
+    </div>
   );
 }

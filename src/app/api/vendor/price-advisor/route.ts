@@ -10,7 +10,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rateLimit";
 
-export const runtime = "nodejs";
 
 // ── Seasonal demand index per month (1.0 = baseline, >1 = high demand) ────────
 

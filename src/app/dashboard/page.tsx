@@ -8,7 +8,6 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import type { Kmetija, Rezervacija, Dozivetje } from "@/types/database";
 import { DashboardClient } from "./DashboardClient";
 
-export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const supabase = await createSupabaseServer();

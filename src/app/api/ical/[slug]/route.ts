@@ -13,9 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHmac } from "crypto";
 
-export const runtime = "nodejs";
 // iCal feeds are cached 15 min (Cache-Control: max-age=900)
-export const revalidate = 900;
 
 // ─── Token verification ───────────────────────────────────────────────────────
 // Token = HMAC-SHA256(kmetija_id, ICAL_SECRET) first 32 hex chars

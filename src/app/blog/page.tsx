@@ -2,6 +2,7 @@
 // NaKmetiji.si — Blog Landing Page (with pagination)
 // =============================================================================
 
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -66,6 +67,18 @@ function BlogJsonLd({ posts }: { posts: { slug: string; title: string; coverImag
 }
 
 export default async function BlogPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  return (
+    <Suspense fallback={<BlogSkeleton />}>
+      <BlogContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function BlogContent({
   searchParams,
 }: {
   searchParams: Promise<{ page?: string }>;
@@ -237,6 +250,23 @@ export default async function BlogPage({
             )}
           </nav>
         )}
+      </div>
+    </div>
+  );
+}
+
+function BlogSkeleton() {
+  return (
+    <div className="min-h-screen bg-cream">
+      <div className="bg-forest-900 pt-32 pb-20 px-6 text-center">
+        <div className="h-8 w-32 bg-white/20 animate-pulse mx-auto rounded-full mb-6" />
+        <div className="h-12 w-48 bg-white/20 animate-pulse mx-auto rounded-xl mb-4" />
+        <div className="h-6 w-64 bg-white/10 animate-pulse mx-auto rounded-lg" />
+      </div>
+      <div className="max-w-6xl mx-auto px-6 py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="h-[420px] rounded-2xl bg-white border border-earth-200/60 animate-pulse" />
+        ))}
       </div>
     </div>
   );

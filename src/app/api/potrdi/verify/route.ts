@@ -10,7 +10,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyApprovalToken } from "@/lib/jws";
 
-export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {

@@ -3,7 +3,7 @@ import { Users, Store, Stamp, AlertTriangle, TrendingUp, RefreshCcw, Search } fr
 import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const revalidate = 0; // Always fresh in HQ
+ // Always fresh in HQ
 
 // B16: Fetch top Oracle search trends from the last 7 days
 async function getOracleTrends(supabase: SupabaseClient) {

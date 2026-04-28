@@ -1,32 +1,34 @@
 "use client";
 
 // =============================================================================
-// NaKmetiji.si — The Oracle: Semantic AI Travel Concierge
-// Floating glassmorphism chat UI with:
-//   • SSE streaming response
-//   • AnimatePresence for smooth transitions
-//   • Light Cycle accent color (time-of-day aware)
-//   • Farm result cards rendered from metadata events
-//   • Pantry upsell cards injected inline
+// NaKmetiji.si — The Oracle (Jože)
+// Semantic AI travel concierge, overhauled to feel like a hand-written letter
+// from a Slovenian country host. Preserves: SSE streaming, AbortController,
+// circuit breaker, retry prompt, zustand session persistence, locale switching.
+// Visual layer: paper texture, watercolor wash header, wax-seal avatar,
+// ink-drawn divider, polaroid-tape suggestion chips, ink-stamp send button,
+// handwritten signature.
 // =============================================================================
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Sparkles,
   X,
   Send,
   ChevronRight,
   Star,
-  Loader2,
-  TreePine,
+  Leaf,
   Maximize2,
   Minimize2,
+  Feather,
+  MapPin,
 } from "lucide-react";
 import { BLUR_DATA_URL } from "@/lib/blur";
 import { useOracleStore } from "@/lib/oracleStore";
+import * as Sentry from "@sentry/nextjs";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -38,7 +40,14 @@ interface OracleMessage {
   role: "user" | "assistant";
   content: string;
   farmCards?: FarmCard[];
+  roadTripHint?: RoadTripHint;
+  shadowVerdict?: { ok: boolean; issues: string[] };
   isStreaming?: boolean;
+}
+
+interface MapContextData {
+  farms: { slug: string; ime: string; lat: number; lng: number }[];
+  landmarks: { ime: string; kategorija: string; lat: number; lng: number; proximity_type: string }[];
 }
 
 interface FarmCard {
@@ -52,6 +61,12 @@ interface FarmCard {
   premium: boolean;
 }
 
+interface RoadTripHint {
+  regions: string[];
+  days: number | null;
+  url: string;
+}
+
 // ---------------------------------------------------------------------------
 // Light Cycle — accent color shifts based on time of day
 // ---------------------------------------------------------------------------
@@ -59,17 +74,18 @@ interface FarmCard {
 function getLightCycle() {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 10)
-    return { name: "jutro", accent: "#d97706", glow: "amber" };
+    return { name: "jutro", accent: "#d97706", wash: "#fde9c2", glow: "amber" };
   if (hour >= 10 && hour < 17)
-    return { name: "dan", accent: "#2D5A27", glow: "forest" };
+    return { name: "dan", accent: "#2D5A27", wash: "#d8e7cf", glow: "forest" };
   if (hour >= 17 && hour < 21)
-    return { name: "vecер", accent: "#9333ea", glow: "purple" };
-  return { name: "noc", accent: "#1e40af", glow: "blue" };
+    return { name: "večer", accent: "#8b5a3c", wash: "#f2d8c6", glow: "copper" };
+  return { name: "noč", accent: "#1e3a5f", wash: "#c9d6e4", glow: "blue" };
 }
 
 function useLightCycle() {
-  const [cycle, setCycle] = useState(getLightCycle);
+  const [cycle, setCycle] = useState({ name: "dan", accent: "#2D5A27", wash: "#d8e7cf", glow: "forest" });
   useEffect(() => {
+    setCycle(getLightCycle());
     const id = setInterval(() => setCycle(getLightCycle()), 60_000);
     return () => clearInterval(id);
   }, []);
@@ -81,15 +97,13 @@ function useLightCycle() {
 // ---------------------------------------------------------------------------
 
 // Allowlist: only internal farm paths and safe absolute HTTPS URLs.
-// Prevents XSS if a prompt-injected model response emits javascript: or data: URLs.
 function isSafeUrl(url: string): boolean {
   if (url.startsWith("/kmetije/")) return true;
-  if (url.startsWith("/")) return true; // any internal path
+  if (url.startsWith("/")) return true;
   try {
     const { protocol, hostname } = new URL(url);
     return (
       (protocol === "https:" || protocol === "http:") &&
-      // Restrict external links to known-safe domains only
       (hostname === "nakmetiji.si" || hostname.endsWith(".nakmetiji.si"))
     );
   } catch {
@@ -98,38 +112,41 @@ function isSafeUrl(url: string): boolean {
 }
 
 function renderMarkdown(text: string): React.ReactNode[] {
-  const parts = text.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g);
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g);
   return parts.map((part, i) => {
-    // Bold: **text**
     const boldMatch = part.match(/^\*\*(.+)\*\*$/);
     if (boldMatch)
       return (
-        <strong key={i} className="font-semibold text-forest-900">
+        <strong key={i} className="font-bold text-forest-900">
           {boldMatch[1]}
         </strong>
       );
-    // Link: [text](url) — URL is validated before rendering
+    const italicMatch = part.match(/^\*(.+)\*$/);
+    if (italicMatch)
+      return (
+        <em key={i} className="italic text-forest-700/90">
+          {italicMatch[1]}
+        </em>
+      );
     const linkMatch = part.match(/^\[(.+)\]\((.+)\)$/);
     if (linkMatch && isSafeUrl(linkMatch[2]))
       return (
         <Link
           key={i}
           href={linkMatch[2]}
-          className="inline-flex items-center gap-1 font-semibold text-forest-700 underline underline-offset-2 hover:text-forest-500 transition-colors"
+          className="inline-flex items-center gap-1 font-semibold text-forest-700 underline decoration-dotted underline-offset-[3px] hover:text-amber-700 transition-colors"
         >
           {linkMatch[1]}
           <ChevronRight size={12} />
         </Link>
       );
-    // Unsafe or unrecognised URL — render as plain text, never as a link
     if (linkMatch) return <span key={i}>{linkMatch[1]}</span>;
     return <span key={i}>{part}</span>;
   });
 }
 
-// Renders a single paragraph/line — detects ## headings with embedded links
 function renderLine(line: string, i: number): React.ReactNode {
-  // Booking widget logic (Closer feature)
+  // Booking widget
   const bookingMatch = line.match(/\[BOOK_WIDGET:([^\]]+)\]/);
   if (bookingMatch) {
     const slug = bookingMatch[1];
@@ -137,13 +154,10 @@ function renderLine(line: string, i: number): React.ReactNode {
       <Link
         key={i}
         href={`/kmetije/${slug}#booking`}
-        className="mt-3 mb-2 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-forest-600 to-forest-500 hover:from-forest-500 hover:to-forest-400 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
-        onClick={() => {
-          // smooth anchor behaviour handled by browser default
-        }}
+        className="mt-3 mb-2 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-forest-800 hover:bg-forest-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-[0.98] ring-1 ring-forest-900/20"
       >
-        <Sparkles size={16} className="text-amber-200" />
-        Preveri razpoložljivost in rezerviraj
+        <Feather size={15} className="text-amber-200" />
+        Preveri razpoložljivost
       </Link>
     );
   }
@@ -155,66 +169,154 @@ function renderLine(line: string, i: number): React.ReactNode {
       <Link
         key={i}
         href={headingLinkMatch[2]}
-        className="group flex items-center gap-1.5 mt-3 mb-1 font-bold text-forest-900 hover:text-forest-600 transition-colors text-base leading-snug"
+        className="group flex items-center gap-1.5 mt-3 mb-1 font-display font-bold text-forest-900 hover:text-amber-700 transition-colors text-base leading-snug"
       >
         {headingLinkMatch[1]}
-        <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+        <ChevronRight
+          size={14}
+          className="opacity-0 group-hover:opacity-100 transition-opacity"
+        />
       </Link>
     );
-  // Unsafe heading link — render as plain heading
   if (headingLinkMatch)
     return (
-      <p key={i} className="mt-3 mb-1 font-bold text-forest-900 text-base leading-snug">
+      <p key={i} className="mt-3 mb-1 font-display font-bold text-forest-900 text-base leading-snug">
         {headingLinkMatch[1]}
       </p>
     );
-  // ## Plain heading (fallback)
   const headingMatch = line.match(/^##\s+(.+)$/);
   if (headingMatch)
     return (
-      <p key={i} className="mt-3 mb-1 font-bold text-forest-900 text-base leading-snug">
+      <p key={i} className="mt-3 mb-1 font-display font-bold text-forest-900 text-base leading-snug">
         {headingMatch[1]}
       </p>
     );
-  // Normal paragraph (remove any trailing book widgets if they were merged into a line by mistake)
   const cleanLine = line.replace(/\[BOOK_WIDGET:[^\]]+\]/g, "");
   return cleanLine ? <p key={i}>{renderMarkdown(cleanLine)}</p> : null;
 }
 
 // ---------------------------------------------------------------------------
-// Sub-components
+// Sub-components — illustrations
 // ---------------------------------------------------------------------------
 
-function TypingDots() {
+/** Pure SVG portrait of Jože — no background, sized by parent.
+ *  Used both on its own (inside the FAB) and wrapped by JozeAvatar below. */
+function JozePortrait({ size = 40 }: { size?: number }) {
   return (
-    <div className="flex items-center gap-1 px-4 py-3">
-      {[0, 1, 2].map((i) => (
-        <motion.span
-          key={i}
-          className="w-2 h-2 rounded-full bg-forest-400"
-          animate={{ opacity: [0.3, 1, 0.3], y: [0, -4, 0] }}
-          transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-        />
-      ))}
+    <svg
+      viewBox="0 0 64 64"
+      width={size}
+      height={size}
+      aria-hidden="true"
+      className="block"
+    >
+      {/* Face */}
+      <ellipse cx="32" cy="36" rx="14" ry="15" fill="#f3d5b5" />
+      {/* Beard */}
+      <path
+        d="M18 37 Q20 50 32 52 Q44 50 46 37 Q44 45 38 47 Q32 49 26 47 Q20 45 18 37 Z"
+        fill="#e6e2dc"
+      />
+      {/* Moustache */}
+      <path d="M24 38 Q28 41 32 39 Q36 41 40 38 Q36 36 32 37 Q28 36 24 38 Z" fill="#e6e2dc" />
+      {/* Eyes — smiling crescents */}
+      <path d="M25 33 Q27 31 29 33" stroke="#2d2a24" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      <path d="M35 33 Q37 31 39 33" stroke="#2d2a24" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      {/* Rosy cheeks */}
+      <circle cx="24" cy="38" r="1.2" fill="#e7a090" opacity="0.6" />
+      <circle cx="40" cy="38" r="1.2" fill="#e7a090" opacity="0.6" />
+      {/* Wide-brim country hat */}
+      <ellipse cx="32" cy="24" rx="22" ry="4.5" fill="#3f2b1a" />
+      <path d="M22 24 Q22 14 32 13 Q42 14 42 24 Z" fill="#4b3420" />
+      <rect x="22" y="22" width="20" height="2" fill="#8b5a3c" opacity="0.85" />
+      {/* Neck / collar */}
+      <rect x="28" y="50" width="8" height="6" fill="#3f5a33" />
+    </svg>
+  );
+}
+
+/** Circular wrapper around JozePortrait — used in the chat header. */
+function JozeAvatar({ accent, size = 40 }: { accent: string; size?: number }) {
+  return (
+    <div
+      className="relative flex items-center justify-center rounded-full flex-shrink-0 overflow-hidden"
+      style={{
+        width: size,
+        height: size,
+        background: `radial-gradient(circle at 30% 30%, ${accent}ee, ${accent}aa 55%, ${accent}cc 100%)`,
+        boxShadow: `
+          inset 0 2px 3px rgba(255,255,255,0.28),
+          inset 0 -3px 6px rgba(0,0,0,0.22),
+          0 4px 10px rgba(0,0,0,0.18)`,
+      }}
+    >
+      <JozePortrait size={size} />
+    </div>
+  );
+}
+
+/** Hand-drawn ink ripple divider — used under the header. */
+function InkDivider({ color = "#2D5A27" }: { color?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 400 12"
+      preserveAspectRatio="none"
+      className="w-full h-3 block opacity-60"
+      style={{ color }}
+    >
+      <path
+        d="M0 6 Q 20 1 40 6 T 80 6 T 120 6 T 160 6 T 200 6 T 240 6 T 280 6 T 320 6 T 360 6 T 400 6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function ThinkingInk() {
+  return (
+    <div className="flex items-center gap-2 px-1 py-1">
+      <span className="handwritten text-forest-700 text-lg italic">Jože razmišlja</span>
+      <div className="flex items-center gap-0.5">
+        {[0, 1, 2].map((i) => (
+          <motion.span
+            key={i}
+            className="w-1.5 h-1.5 rounded-full bg-forest-700"
+            animate={{ opacity: [0.2, 1, 0.2], y: [0, -2, 0] }}
+            transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.18 }}
+          />
+        ))}
+      </div>
     </div>
   );
 }
 
 function FarmResultCard({ farm }: { farm: FarmCard }) {
   const REGIJA_LABELS: Record<string, string> = {
-    gorenjska: "Gorenjska", primorska: "Primorska", stajerska: "Štajerska",
-    dolenjska: "Dolenjska", koroska: "Koroška", savinjska: "Savinjska",
-    pomurska: "Pomurska", notranjska: "Notranjska", zasavska: "Zasavska",
-    posavska: "Posavska", jugovzhodna_slovenija: "JV Slovenija",
+    gorenjska: "Gorenjska",
+    primorska: "Primorska",
+    stajerska: "Štajerska",
+    dolenjska: "Dolenjska",
+    koroska: "Koroška",
+    savinjska: "Savinjska",
+    pomurska: "Pomurska",
+    notranjska: "Notranjska",
+    zasavska: "Zasavska",
+    posavska: "Posavska",
+    jugovzhodna_slovenija: "JV Slovenija",
     osrednjeslovenska: "Osrednjeslovenska",
   };
 
   return (
     <Link
       href={`/kmetije/${farm.slug}`}
-      className="group flex items-center gap-3 rounded-xl bg-white/60 hover:bg-white/90 border border-white/50 hover:border-forest-200 p-3 transition-all duration-300 hover:shadow-md"
+      className="group relative flex items-center gap-3 rounded-xl bg-[#fdf8ee] hover:bg-white border border-earth-200/80 hover:border-forest-300 p-3 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
     >
-      <div className="relative w-14 h-14 rounded-lg overflow-hidden flex-shrink-0">
+      <span className="tape-strip tape-strip-tl" aria-hidden="true" />
+      <div className="relative w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-black/5">
         <Image
           src={farm.naslovna_slika || "/images/placeholder-farm.jpg"}
           alt={farm.ime}
@@ -225,64 +327,170 @@ function FarmResultCard({ farm }: { farm: FarmCard }) {
           blurDataURL={BLUR_DATA_URL}
         />
         {farm.premium && (
-          <div className="absolute top-1 left-1 w-4 h-4 rounded-full bg-gold-500 flex items-center justify-center">
+          <div className="absolute top-1 left-1 w-4 h-4 rounded-full bg-gold-500 flex items-center justify-center shadow">
             <Star size={8} fill="white" className="text-white" />
           </div>
         )}
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-forest-900 truncate">{farm.ime}</p>
+        <p className="text-sm font-bold text-forest-900 truncate font-display">
+          {farm.ime}
+        </p>
         <p className="text-xs text-earth-500 truncate">
           📍 {REGIJA_LABELS[farm.regija] ?? farm.regija}
         </p>
         <div className="flex items-center gap-2 mt-0.5">
           {farm.ocena && (
-            <span className="text-xs text-gold-600 font-medium">
+            <span className="text-xs text-gold-600 font-semibold">
               ★ {farm.ocena.toFixed(1)}
             </span>
           )}
           {farm.cena_noc && (
-            <span className="text-xs text-earth-500">
-              od {farm.cena_noc} €/noč
-            </span>
+            <span className="text-xs text-earth-500">od {farm.cena_noc} €/noč</span>
           )}
         </div>
       </div>
-      <ChevronRight size={14} className="text-earth-400 group-hover:text-forest-600 transition-colors flex-shrink-0" />
+      <ChevronRight
+        size={14}
+        className="text-earth-400 group-hover:text-forest-600 transition-colors flex-shrink-0"
+      />
     </Link>
   );
 }
 
-function MessageBubble({ msg, accentColor }: { msg: OracleMessage; accentColor: string }) {
+const REGIJA_LABEL_SHORT: Record<string, string> = {
+  gorenjska: "Gorenjska",
+  primorska: "Primorska",
+  stajerska: "Štajerska",
+  dolenjska: "Dolenjska",
+  koroska: "Koroška",
+  savinjska: "Savinjska",
+  pomurska: "Pomurska",
+  notranjska: "Notranjska",
+  zasavska: "Zasavska",
+  posavska: "Posavska",
+  jugovzhodna_slovenija: "JV Slovenija",
+  osrednjeslovenska: "Osrednjeslovenska",
+};
+
+function RoadTripHintCard({ hint }: { hint: RoadTripHint }) {
+  const labels = hint.regions.map((r) => REGIJA_LABEL_SHORT[r] ?? r);
+  const daysStr = hint.days ? `${hint.days} ${hint.days === 1 ? "dan" : hint.days < 5 ? "dni" : "dni"}` : "večdnevno";
+  return (
+    <Link
+      href={hint.url}
+      className="group relative block rounded-2xl border border-amber-300/70 bg-gradient-to-br from-amber-50 to-amber-100/60 p-4 hover:shadow-md hover:-translate-y-0.5 transition-all"
+    >
+      <span className="tape-strip tape-strip-tr" aria-hidden="true" />
+      <div className="flex items-start gap-3">
+        <div className="wood-badge w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-5 h-5 text-white" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h4l3-7 4 14 3-7h4" />
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700 mb-0.5">
+            Ideja za pot
+          </p>
+          <p className="text-sm font-bold text-forest-900 font-display leading-tight">
+            Road trip: {labels.join(" → ")}
+          </p>
+          <p className="text-xs text-earth-600 mt-0.5">
+            {daysStr} · sestavim ti pot z eno kmetijo na regijo
+          </p>
+        </div>
+        <ChevronRight size={16} className="text-amber-700 mt-2 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+      </div>
+    </Link>
+  );
+}
+
+function MessageBubble({
+  msg,
+  accentColor,
+}: {
+  msg: OracleMessage;
+  accentColor: string;
+}) {
   const isUser = msg.role === "user";
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
       className={`flex flex-col gap-2 ${isUser ? "items-end" : "items-start"}`}
     >
       {/* Text bubble */}
       <div
-        className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+        className={`relative max-w-[88%] px-4 py-3 text-[13.5px] leading-relaxed ${
           isUser
-            ? "rounded-br-sm text-white"
-            : "glass-card rounded-bl-sm text-forest-900"
+            ? "rounded-[18px] rounded-br-[4px] text-white"
+            : "rounded-[18px] rounded-bl-[4px] text-forest-900"
         }`}
-        style={isUser ? { background: accentColor } : undefined}
+        style={
+          isUser
+            ? {
+                background: `linear-gradient(135deg, ${accentColor}, ${accentColor}dd)`,
+                boxShadow: `0 6px 18px ${accentColor}33`,
+              }
+            : {
+                background: "rgba(253, 248, 238, 0.92)",
+                boxShadow:
+                  "0 4px 14px rgba(45,90,39,0.08), inset 0 0 0 1px rgba(45,90,39,0.09)",
+              }
+        }
       >
         {isUser ? (
           <p>{msg.content}</p>
         ) : msg.isStreaming && !msg.content ? (
-          <TypingDots />
+          <ThinkingInk />
         ) : (
           <div className="space-y-1.5">
             {msg.content.split("\n").map((line, i) => renderLine(line, i))}
+            {msg.isStreaming && (
+              <motion.span
+                aria-hidden="true"
+                className="inline-block w-[2px] h-[14px] bg-forest-700 align-middle ml-0.5"
+                animate={{ opacity: [1, 0, 1] }}
+                transition={{ duration: 0.9, repeat: Infinity }}
+              />
+            )}
           </div>
         )}
       </div>
+
+      {/* Shadow verdict badge */}
+      <AnimatePresence>
+        {!isUser && msg.shadowVerdict && !msg.isStreaming && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`self-start flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+              msg.shadowVerdict.ok
+                ? "bg-forest-50 text-forest-600 border border-forest-200/60"
+                : "bg-amber-50 text-amber-700 border border-amber-200"
+            }`}
+          >
+            <span>{msg.shadowVerdict.ok ? "✓" : "⚠"}</span>
+            <span>{msg.shadowVerdict.ok ? "Preverjeno" : "Preverite podatke"}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Road-trip hint — shown when the query spans multiple regions */}
+      <AnimatePresence>
+        {!isUser && msg.roadTripHint && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-[92%]"
+          >
+            <RoadTripHintCard hint={msg.roadTripHint} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Farm result cards */}
       <AnimatePresence>
@@ -292,8 +500,8 @@ function MessageBubble({ msg, accentColor }: { msg: OracleMessage; accentColor: 
             animate={{ opacity: 1, scale: 1 }}
             className="w-full max-w-[92%] space-y-2"
           >
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-earth-400 ml-1">
-              Priporočene kmetije
+            <p className="handwritten text-forest-700 text-lg ml-1 leading-none">
+              Pa vam tole priporočam —
             </p>
             {msg.farmCards.map((farm) => (
               <FarmResultCard key={farm.slug} farm={farm} />
@@ -306,7 +514,7 @@ function MessageBubble({ msg, accentColor }: { msg: OracleMessage; accentColor: 
 }
 
 // ---------------------------------------------------------------------------
-// Suggested prompts by locale
+// Copy — suggestions, status labels, greetings
 // ---------------------------------------------------------------------------
 
 const SUGGESTIONS: Record<Locale, string[]> = {
@@ -337,10 +545,17 @@ const SUGGESTIONS: Record<Locale, string[]> = {
 };
 
 const STATUS_LABELS: Record<string, Record<Locale, string>> = {
-  intent:  { sl: "Jože posluša...",              en: "Jože is listening...",             de: "Jože hört zu...",             it: "Jože ascolta..."               },
-  search:  { sl: "Jože brska po zakladih...",    en: "Jože searches his treasures...",   de: "Jože sucht seine Schätze...", it: "Jože cerca i suoi tesori..."   },
-  geo:     { sl: "Jože pregleduje okolico...",   en: "Jože scans the surroundings...",   de: "Jože erkundet die Umgebung...", it: "Jože esplora i dintorni..."  },
-  pitch:   { sl: "Jože pripoveduje...",          en: "Jože tells a story...",            de: "Jože erzählt...",             it: "Jože racconta..."              },
+  intent: { sl: "Jože posluša...", en: "Jože is listening...", de: "Jože hört zu...", it: "Jože ascolta..." },
+  search: { sl: "Jože brska po zakladih...", en: "Jože searches his treasures...", de: "Jože sucht seine Schätze...", it: "Jože cerca i suoi tesori..." },
+  geo:    { sl: "Jože pregleduje okolico...", en: "Jože scans the surroundings...", de: "Jože erkundet die Umgebung...", it: "Jože esplora i dintorni..." },
+  pitch:  { sl: "Jože pripoveduje...", en: "Jože tells a story...", de: "Jože erzählt...", it: "Jože racconta..." },
+};
+
+const GREETINGS: Record<Locale, string> = {
+  sl: `Bog žegnaj! Sem **Jože**, vaš kmečki vodnik.\n\nPovejte mi — kam vas srce vleče? Tihi gozd, vonj po sveže pečenem kruhu, jutranja megla nad travnikom? Opišite v svojih besedah, pa vam bom povedal, kje to najdete.\n\n*Ker kdor prej pride, prej melje.* 🌾`,
+  en: `Welcome! I'm **Jože** — your countryside guide to hidden Slovenia.\n\nTell me, where does your heart pull you? A quiet forest, the smell of fresh bread from a stone oven, morning mist lifting over a meadow...\n\nDescribe it in your own words.`,
+  de: `Willkommen! Ich bin **Jože** — Ihr Reiseführer ins verborgene Slowenien.\n\nErzählen Sie mir, wohin Ihr Herz Sie zieht: ein stiller Wald, der Duft von frischem Brot, Morgennebel über Wiesen...`,
+  it: `Benvenuti! Sono **Jože** — la vostra guida nella Slovenia nascosta.\n\nDitemi, dove vi porta il cuore? Un bosco silenzioso, il profumo del pane fresco, la nebbia del mattino sui prati...`,
 };
 
 // ---------------------------------------------------------------------------
@@ -356,9 +571,12 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
   const [statusPhase, setStatusPhase] = useState<string | null>(null);
   const [hasGreeted, setHasGreeted] = useState(false);
   const [failCount, setFailCount] = useState(0);
+  const [mapContext, setMapContext] = useState<MapContextData | null>(null);
+  const pendingMsgRef = useRef<string | null>(null);
 
-  // B11: Persist chat across navigations via Zustand sessionStorage store
   const oracleStore = useOracleStore();
+  const pendingOpen = useOracleStore((s) => s.pendingOpen);
+  const consumePending = useOracleStore((s) => s.consumePending);
   const isCircuitBroken = failCount >= 3;
   const [retryInfo, setRetryInfo] = useState<{
     retryable: boolean;
@@ -369,23 +587,22 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const lightCycle = useLightCycle();
-  // AbortController ref — cancelled on component unmount or when a new message
-  // is sent while a previous stream is still running.
+
+  const pathname = usePathname();
+  const isMapPage = pathname?.startsWith("/zemljevid") ?? false;
+  const fabPosition = "bottom-6 right-6";
+  const panelPosition = "bottom-6 right-6";
+  const panelOrigin = "bottom right";
   const abortRef = useRef<AbortController | null>(null);
 
-  // Auto-scroll to bottom on new content
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Focus input when opened
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 300);
-    }
+    if (isOpen) setTimeout(() => inputRef.current?.focus(), 300);
   }, [isOpen]);
 
-  // Auto-grow textarea
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.style.height = "auto";
@@ -393,46 +610,53 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
     }
   }, [input]);
 
-  // Greeting message — restore from sessionStorage if available
   useEffect(() => {
     if (isOpen && !hasGreeted) {
       setHasGreeted(true);
 
-      // B11: Restore previous session messages if they exist
       const stored = oracleStore.messages;
       if (stored.length > 0) {
         setMessages(stored.map((m) => ({ role: m.role, content: m.content })));
         return;
       }
 
-      const greetings: Record<Locale, string> = {
-        sl: `Bog žegnaj! Sem Jože, vaš kmečki vodnik.\n\nPovejte mi — kam vas srce vleče? Tihi gozd, vonj po sveže pečenem kruhu, jutranja megla nad travnikom? Opišite v svojih besedah, pa vam bom povedal, kje to najdete.\n\n*Ker kdor prej pride, prej melje.* 😊`,
-        en: `Welcome! I'm Jože — your countryside guide to hidden Slovenia.\n\nTell me, where does your heart pull you? A quiet forest, the smell of fresh bread from a stone oven, morning mist lifting over a meadow...\n\nDescribe it in your own words.`,
-        de: `Willkommen! Ich bin Jože — Ihr Reiseführer ins verborgene Slowenien.\n\nErzählen Sie mir, wohin Ihr Herz Sie zieht: ein stiller Wald, der Duft von frischem Brot, Morgennebel über Wiesen...`,
-        it: `Benvenuti! Sono Jože — la vostra guida nella Slovenia nascosta.\n\nDitemi, dove vi porta il cuore? Un bosco silenzioso, il profumo del pane fresco, la nebbia del mattino sui prati...`,
-      };
-      const greeting: OracleMessage = { role: "assistant", content: greetings[locale] };
+      const greeting: OracleMessage = { role: "assistant", content: GREETINGS[locale] };
       setMessages([greeting]);
       oracleStore.addMessage({ role: greeting.role, content: greeting.content });
     }
   }, [isOpen, hasGreeted, locale, oracleStore]);
 
-  // Cancel stream on unmount (e.g. user navigates away mid-stream)
   useEffect(() => {
-    return () => { abortRef.current?.abort(); };
+    return () => {
+      abortRef.current?.abort();
+    };
   }, []);
+
+  // Magic Fold: openOracle() from anywhere → consume pending, open panel, auto-send seed
+  useEffect(() => {
+    if (!pendingOpen) return;
+    const { message: seed } = consumePending();
+    pendingMsgRef.current = seed;
+    setIsOpen(true);
+  }, [pendingOpen, consumePending]);
+
+  // When panel opens with a pending seed message, auto-send after greeting renders
+  useEffect(() => {
+    if (!isOpen || !pendingMsgRef.current) return;
+    const seed = pendingMsgRef.current;
+    pendingMsgRef.current = null;
+    const id = setTimeout(() => sendMessage(seed), 700);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || isLoading) return;
 
-      // Cancel any in-flight stream before starting a new one
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
-
-      // 45-second hard timeout — Groq maxDuration is 60s on server, give
-      // ourselves 15s of margin to detect hangs before the server kills it.
       const timeoutId = setTimeout(() => controller.abort(), 45_000);
 
       const userMessage: OracleMessage = { role: "user", content: text };
@@ -442,10 +666,8 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
       setIsLoading(true);
       setStatusPhase("intent");
       setRetryInfo(null);
-      // Reset fail count if it's a new successful attempt? No, let circuit break be hard until refresh.
       if (isCircuitBroken) return;
 
-      // Add streaming assistant placeholder
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: "", isStreaming: true },
@@ -453,6 +675,7 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
 
       let accumulated = "";
       let farmCards: FarmCard[] = [];
+      let roadTripHint: RoadTripHint | null = null;
 
       try {
         const history = messages
@@ -492,19 +715,59 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
                 try {
                   const d = JSON.parse(raw) as { phase: string };
                   setStatusPhase(d.phase);
-                } catch { /* skip */ }
+                } catch {
+                  /* skip */
+                }
               } else if (currentEvent === "farms") {
                 try {
                   const d = JSON.parse(raw) as { farms: FarmCard[] };
                   farmCards = d.farms;
+                } catch {
+                  /* skip */
+                }
+              } else if (currentEvent === "roadtrip_hint") {
+                try {
+                  roadTripHint = JSON.parse(raw) as RoadTripHint;
+                } catch {
+                  /* skip */
+                }
+              } else if (currentEvent === "map_context") {
+                try {
+                  const ctx = JSON.parse(raw) as MapContextData;
+                  setMapContext(ctx);
+                  // Broadcast to Mapbox on the /zemljevid page if it's open in the same tab
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(new CustomEvent("oracle:map_context", { detail: ctx }));
+                  }
+                } catch { /* skip */ }
+              } else if (currentEvent === "shadow_verdict") {
+                try {
+                  const verdict = JSON.parse(raw) as { ok: boolean; issues: string[] };
+                  setMessages((prev) => {
+                    const next = [...prev];
+                    const last = next[next.length - 1];
+                    if (last?.role === "assistant") {
+                      next[next.length - 1] = { ...last, shadowVerdict: verdict };
+                    }
+                    return next;
+                  });
                 } catch { /* skip */ }
               } else if (currentEvent === "error") {
                 try {
-                  const d = JSON.parse(raw) as { retryable?: boolean; retryAfterMs?: number | null };
+                  const d = JSON.parse(raw) as {
+                    retryable?: boolean;
+                    retryAfterMs?: number | null;
+                  };
                   if (d.retryable) {
-                    setRetryInfo({ retryable: true, retryAfterMs: d.retryAfterMs ?? null, lastMessage: text });
+                    setRetryInfo({
+                      retryable: true,
+                      retryAfterMs: d.retryAfterMs ?? null,
+                      lastMessage: text,
+                    });
                   }
-                } catch { /* skip */ }
+                } catch {
+                  /* skip */
+                }
               } else if (currentEvent === null) {
                 try {
                   const parsed = JSON.parse(raw) as { text?: string };
@@ -523,7 +786,9 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
                       return next;
                     });
                   }
-                } catch { /* non-JSON data line */ }
+                } catch {
+                  /* non-JSON data line */
+                }
               }
             } else if (line === "") {
               currentEvent = null;
@@ -531,10 +796,9 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
           }
         }
       } catch (err) {
-        // Ignore intentional aborts (user navigated away or sent a new message)
         if (err instanceof Error && err.name === "AbortError") return;
-        setFailCount(c => c + 1);
-        console.error("[Oracle UI] Stream error:", err);
+        setFailCount((c) => c + 1);
+        Sentry.captureException(err, { tags: { feature: "oracle", action: "stream" } });
         accumulated =
           locale === "sl"
             ? "Oj, počakajte hip — šel sem v klet po eno dobro. Poskusite znova čez trenutek. *Ker lepa beseda lepo mesto najde.*"
@@ -543,7 +807,6 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
         clearTimeout(timeoutId);
         setIsLoading(false);
         setStatusPhase(null);
-        // Finalize the last assistant message
         setMessages((prev) => {
           const next = [...prev];
           const last = next[next.length - 1];
@@ -552,12 +815,12 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
               ...last,
               content: accumulated,
               farmCards: farmCards.length > 0 ? farmCards : undefined,
+              roadTripHint: roadTripHint ?? undefined,
               isStreaming: false,
             };
           }
           return next;
         });
-        // B11: Persist final assistant response to session store
         if (accumulated) {
           oracleStore.addMessage({ role: "assistant", content: accumulated });
         }
@@ -573,61 +836,87 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
     }
   };
 
-  // Panel dimensions
-  const panelWidth  = isExpanded ? "min(680px, 96vw)" : "min(420px, 96vw)";
-  const panelHeight = isExpanded ? "min(700px, 85vh)" : "min(540px, 80vh)";
+  const panelWidth = isExpanded ? "min(680px, 96vw)" : "min(420px, 96vw)";
+  const panelHeight = isExpanded ? "min(720px, 85vh)" : "min(580px, 82vh)";
 
   const statusLabel = statusPhase
-    ? (STATUS_LABELS[statusPhase]?.[locale] ?? "...")
+    ? STATUS_LABELS[statusPhase]?.[locale] ?? "..."
     : null;
+
+  const userHasSpoken = messages.filter((m) => m.role === "user").length > 0;
 
   return (
     <>
-      {/* ── Floating trigger button ──────────────────────────────────────────── */}
+      {/* ── Floating trigger — wooden stamp FAB ────────────────────────────── */}
       <AnimatePresence>
         {!isOpen && (
-          <motion.button
-            key="oracle-fab"
+          <motion.div
+            key="oracle-fab-wrap"
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 22 }}
-            onClick={() => {
-              if (isCircuitBroken) return;
-              setIsOpen(true);
-            }}
-            className="fixed bottom-6 right-6 flex items-center gap-2.5 rounded-2xl px-5 py-3.5 text-white font-semibold text-sm shadow-2xl select-none"
-            style={{
-              zIndex: "var(--z-oracle)",
-              background: isCircuitBroken 
-                ? "rgba(100, 110, 100, 0.9)"
-                : `linear-gradient(135deg, ${lightCycle.accent}, ${lightCycle.accent}cc)`,
-              boxShadow: isCircuitBroken ? "none" : `0 8px 32px ${lightCycle.accent}55, 0 2px 8px rgba(0,0,0,0.15)`,
-              cursor: isCircuitBroken ? "not-allowed" : "pointer",
-            }}
-            aria-label="Vprašaj Jožeta"
+            className={`fixed ${fabPosition} flex items-end gap-3 select-none`}
+            style={{ zIndex: "var(--z-oracle)" }}
           >
-            {isCircuitBroken ? (
-              <>
-                <TreePine size={18} className="opacity-70" />
-                <span className="hidden sm:inline">Jože počiva</span>
-              </>
-            ) : (
-              <>
-                <Sparkles size={18} />
-                <span className="hidden sm:inline">Vprašaj Jožeta</span>
-                <span className="sm:hidden">Jože</span>
-
-                {/* Pulse ring */}
-                <motion.span
-                  className="absolute inset-0 rounded-2xl border-2"
-                  style={{ borderColor: lightCycle.accent }}
-                  animate={{ scale: [1, 1.15], opacity: [0.6, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-                />
-              </>
+            {/* Handwritten callout — hidden on map & mobile to save space */}
+            {!isMapPage && !isCircuitBroken && (
+              <motion.div
+                initial={{ opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 }}
+                className="hidden md:block mb-2 mr-1 card-polaroid journal-tilt-l px-4 py-2 bg-white"
+                style={{ transformOrigin: "bottom right" }}
+              >
+                <span className="tape-strip tape-strip-tr" aria-hidden="true" />
+                <p className="handwritten text-forest-800 text-lg leading-none whitespace-nowrap">
+                  Vprašaj Jožeta
+                </p>
+                <p className="text-[10px] uppercase tracking-[0.14em] text-earth-500 mt-1 text-center">
+                  {lightCycle.name}
+                </p>
+              </motion.div>
             )}
-          </motion.button>
+
+            <motion.button
+              onClick={() => {
+                if (isCircuitBroken) return;
+                setIsOpen(true);
+              }}
+              whileHover={{ scale: 1.05, rotate: -3 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative h-14 w-14 rounded-full flex items-center justify-center firefly-glow"
+              style={{
+                background: isCircuitBroken
+                  ? "radial-gradient(circle at 30% 30%, #8a8a80, #5a5a50)"
+                  : `radial-gradient(circle at 30% 30%, ${lightCycle.accent}ee, ${lightCycle.accent}aa 60%, ${lightCycle.accent}cc 100%)`,
+                boxShadow: isCircuitBroken
+                  ? "0 6px 16px rgba(0,0,0,0.2)"
+                  : `0 10px 28px ${lightCycle.accent}55, inset 0 2px 3px rgba(255,255,255,0.25), inset 0 -3px 6px rgba(0,0,0,0.22)`,
+                cursor: isCircuitBroken ? "not-allowed" : "pointer",
+              }}
+              aria-label="Vprašaj Jožeta"
+            >
+              {isCircuitBroken ? (
+                <Leaf size={22} className="text-white/70" />
+              ) : (
+                <>
+                  {/* Portrait fills the FAB — the button's radial gradient
+                      already provides the backdrop. */}
+                  <div className="w-full h-full rounded-full overflow-hidden">
+                    <JozePortrait size={56} />
+                  </div>
+                  {/* Pulse ring */}
+                  <motion.span
+                    className="absolute inset-0 rounded-full border-2 pointer-events-none"
+                    style={{ borderColor: lightCycle.accent }}
+                    animate={{ scale: [1, 1.35], opacity: [0.5, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+                  />
+                </>
+              )}
+            </motion.button>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -636,44 +925,46 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
         {isOpen && (
           <motion.div
             key="oracle-panel"
-            initial={{ opacity: 0, scale: 0.92, y: 24, transformOrigin: "bottom right" }}
+            initial={{ opacity: 0, scale: 0.92, y: 24, transformOrigin: panelOrigin }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 24 }}
             transition={{ type: "spring", stiffness: 280, damping: 26 }}
-            className="fixed bottom-6 right-6 flex flex-col overflow-hidden rounded-3xl shadow-2xl"
+            className={`fixed ${panelPosition} flex flex-col overflow-hidden rounded-[28px]`}
             style={{
               zIndex: "var(--z-oracle)",
               width: panelWidth,
               height: panelHeight,
-              background: "rgba(255,255,255,0.72)",
-              backdropFilter: "blur(32px) saturate(180%)",
-              WebkitBackdropFilter: "blur(32px) saturate(180%)",
-              border: "1px solid rgba(255,255,255,0.45)",
-              boxShadow: `0 32px 80px rgba(0,0,0,0.14), 0 0 0 1px rgba(255,255,255,0.25), 0 0 64px ${lightCycle.accent}22`,
+              background: "#fdf8ee",
+              border: "1px solid rgba(45,90,39,0.18)",
+              boxShadow: `
+                0 40px 100px rgba(0,0,0,0.18),
+                0 12px 32px rgba(45,90,39,0.14),
+                0 0 0 1px rgba(255,255,255,0.4) inset,
+                0 0 80px ${lightCycle.accent}20`,
             }}
           >
-            {/* ── Header ──────────────────────────────────────────────────── */}
+            {/* Paper grain texture overlay */}
             <div
-              className="flex items-center gap-3 px-5 py-4 flex-shrink-0"
+              aria-hidden="true"
+              className="texture-paper absolute inset-0 rounded-[28px] pointer-events-none"
+            />
+
+            {/* ── Header — watercolor wash + wax seal ─────────────────────── */}
+            <div
+              className="relative flex items-center gap-3 px-5 pt-5 pb-4 flex-shrink-0"
               style={{
-                background: `linear-gradient(135deg, ${lightCycle.accent}18, ${lightCycle.accent}08)`,
-                borderBottom: "1px solid rgba(255,255,255,0.35)",
+                background: `linear-gradient(135deg, ${lightCycle.wash}dd 0%, ${lightCycle.wash}66 70%, transparent 100%)`,
               }}
             >
-              {/* Oracle avatar */}
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-inner"
-                style={{ background: `linear-gradient(135deg, ${lightCycle.accent}, ${lightCycle.accent}aa)` }}
-              >
-                <TreePine size={18} className="text-white" />
-              </div>
+              <JozeAvatar accent={lightCycle.accent} size={44} />
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-bold text-forest-900">Jože</p>
-                  {/* Light cycle indicator */}
+                  <p className="font-display text-lg font-black text-forest-900 leading-none">
+                    Jože
+                  </p>
                   <span
-                    className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
+                    className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white shadow-sm"
                     style={{ background: lightCycle.accent }}
                   >
                     {lightCycle.name}
@@ -686,9 +977,8 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
                       initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -4 }}
-                      className="text-xs text-earth-500 flex items-center gap-1.5"
+                      className="handwritten text-forest-700 text-base leading-tight mt-0.5"
                     >
-                      <Loader2 size={10} className="animate-spin" />
                       {statusLabel}
                     </motion.p>
                   ) : (
@@ -696,25 +986,31 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
                       key="idle"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="text-xs text-earth-500"
+                      className="handwritten text-forest-700/90 text-base leading-tight mt-0.5"
                     >
-                      {locale === "sl" ? "Vaš kmečki vodnik" : "Your countryside guide"}
+                      {locale === "sl"
+                        ? "vaš kmečki vodnik"
+                        : locale === "de"
+                        ? "Ihr Reiseführer"
+                        : locale === "it"
+                        ? "la vostra guida"
+                        : "your countryside guide"}
                     </motion.p>
                   )}
                 </AnimatePresence>
               </div>
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 relative z-10">
                 <button
                   onClick={() => setIsExpanded((e) => !e)}
-                  className="p-1.5 rounded-lg text-earth-400 hover:text-forest-700 hover:bg-white/60 transition-all"
+                  className="p-1.5 rounded-lg text-earth-500 hover:text-forest-700 hover:bg-white/70 transition-all"
                   aria-label={isExpanded ? "Zmanjšaj" : "Razširi"}
                 >
                   {isExpanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
                 </button>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="p-1.5 rounded-lg text-earth-400 hover:text-forest-700 hover:bg-white/60 transition-all"
+                  className="p-1.5 rounded-lg text-earth-500 hover:text-forest-700 hover:bg-white/70 transition-all"
                   aria-label="Zapri"
                 >
                   <X size={15} />
@@ -722,19 +1018,40 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
               </div>
             </div>
 
+            {/* Ink ripple divider */}
+            <div className="relative flex-shrink-0 px-5 -mt-1">
+              <InkDivider color={lightCycle.accent} />
+            </div>
+
+            {/* Map context pill — shown when Oracle has found farms with coords */}
+            <AnimatePresence>
+              {mapContext && mapContext.farms.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  className="flex-shrink-0 px-4 pt-1 pb-0"
+                >
+                  <Link
+                    href={`/zemljevid?farms=${mapContext.farms.map((f) => f.slug).join(",")}`}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-forest-50 border border-forest-200/70 px-3 py-1 text-[10px] font-semibold text-forest-700 hover:bg-forest-100 transition-colors"
+                  >
+                    <MapPin size={10} />
+                    Prikaži {mapContext.farms.length} {mapContext.farms.length === 1 ? "kmetijo" : "kmetije"} na zemljevidu
+                  </Link>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* ── Messages ────────────────────────────────────────────────── */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 scrollbar-thin">
+            <div className="relative flex-1 overflow-y-auto px-4 py-4 space-y-4 scrollbar-thin">
               <AnimatePresence initial={false}>
                 {messages.map((msg, i) => (
-                  <MessageBubble
-                    key={i}
-                    msg={msg}
-                    accentColor={lightCycle.accent}
-                  />
+                  <MessageBubble key={i} msg={msg} accentColor={lightCycle.accent} />
                 ))}
               </AnimatePresence>
 
-              {/* "Try again" — shown when server emits a retryable error event */}
+              {/* Retry prompt */}
               <AnimatePresence>
                 {retryInfo?.retryable && !isLoading && (
                   <motion.div
@@ -745,12 +1062,28 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
                   >
                     <button
                       onClick={() => sendMessage(retryInfo.lastMessage)}
-                      className="flex items-center gap-2 rounded-full bg-white/80 hover:bg-white border border-earth-200 hover:border-forest-300 px-4 py-2 text-xs font-semibold text-earth-700 hover:text-forest-800 shadow-sm transition-all"
+                      className="flex items-center gap-2 rounded-full bg-white hover:bg-forest-50 border border-earth-200 hover:border-forest-300 px-4 py-2 text-xs font-semibold text-earth-700 hover:text-forest-800 shadow-sm transition-all"
                     >
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      <svg
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
                       </svg>
-                      {locale === "sl" ? "Poskusi znova" : locale === "de" ? "Erneut versuchen" : locale === "it" ? "Riprova" : "Try again"}
+                      {locale === "sl"
+                        ? "Poskusi znova"
+                        : locale === "de"
+                        ? "Erneut versuchen"
+                        : locale === "it"
+                        ? "Riprova"
+                        : "Try again"}
                     </button>
                   </motion.div>
                 )}
@@ -759,24 +1092,28 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* ── Suggestion chips (only shown when no messages from user) ─ */}
+            {/* ── Suggestion chips (only before user's first message) ─ */}
             <AnimatePresence>
-              {messages.filter((m) => m.role === "user").length === 0 && (
+              {!userHasSpoken && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="px-4 pb-2 flex flex-wrap gap-2"
+                  className="relative px-4 pb-2 flex flex-wrap gap-2"
                 >
-                  {SUGGESTIONS[locale].map((s) => (
-                    <button
+                  {SUGGESTIONS[locale].map((s, i) => (
+                    <motion.button
                       key={s}
                       onClick={() => sendMessage(s)}
                       disabled={isLoading}
-                      className="rounded-full bg-white/70 hover:bg-white border border-earth-200 hover:border-forest-300 px-3 py-1.5 text-xs text-earth-700 hover:text-forest-800 transition-all duration-200 disabled:opacity-50"
+                      whileHover={{ y: -2, rotate: 0 }}
+                      whileTap={{ scale: 0.96 }}
+                      className={`rounded-full bg-white hover:bg-amber-50 border border-earth-200 hover:border-amber-300 px-3 py-1.5 text-xs text-earth-700 hover:text-forest-800 font-medium shadow-sm transition-colors disabled:opacity-50 ${
+                        i % 2 === 0 ? "rotate-[-1deg]" : "rotate-[0.8deg]"
+                      }`}
                     >
                       {s}
-                    </button>
+                    </motion.button>
                   ))}
                 </motion.div>
               )}
@@ -784,14 +1121,17 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
 
             {/* ── Input area ──────────────────────────────────────────────── */}
             <div
-              className="flex-shrink-0 px-4 pb-4 pt-3"
-              style={{ borderTop: "1px solid rgba(255,255,255,0.4)" }}
+              className="relative flex-shrink-0 px-4 pb-4 pt-3"
+              style={{ borderTop: "1px dashed rgba(45,90,39,0.18)" }}
             >
               <div
                 className="flex items-end gap-2 rounded-2xl px-4 py-3"
                 style={{
-                  background: "rgba(255,255,255,0.65)",
-                  border: `1.5px solid ${isLoading ? lightCycle.accent + "66" : "rgba(255,255,255,0.5)"}`,
+                  background: "rgba(255,255,255,0.96)",
+                  border: `1.5px solid ${
+                    isLoading ? lightCycle.accent + "99" : "rgba(45,90,39,0.2)"
+                  }`,
+                  boxShadow: "inset 0 1px 2px rgba(0,0,0,0.04)",
                   transition: "border-color 0.3s",
                 }}
               >
@@ -803,8 +1143,8 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
                   disabled={isLoading || isCircuitBroken}
                   rows={1}
                   placeholder={
-                    isCircuitBroken 
-                      ? "Jože počiva..." 
+                    isCircuitBroken
+                      ? "Jože počiva..."
                       : locale === "sl"
                       ? "Povejte mi, kam vas srce vleče..."
                       : locale === "de"
@@ -813,32 +1153,43 @@ export function OracleConcierge({ locale = "sl" }: { locale?: Locale }) {
                       ? "Dove vi porta il cuore..."
                       : "Tell me, where does your heart pull you..."
                   }
-                  className="flex-1 resize-none bg-transparent text-sm text-forest-900 placeholder:text-earth-400 focus:outline-none leading-relaxed max-h-28 overflow-y-auto"
+                  className="flex-1 resize-none bg-transparent text-sm text-forest-900 placeholder:text-earth-500 focus:outline-none leading-relaxed max-h-28 overflow-y-auto"
                   style={{ scrollbarWidth: "none" }}
                 />
 
                 <motion.button
                   onClick={() => sendMessage(input)}
                   disabled={isLoading || !input.trim() || isCircuitBroken}
-                  whileTap={{ scale: 0.9 }}
-                  className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-white disabled:opacity-40 transition-all"
+                  whileTap={{ scale: 0.88, rotate: -6 }}
+                  whileHover={input.trim() && !isLoading ? { scale: 1.05 } : undefined}
+                  className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white disabled:opacity-40 transition-all relative"
                   style={{
-                    background: input.trim() && !isLoading && !isCircuitBroken
-                      ? lightCycle.accent
-                      : "#b0b8b0",
+                    background:
+                      input.trim() && !isLoading && !isCircuitBroken
+                        ? `radial-gradient(circle at 30% 30%, ${lightCycle.accent}ee, ${lightCycle.accent}aa 60%, ${lightCycle.accent}cc 100%)`
+                        : "radial-gradient(circle at 30% 30%, #b7beb7, #8a938a)",
+                    boxShadow:
+                      input.trim() && !isLoading && !isCircuitBroken
+                        ? `0 4px 10px ${lightCycle.accent}55, inset 0 1px 2px rgba(255,255,255,0.3), inset 0 -2px 3px rgba(0,0,0,0.2)`
+                        : "0 2px 4px rgba(0,0,0,0.1)",
                   }}
                   aria-label="Pošlji"
                 >
                   {isLoading ? (
-                    <Loader2 size={15} className="animate-spin" />
+                    <motion.span
+                      className="block w-4 h-4 border-2 border-white/50 border-t-white rounded-full"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 0.9, repeat: Infinity, ease: "linear" }}
+                    />
                   ) : (
-                    <Send size={14} />
+                    <Send size={15} />
                   )}
                 </motion.button>
               </div>
 
-              <p className="text-center text-[10px] text-earth-400 mt-2">
-                AI · NaKmetiji.si · {new Date().getFullYear()}
+              {/* Handwritten signature footer */}
+              <p className="handwritten text-center text-earth-500 text-base mt-2 leading-none">
+                — z ljubeznijo, Jože
               </p>
             </div>
           </motion.div>

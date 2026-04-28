@@ -115,7 +115,7 @@ interface VibeState {
 const MAX_HISTORY = 30;
 const DOMINANCE_THRESHOLD = 3; // Min score before a vibe can become dominant
 const RECENCY_BOOST = 1.5; // Score per tag match for most recent view
-// BASE_SCORE = 1 (implicit default weight for older views)
+const DECAY_FACTOR = 0.95; // Applied per view so stale interests fade over time
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -163,11 +163,15 @@ export const useVibeStore = create<VibeState>()(
         const recentViews = state.viewHistory.slice(-5);
         if (recentViews.includes(slug)) return;
 
-        // Collect all tags from both sources
-        const allTags = [...vibeTags, ...dozivetkaSlugs];
-
-        // Map to VibeTag and accumulate scores
+        // Apply decay to every score BEFORE adding new signals so stale
+        // interests fade away instead of accumulating indefinitely.
         const newScores = { ...state.scores };
+        for (const tag of VIBE_TAGS) {
+          newScores[tag] = newScores[tag] * DECAY_FACTOR;
+        }
+
+        // Accumulate new signal from this view.
+        const allTags = [...vibeTags, ...dozivetkaSlugs];
         for (const tag of allTags) {
           const mapped = TAG_MAPPING[tag.toLowerCase()];
           if (mapped) {
@@ -177,12 +181,11 @@ export const useVibeStore = create<VibeState>()(
           }
         }
 
-        // Apply light decay to all scores (keeps recency relevant)
+        // Round to 2 decimals for stable persistence.
         for (const tag of VIBE_TAGS) {
           newScores[tag] = Math.round(newScores[tag] * 100) / 100;
         }
 
-        // Update history
         const newHistory = [...state.viewHistory, slug].slice(-MAX_HISTORY);
 
         set({

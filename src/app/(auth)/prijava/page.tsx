@@ -20,6 +20,9 @@ function PrijavaForm() {
   const [geslo, setGeslo] = useState("");
   const [pokaziGeslo, setPokazíGeslo] = useState(false);
   const [napaka, setNapaka] = useState<string | null>(null);
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaCode, setMfaCode] = useState("");
+  const [factorId, setFactorId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -28,7 +31,7 @@ function PrijavaForm() {
 
     startTransition(async () => {
       const supabase = createSupabaseBrowser();
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: geslo,
       });
@@ -44,9 +47,92 @@ function PrijavaForm() {
         return;
       }
 
+      // Preveri MFA
+      const mfa = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (mfa.data && mfa.data.nextLevel === "aal2" && mfa.data.currentLevel === "aal1") {
+        // Račun zahteva MFA
+        const factors = await supabase.auth.mfa.listFactors();
+        const totpFactor = factors.data?.totp[0];
+        if (totpFactor) {
+          setFactorId(totpFactor.id);
+          setMfaRequired(true);
+          return;
+        }
+      }
+
       router.push(redirect);
       router.refresh();
     });
+  }
+
+  async function handleMfaSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!factorId) return;
+    setNapaka(null);
+
+    startTransition(async () => {
+      const supabase = createSupabaseBrowser();
+      try {
+        const challenge = await supabase.auth.mfa.challenge({ factorId });
+        if (challenge.error) throw challenge.error;
+
+        const verify = await supabase.auth.mfa.verify({
+          factorId,
+          challengeId: challenge.data.id,
+          code: mfaCode,
+        });
+        
+        if (verify.error) throw verify.error;
+
+        router.push(redirect);
+        router.refresh();
+      } catch (err: any) {
+        setNapaka("Neveljavna MFA koda.");
+      }
+    });
+  }
+
+  if (mfaRequired) {
+    return (
+      <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-forest-500 flex items-center justify-center">
+              <Lock size={20} className="text-white" />
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-1">Dvostopenjska prijava</h1>
+          <p className="text-white/60 text-sm">Vnesite 6-mestno kodo iz aplikacije</p>
+        </div>
+
+        <form onSubmit={handleMfaSubmit} className="space-y-4">
+          <div>
+            <input
+              type="text"
+              value={mfaCode}
+              onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              required
+              placeholder="123456"
+              className="w-full py-3 text-center text-xl tracking-[0.3em] font-mono bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-forest-400 focus:ring-1 focus:ring-forest-400"
+            />
+          </div>
+
+          {napaka && (
+            <div className="bg-red-500/20 border border-red-500/40 rounded-xl px-4 py-3 text-sm text-red-200 text-center">
+              {napaka}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={isPending || mfaCode.length < 6}
+            className="w-full py-3 bg-forest-500 hover:bg-forest-400 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+          >
+            {isPending ? <Loader2 size={16} className="animate-spin" /> : "Potrdi kodo"}
+          </button>
+        </form>
+      </div>
+    );
   }
 
   return (

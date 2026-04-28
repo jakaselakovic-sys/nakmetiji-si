@@ -12,6 +12,7 @@ import { AnalyticsView } from "./views/AnalyticsView";
 import { SettingsView } from "./views/SettingsView";
 import { UrediKmetijoView } from "./views/UrediKmetijoView";
 import { MagicVendorSuite } from "@/components/vendor/MagicVendorSuite";
+import { OnboardingChecklist } from "@/components/dashboard/OnboardingChecklist";
 
 type DashboardTab = "pregled" | "uredi" | "analitika" | "ai-orodja" | "nastavitve";
 
@@ -248,6 +249,13 @@ export function DashboardClient({ userEmail, profilIme, vloga, kmetija, rezervac
 
         {/* View content */}
         <div className="px-6 lg:px-10 py-8 max-w-4xl">
+          {activeTab === "pregled" && vloga !== "gost" && (
+            <OnboardingChecklist
+              kmetija={kmetija}
+              dozivetjaCount={izbranaDozivetjaIds.length}
+              onJumpToTab={(tab) => setActiveTab(tab)}
+            />
+          )}
           {activeTab === "pregled" && (
             <PregledView
               kmetijaId={kmetija?.id ?? null}

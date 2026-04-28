@@ -18,7 +18,6 @@ import { createClient } from "@supabase/supabase-js";
 import { posljiAvtoPreklic } from "@/lib/email";
 import * as Sentry from "@sentry/nextjs";
 
-export const runtime = "nodejs";
 export const maxDuration = 30;
 
 interface CancelledBooking {
