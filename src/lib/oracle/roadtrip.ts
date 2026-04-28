@@ -364,7 +364,7 @@ function findBufferStop(
 function twoOptImprove(farms: RawFarm[]): RawFarm[] {
   if (farms.length <= 2) return farms;
   const n = farms.length;
-  let result = [...farms];
+  const result = [...farms];
   const nodeAt = (i: number) =>
     i >= 0 && i < n
       ? { lat: result[i].lat!, lng: result[i].lng! }
