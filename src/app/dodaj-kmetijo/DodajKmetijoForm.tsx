@@ -4,22 +4,23 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   TreePine, MapPin, Phone, Globe, ChevronRight, ChevronLeft,
-  Loader2, CheckCircle,
+  Loader2, CheckCircle, Sparkles,
 } from "lucide-react";
 import { ustvariKmetijo } from "@/lib/actions/kmetije";
-import type { Dozivetje, Regija } from "@/types/database";
-import { REGIJA_LABELS, REGIJE } from "@/types/database";
+import type { Dozivetje, Regija, LastnostKey } from "@/types/database";
+import { REGIJA_LABELS, REGIJE, LASTNOSTI, LASTNOSTI_LABELS } from "@/types/database";
 
 interface Props {
   dozivetja: Dozivetje[];
 }
 
-type Korak = 1 | 2 | 3;
+type Korak = 1 | 2 | 3 | 4;
 
 const KORAKI = [
   { n: 1, label: "Osnovno" },
   { n: 2, label: "Lokacija" },
-  { n: 3, label: "Kontakt" },
+  { n: 3, label: "Lastnosti" },
+  { n: 4, label: "Kontakt" },
 ];
 
 export function DodajKmetijoForm({ dozivetja }: Props) {
@@ -40,8 +41,14 @@ export function DodajKmetijoForm({ dozivetja }: Props) {
   const [naslov, setNaslov] = useState("");
   const [obcina, setObcina] = useState("");
   const [postnaStevilka, setPostnaStevilka] = useState("");
+  const [latStr, setLatStr] = useState("");
+  const [lngStr, setLngStr] = useState("");
 
-  // Korak 3 — kontakt
+  // Korak 3 — lastnosti & posebna ponudba
+  const [lastnosti, setLastnosti] = useState<LastnostKey[]>([]);
+  const [posebnePonudbe, setPosebnePonudbe] = useState("");
+
+  // Korak 4 — kontakt
   const [telefon, setTelefon] = useState("");
   const [email, setEmail] = useState("");
   const [spletnaStran, setSpletnaStan] = useState("");
@@ -52,13 +59,40 @@ export function DodajKmetijoForm({ dozivetja }: Props) {
     );
   }
 
+  function toggleLastnost(key: LastnostKey) {
+    setLastnosti((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  }
+
   function naslednji() {
     setNapaka(null);
     if (korak === 1) {
       if (!ime.trim()) { setNapaka("Vnesite ime kmetije."); return; }
       if (!opis.trim()) { setNapaka("Vnesite opis kmetije."); return; }
     }
-    setKorak((k) => (Math.min(k + 1, 3) as Korak));
+    if (korak === 2) {
+      // Validate coords if provided (both or neither)
+      const hasLat = latStr.trim().length > 0;
+      const hasLng = lngStr.trim().length > 0;
+      if (hasLat !== hasLng) {
+        setNapaka("Vnesite obe koordinati (širina + dolžina) ali pustite obe prazni.");
+        return;
+      }
+      if (hasLat && hasLng) {
+        const lat = parseFloat(latStr);
+        const lng = parseFloat(lngStr);
+        if (Number.isNaN(lat) || lat < 45 || lat > 47) {
+          setNapaka("Geografska širina mora biti med 45 in 47 (Slovenija).");
+          return;
+        }
+        if (Number.isNaN(lng) || lng < 13 || lng > 17) {
+          setNapaka("Geografska dolžina mora biti med 13 in 17 (Slovenija).");
+          return;
+        }
+      }
+    }
+    setKorak((k) => (Math.min(k + 1, 4) as Korak));
   }
 
   function prejsnji() {
@@ -72,6 +106,9 @@ export function DodajKmetijoForm({ dozivetja }: Props) {
     setNapaka(null);
 
     startTransition(async () => {
+      const lat = latStr.trim() ? parseFloat(latStr) : null;
+      const lng = lngStr.trim() ? parseFloat(lngStr) : null;
+
       const rezultat = await ustvariKmetijo({
         ime: ime.trim(),
         kratki_opis: kratkiOpis.trim(),
@@ -84,6 +121,10 @@ export function DodajKmetijoForm({ dozivetja }: Props) {
         kontakt_email: email.trim(),
         kontakt_spletna_stran: spletnaStran.trim(),
         dozivetja_ids: izbranaDozivja,
+        lastnosti,
+        posebne_ponudbe: posebnePonudbe.trim() || undefined,
+        lat: lat !== null && !Number.isNaN(lat) ? lat : null,
+        lng: lng !== null && !Number.isNaN(lng) ? lng : null,
       });
 
       if (!rezultat.uspeh) {
@@ -285,14 +326,108 @@ export function DodajKmetijoForm({ dozivetja }: Props) {
             </div>
           </div>
 
-          <p className="text-xs text-earth-400 bg-earth-50 rounded-xl px-4 py-3">
-            GPS koordinate bo administrator nastavil ob pregledu vaše vloge.
-          </p>
+          <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 space-y-3">
+            <div>
+              <p className="text-sm font-bold text-forest-900 mb-1">GPS koordinate (priporočeno)</p>
+              <p className="text-xs text-earth-600">
+                Najdite svoj naslov na <a href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer" className="text-forest-700 underline decoration-dotted">Google Maps</a>,
+                desni klik na pin → kliknite koordinate, da jih kopirate. Format: 46.3842, 13.9738
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-earth-500 mb-1">
+                  Geografska širina (lat)
+                </label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={latStr}
+                  onChange={(e) => setLatStr(e.target.value)}
+                  placeholder="46.3842"
+                  className="w-full px-3 py-2 border border-earth-300 rounded-lg text-sm bg-white focus:outline-none focus:border-forest-400 focus:ring-1 focus:ring-forest-400"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-earth-500 mb-1">
+                  Geografska dolžina (lng)
+                </label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={lngStr}
+                  onChange={(e) => setLngStr(e.target.value)}
+                  placeholder="13.9738"
+                  className="w-full px-3 py-2 border border-earth-300 rounded-lg text-sm bg-white focus:outline-none focus:border-forest-400 focus:ring-1 focus:ring-forest-400"
+                />
+              </div>
+            </div>
+            <p className="text-[11px] text-earth-500">
+              Brez koordinat: kmetija se ne bo prikazala na zemljevidu in v road-trip načrtih.
+            </p>
+          </div>
         </div>
       )}
 
-      {/* ── Korak 3: Kontakt ──────────────────────────────────────────── */}
+      {/* ── Korak 3: Lastnosti & posebna ponudba ──────────────────────── */}
       {korak === 3 && (
+        <div className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-earth-700 mb-2">
+              Lastnosti kmetije
+            </label>
+            <p className="text-xs text-earth-500 mb-3">
+              Označite, kar ponujate. Te lastnosti Jože uporablja pri priporočilih.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {LASTNOSTI.map((key) => {
+                const meta = LASTNOSTI_LABELS[key];
+                const checked = lastnosti.includes(key);
+                return (
+                  <label
+                    key={key}
+                    className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all text-sm ${
+                      checked
+                        ? "bg-emerald-50 border-emerald-300 text-emerald-900"
+                        : "bg-white border-earth-200 text-earth-700 hover:border-emerald-200"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="rounded border-earth-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 flex-shrink-0"
+                      checked={checked}
+                      onChange={() => toggleLastnost(key)}
+                    />
+                    <span className="text-base leading-none">{meta.icon}</span>
+                    <span className="font-medium leading-tight">{meta.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-earth-700 mb-1.5 flex items-center gap-1.5">
+              <Sparkles size={14} className="text-amber-600" />
+              Trenutna posebna ponudba <span className="text-earth-400 font-normal">(neobvezno)</span>
+            </label>
+            <textarea
+              value={posebnePonudbe}
+              onChange={(e) => setPosebnePonudbe(e.target.value)}
+              placeholder="Npr. Ta teden 10 % popust na nočitev s polpenzionom za pare …"
+              rows={3}
+              maxLength={400}
+              className="w-full px-4 py-3 border border-earth-300 rounded-xl text-sm bg-white focus:outline-none focus:border-forest-400 focus:ring-1 focus:ring-forest-400 resize-none"
+            />
+            <p className="text-[10px] text-earth-400 mt-1">
+              {posebnePonudbe.length} / 400 znakov · Lahko spremenite kadarkoli iz nadzorne plošče.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Korak 4: Kontakt ──────────────────────────────────────────── */}
+      {korak === 4 && (
         <div className="space-y-5">
           <div>
             <label className="block text-sm font-medium text-earth-700 mb-1.5">
@@ -367,7 +502,7 @@ export function DodajKmetijoForm({ dozivetja }: Props) {
           <div />
         )}
 
-        {korak < 3 ? (
+        {korak < 4 ? (
           <button
             type="button"
             onClick={naslednji}

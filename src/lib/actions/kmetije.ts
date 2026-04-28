@@ -208,6 +208,10 @@ export async function ustvariKmetijo(vhod: {
   kontakt_email: string;
   kontakt_spletna_stran: string;
   dozivetja_ids: string[];
+  lastnosti?: string[];
+  posebne_ponudbe?: string;
+  lat?: number | null;
+  lng?: number | null;
 }): Promise<{ uspeh: true; slug: string } | { uspeh: false; napaka: string }> {
   const supabase = await createSupabaseServer();
 
@@ -241,6 +245,10 @@ export async function ustvariKmetijo(vhod: {
       naslov: vhod.naslov || null,
       obcina: vhod.obcina || null,
       postna_stevilka: vhod.postna_stevilka || null,
+      lat: vhod.lat ?? null,
+      lng: vhod.lng ?? null,
+      lastnosti: vhod.lastnosti ?? [],
+      posebne_ponudbe: vhod.posebne_ponudbe || null,
       kontaktni_podatki: kontaktniPodatki,
       slug,
       lastnik_id: user.id,
@@ -339,6 +347,10 @@ export async function posodobiKmetijo(
     iban?: string | null;
     bic?: string | null;
     dozivetja_ids?: string[];
+    lastnosti?: string[];
+    posebne_ponudbe?: string | null;
+    lat?: number | null;
+    lng?: number | null;
   }
 ): Promise<{ ok: boolean; napaka?: string }> {
   const supabase = await createSupabaseServer();
@@ -379,6 +391,10 @@ export async function posodobiKmetijo(
   if (vhod.max_gostov !== undefined) posodobitev.max_gostov = vhod.max_gostov;
   if (vhod.iban !== undefined) posodobitev.iban = vhod.iban || null;
   if (vhod.bic !== undefined) posodobitev.bic = vhod.bic || null;
+  if (vhod.lastnosti !== undefined) posodobitev.lastnosti = vhod.lastnosti;
+  if (vhod.posebne_ponudbe !== undefined) posodobitev.posebne_ponudbe = vhod.posebne_ponudbe || null;
+  if (vhod.lat !== undefined) posodobitev.lat = vhod.lat;
+  if (vhod.lng !== undefined) posodobitev.lng = vhod.lng;
 
   const { error } = await supabase
     .from("kmetije")

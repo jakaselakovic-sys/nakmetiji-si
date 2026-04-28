@@ -19,10 +19,14 @@ import {
 import {
   REGIJE,
   REGIJA_LABELS,
+  LASTNOSTI,
+  LASTNOSTI_LABELS,
   type Kmetija,
   type Dozivetje,
   type Regija,
+  type LastnostKey,
 } from "@/types/database";
+import { FarmRewardsEditor } from "@/components/dashboard/FarmRewardsEditor";
 
 interface Props {
   kmetija: Kmetija;
@@ -107,9 +111,17 @@ export function UrediKmetijoView({ kmetija, vseDozivetja, izbranaDozivetjaIds }:
   const [iban, setIban] = useState(kmetija.iban ?? "");
   const [bic, setBic] = useState(kmetija.bic ?? "");
   const [dozivetja_ids, setDozivetjaIds] = useState<string[]>(izbranaDozivetjaIds);
+  const [lastnosti, setLastnosti] = useState<LastnostKey[]>(
+    (kmetija.lastnosti ?? []) as LastnostKey[],
+  );
+  const [posebne_ponudbe, setPosebnePonudbe] = useState(kmetija.posebne_ponudbe ?? "");
 
   function toggleDozivetje(id: string) {
     setDozivetjaIds((prev) => prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]);
+  }
+
+  function toggleLastnost(key: LastnostKey) {
+    setLastnosti((prev) => prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]);
   }
 
   // ── Submit ─────────────────────────────────────────────────────────────────
@@ -179,6 +191,8 @@ export function UrediKmetijoView({ kmetija, vseDozivetja, izbranaDozivetjaIds }:
         iban:                  parsed.iban ?? "",
         bic:                   parsed.bic ?? "",
         dozivetja_ids,
+        lastnosti,
+        posebne_ponudbe:       posebne_ponudbe.trim() || null,
       });
 
       if (rezultat.ok) {
@@ -476,6 +490,69 @@ export function UrediKmetijoView({ kmetija, vseDozivetja, izbranaDozivetjaIds }:
           </div>
         </section>
       )}
+
+      {/* ── Lastnosti — concrete features Jože can quote ──────────────── */}
+      <section className="rounded-2xl bg-white border border-earth-200/60 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-earth-200/60">
+          <h3 className="text-base font-bold text-forest-900">Lastnosti kmetije</h3>
+          <p className="text-xs text-earth-500 mt-0.5">
+            Konkretne lastnosti, ki jih Jože uporablja pri priporočilih (npr. &laquo;Imajo bazen&raquo;).
+          </p>
+        </div>
+        <div className="px-6 py-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {LASTNOSTI.map((key) => {
+              const meta = LASTNOSTI_LABELS[key];
+              const checked = lastnosti.includes(key);
+              return (
+                <label
+                  key={key}
+                  className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all text-sm ${
+                    checked
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-900"
+                      : "bg-white border-earth-200 text-earth-700 hover:border-emerald-200"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="rounded border-earth-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 flex-shrink-0"
+                    checked={checked}
+                    onChange={() => toggleLastnost(key)}
+                  />
+                  <span className="text-base leading-none">{meta.icon}</span>
+                  <span className="font-medium leading-tight">{meta.label}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Posebna ponudba — free text the owner can update any time ── */}
+      <section className="rounded-2xl bg-white border border-earth-200/60 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-earth-200/60">
+          <h3 className="text-base font-bold text-forest-900">Trenutna posebna ponudba</h3>
+          <p className="text-xs text-earth-500 mt-0.5">
+            Sveža informacija, ki jo Jože omeni gostom (npr. &laquo;Ta teden pečemo kruh ob četrtkih&raquo;).
+          </p>
+        </div>
+        <div className="px-6 py-5">
+          <textarea
+            value={posebne_ponudbe}
+            onChange={(e) => setPosebnePonudbe(e.target.value)}
+            placeholder="Ta teden 10 % popust na nočitev s polpenzionom za pare …"
+            maxLength={400}
+            rows={3}
+            className={inputCls(false)}
+          />
+          <p className="text-[10px] text-earth-400 mt-1">
+            {posebne_ponudbe.length} / 400 znakov · Pustite prazno, če trenutno nimate ponudbe.
+          </p>
+        </div>
+      </section>
+
+      {/* ── Per-farm rewards editor ───────────────────────────────────── */}
+      <FarmRewardsEditor kmetijaId={kmetija.id} />
 
       {/* ── Global error / success ─────────────────────────────────────── */}
       {Object.keys(fieldErrors).length > 0 && (
