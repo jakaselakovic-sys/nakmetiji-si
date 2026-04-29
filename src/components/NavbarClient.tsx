@@ -13,11 +13,12 @@ import Link from "next/link";
 import { useState, useEffect, useTransition } from "react";
 import { motion, AnimatePresence, useSpring, useMotionValueEvent, useScroll } from "framer-motion";
 import {
-  Menu, X, Plus, Leaf, User, Shield, LayoutDashboard,
+  Menu, X, Plus, Search, User, Shield, LayoutDashboard,
   LogOut, Stamp, ChevronRight, Home, Map, BookOpen,
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabase/client";
+import { Logo } from "./Logo";
 
 interface Props {
   navLinks: { label: string; href: string }[];
@@ -125,44 +126,49 @@ export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
           <nav
             className={
               isMapPage
-                ? "relative flex items-center justify-between px-6 h-[60px] bg-white/85 backdrop-blur-xl border-b border-earth-200/60 shadow-[0_1px_0_rgba(0,0,0,0.03),0_8px_24px_-16px_rgba(45,90,39,0.18)] before:pointer-events-none before:absolute before:inset-x-0 before:-bottom-px before:h-px before:bg-gradient-to-r before:from-transparent before:via-forest-200/60 before:to-transparent"
-                : `glass-island flex items-center justify-between transition-all duration-500 ${scrolled ? "px-4 py-2" : "px-6 py-3"}`
+                ? "relative flex items-center justify-between px-6 h-[60px] bg-white/85 backdrop-blur-xl border-b border-earth-200/60 shadow-[0_1px_0_rgba(0,0,0,0.03),0_8px_24px_-16px_rgba(45,90,39,0.18)]"
+                : `nav-pill flex items-center justify-between gap-3 transition-all duration-500 ${scrolled ? "px-3 py-2" : "px-4 py-2.5"}`
             }
+            style={!isMapPage ? {
+              background: "linear-gradient(180deg, #1f4d35 0%, #1a3a2a 100%)",
+              borderRadius: "999px",
+              border: "1px solid rgba(255,255,255,0.06)",
+              boxShadow: "0 12px 36px rgba(15,35,24,0.34), 0 2px 6px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.08)",
+            } : undefined}
           >
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
-              <div
-                className={`flex items-center justify-center rounded-2xl bg-forest-700 text-white shadow-md group-hover:bg-forest-600 transition-all duration-500 ${
-                  scrolled ? "h-8 w-8 rounded-xl" : "h-9 w-9"
+            {/* Search-bubble + logo cluster */}
+            <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0">
+              <span
+                className={`flex items-center justify-center rounded-full bg-white text-forest-800 shadow-sm transition-all duration-500 ${
+                  scrolled ? "h-8 w-8" : "h-9 w-9"
                 }`}
+                aria-hidden="true"
               >
-                <Leaf size={scrolled ? 15 : 17} strokeWidth={2.5} />
-              </div>
-              <div className="flex flex-col leading-none">
-                <span className={`font-bold tracking-tight text-forest-900 transition-all duration-500 ${
-                  scrolled ? "text-sm" : "text-base"
-                }`}>
-                  NaKmetiji
-                </span>
-                <span className={`uppercase tracking-[0.2em] font-medium text-forest-600/60 transition-all duration-500 ${
-                  scrolled ? "text-[7px]" : "text-[8px]"
-                }`}>
-                  Turistične kmetije
-                </span>
-              </div>
+                <Search size={scrolled ? 13 : 15} strokeWidth={2.5} />
+              </span>
+              {!isMapPage ? (
+                <Logo size={scrolled ? "sm" : "md"} variant="light" href={null} />
+              ) : (
+                <Logo size="sm" variant="dark" href={null} />
+              )}
             </Link>
 
             {/* Nav links */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`relative px-3 py-1.5 text-sm font-medium rounded-2xl transition-all duration-300 ${
-                    isActive(link.href)
-                      ? "text-forest-800 bg-forest-100/60"
-                      : "text-forest-700/70 hover:text-forest-800 hover:bg-forest-50/60"
+                  className={`relative px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-300 ${
+                    isMapPage
+                      ? isActive(link.href)
+                        ? "text-forest-800 bg-forest-100/60"
+                        : "text-forest-700/70 hover:text-forest-800 hover:bg-forest-50/60"
+                      : isActive(link.href)
+                        ? "text-white bg-white/15"
+                        : "text-cream/80 hover:text-white hover:bg-white/10"
                   }`}
+                  style={!isMapPage ? { color: isActive(link.href) ? "#fff" : "rgba(244,241,234,0.78)" } : undefined}
                 >
                   {link.label}
                 </Link>
@@ -174,9 +180,10 @@ export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
               {/* Dodaj kmetijo CTA */}
               <Link
                 href="/dodaj-kmetijo"
-                className="rounded-2xl px-4 py-2 text-sm font-semibold bg-forest-700 text-white hover:bg-forest-600 shadow-sm hover:shadow-md hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 inline-flex items-center gap-1.5"
+                className="rounded-full px-4 py-2 text-sm font-bold text-white shadow-md hover:shadow-lg hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 inline-flex items-center gap-1.5"
+                style={{ background: "linear-gradient(180deg, #2d8a56 0%, #2D5A27 100%)" }}
               >
-                <Plus size={14} strokeWidth={2.5} />
+                <Plus size={14} strokeWidth={2.8} />
                 Dodaj
               </Link>
 
@@ -185,7 +192,11 @@ export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
                 <div className="relative">
                   <button
                     onClick={(e) => { e.stopPropagation(); setUserMenuOpen(!userMenuOpen); }}
-                    className="flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm font-semibold border border-forest-200/60 text-forest-800 hover:bg-forest-50/60 transition-all"
+                    className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold transition-all ${
+                      isMapPage
+                        ? "border border-forest-200/60 text-forest-800 hover:bg-forest-50/60"
+                        : "text-cream/90 hover:text-white hover:bg-white/10 border border-white/15"
+                    }`}
                   >
                     {vloga === "super_admin" ? <Shield size={14} /> : <User size={14} />}
                     {vloga === "super_admin" ? "Admin" : "Račun"}
@@ -258,15 +269,13 @@ export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
                 <div className="flex items-center gap-1.5">
                   <Link
                     href="/prijava"
-                    className="rounded-2xl px-3 py-2 text-sm font-semibold text-forest-700 hover:bg-forest-50/60 transition-all duration-300"
+                    className={`rounded-full px-3 py-2 text-sm font-semibold transition-all duration-300 ${
+                      isMapPage
+                        ? "text-forest-700 hover:bg-forest-50/60"
+                        : "text-cream/85 hover:text-white hover:bg-white/10"
+                    }`}
                   >
                     Prijava
-                  </Link>
-                  <Link
-                    href="/registracija"
-                    className="rounded-2xl px-4 py-2 text-sm font-semibold border border-forest-200/60 text-forest-800 hover:bg-forest-50/60 transition-all duration-300"
-                  >
-                    Registracija
                   </Link>
                 </div>
               )}
@@ -291,14 +300,10 @@ export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
       >
         <nav className="flex items-center justify-between px-5 py-3">
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="flex items-center justify-center h-8 w-8 rounded-xl bg-forest-700 text-white shadow-md">
-              <Leaf size={15} strokeWidth={2.5} />
-            </div>
-            <span className={`font-bold tracking-tight transition-colors duration-500 ${
-              scrolled ? "text-forest-900" : "text-white"
-            }`}>
-              NaKmetiji
+            <span className="flex items-center justify-center h-8 w-8 rounded-full bg-white text-forest-800 shadow-sm">
+              <Search size={14} strokeWidth={2.5} />
             </span>
+            <Logo size="sm" variant={scrolled ? "dark" : "light"} href={null} />
           </Link>
 
           <button

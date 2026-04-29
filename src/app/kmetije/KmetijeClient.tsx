@@ -546,6 +546,7 @@ export function KmetijeClient({ initialKmetije, dozivetja }: Props) {
                       name: kmetija.ime,
                       tagline: kmetija.kratki_opis || undefined,
                       region: kmetija.regija,
+                      obcina: kmetija.obcina,
                       coverImageUrl: kmetija.naslovna_slika,
                       experiencesOffered: kmetija.dozivetja.map(
                         (d) => d.slug
@@ -553,6 +554,7 @@ export function KmetijeClient({ initialKmetije, dozivetja }: Props) {
                       rating: kmetija.ocena,
                       reviewCount: kmetija.stevilo_ocen,
                       isPremium: kmetija.premium,
+                      cenaNoc: kmetija.cena_noc,
                     }}
                   />
                 </motion.div>

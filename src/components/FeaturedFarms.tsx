@@ -8,7 +8,7 @@ import { ArrowRight } from "lucide-react";
 import { FarmCard } from "@/components/FarmCard";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { SectionHeader } from "@/components/ui";
-import { REGIJA_LABELS, type Kmetija, type Dozivetje, type Regija } from "@/types/database";
+import { type Kmetija, type Dozivetje } from "@/types/database";
 import type { ExperienceTag } from "@/types";
 
 interface KmetijaZDozivetji extends Kmetija {
@@ -73,12 +73,14 @@ export async function FeaturedFarms() {
                   slug: kmetija.slug,
                   name: kmetija.ime,
                   tagline: kmetija.kratki_opis || undefined,
-                  region: REGIJA_LABELS[kmetija.regija as Regija] ?? kmetija.regija,
+                  region: kmetija.regija,
+                  obcina: kmetija.obcina,
                   coverImageUrl: kmetija.naslovna_slika,
                   experiencesOffered: kmetija.dozivetja.map((d) => d.slug) as ExperienceTag[],
                   rating: kmetija.ocena,
                   reviewCount: kmetija.stevilo_ocen,
                   isPremium: kmetija.premium,
+                  cenaNoc: kmetija.cena_noc,
                 }}
               />
             ))}

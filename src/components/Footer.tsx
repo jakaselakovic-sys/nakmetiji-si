@@ -5,8 +5,9 @@
 // =============================================================================
 
 import Link from "next/link";
-import { Leaf, Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin, Phone } from "lucide-react";
 import { KronikaSubscribeWidget } from "@/components/KronikaSubscribeWidget";
+import { Logo } from "@/components/Logo";
 
 const NAV_SECTIONS = [
   {
@@ -54,13 +55,8 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-[1.2fr_repeat(3,1fr)] gap-12">
           {/* Brand + sign-off */}
           <div>
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/90 text-white shadow-lg shadow-emerald-500/20">
-                <Leaf size={18} strokeWidth={2.5} />
-              </div>
-              <span className="text-xl font-bold tracking-tight text-white font-display">
-                NaKmetiji
-              </span>
+            <div className="mb-4">
+              <Logo size="lg" variant="light" href="/" />
             </div>
             <p className="text-sm leading-relaxed text-white/70 max-w-xs mb-6">
               Vonj sveže pokošene trave, topel kruh iz krušne peči, ptičje

@@ -136,7 +136,10 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/zemljevid)",
       "Bash(npx next *)",
       "Bash(node -c scripts/grounding-audit.mjs)",
-      "Bash(npm --version)"
+      "Bash(npm --version)",
+      "Bash(git fetch *)",
+      "Bash(git pull *)",
+      "Bash(git stash *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\jakas\\Desktop\\nakmetiji\\src\\app",
