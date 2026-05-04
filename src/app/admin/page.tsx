@@ -46,7 +46,7 @@ export default async function AdminPage() {
 
     supabase
       .from("kmetije")
-      .select("id, ime, slug, regija, aktivna, premium, ocena, stevilo_ocen, ustvarjeno, lastnik_id")
+      .select("id, ime, slug, regija, aktivna, premium, paket, ocena, stevilo_ocen, ustvarjeno, lastnik_id")
       .order("ustvarjeno", { ascending: false }),
 
     supabase

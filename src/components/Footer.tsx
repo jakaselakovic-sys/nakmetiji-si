@@ -9,31 +9,6 @@ import { Mail, MapPin, Phone } from "lucide-react";
 import { KronikaSubscribeWidget } from "@/components/KronikaSubscribeWidget";
 import { Logo } from "@/components/Logo";
 
-const NAV_SECTIONS = [
-  {
-    title: "Odkrijte",
-    links: [
-      { href: "/kmetije", label: "Vse kmetije" },
-      { href: "/zemljevid", label: "Zemljevid" },
-      { href: "/pot", label: "Jožetov Road Trip" },
-      { href: "/green-passport", label: "Zeleni Potni List" },
-    ],
-  },
-  {
-    title: "Za lastnike",
-    links: [
-      { href: "/dodaj-kmetijo", label: "Dodaj kmetijo" },
-      { href: "/dashboard", label: "Nadzorna plošča" },
-    ],
-  },
-  {
-    title: "O nas",
-    links: [
-      { href: "/o-nas", label: "Naša zgodba" },
-      { href: "/pogoji-demo", label: "Pogoji uporabe" },
-    ],
-  },
-];
 
 export function Footer() {
   return (
@@ -52,45 +27,19 @@ export function Footer() {
 
       {/* ── Main footer ── */}
       <div className="relative mx-auto max-w-7xl px-6 py-20 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-[1.2fr_repeat(3,1fr)] gap-12">
-          {/* Brand + sign-off */}
-          <div>
-            <div className="mb-4">
-              <Logo size="lg" variant="light" href="/" />
-            </div>
-            <p className="text-sm leading-relaxed text-white/70 max-w-xs mb-6">
-              Vonj sveže pokošene trave, topel kruh iz krušne peči, ptičje
-              petje ob zori. To je Slovenija, ki jo varujemo.
-            </p>
-            <p className="handwritten text-2xl text-emerald-200/80 leading-snug max-w-xs mb-6">
-              Se vidimo med griči —
-              <span className="block text-emerald-300/90">Ekipa NaKmetiji</span>
-            </p>
-            <div className="max-w-xs">
-              <KronikaSubscribeWidget variant="dark" />
-            </div>
+        <div className="max-w-sm">
+          <div className="mb-4">
+            <Logo size="lg" variant="light" href="/" />
           </div>
-
-          {/* Navigation columns */}
-          {NAV_SECTIONS.map((section) => (
-            <div key={section.title}>
-              <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-emerald-300/70 mb-5">
-                {section.title}
-              </h3>
-              <ul className="space-y-3 text-sm">
-                {section.links.map((l) => (
-                  <li key={l.href}>
-                    <Link
-                      href={l.href}
-                      className="text-white/70 hover:text-white transition-colors"
-                    >
-                      {l.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <p className="text-sm leading-relaxed text-white/70 mb-6">
+            Vonj sveže pokošene trave, topel kruh iz krušne peči, ptičje
+            petje ob zori. To je Slovenija, ki jo varujemo.
+          </p>
+          <p className="handwritten text-2xl text-emerald-200/80 leading-snug mb-6">
+            Se vidimo med griči —
+            <span className="block text-emerald-300/90">Ekipa NaKmetiji</span>
+          </p>
+          <KronikaSubscribeWidget variant="dark" />
         </div>
 
         {/* Contact row */}

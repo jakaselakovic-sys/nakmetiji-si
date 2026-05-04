@@ -75,6 +75,9 @@ export async function pridobiKmetije(
     }
   }
 
+  // Always rank Titan Elite → Pospešek → Avtentičnost → Korenine first
+  query = query.order("tier_rang", { ascending: false });
+
   const ascending = smer === "asc";
   switch (sortiranje) {
     case "ocena":
@@ -207,12 +210,17 @@ export async function ustvariKmetijo(vhod: {
   kontakt_telefon: string;
   kontakt_email: string;
   kontakt_spletna_stran: string;
+  kontakt_instagram?: string;
+  kontakt_facebook?: string;
   dozivetja_ids: string[];
   lastnosti?: string[];
   posebne_ponudbe?: string;
+  cena_noc?: number | null;
+  max_gostov?: number;
+  naslovna_slika?: string;
   lat?: number | null;
   lng?: number | null;
-}): Promise<{ uspeh: true; slug: string } | { uspeh: false; napaka: string }> {
+}): Promise<{ uspeh: true; slug: string; id: string } | { uspeh: false; napaka: string }> {
   const supabase = await createSupabaseServer();
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -234,6 +242,8 @@ export async function ustvariKmetijo(vhod: {
   if (vhod.kontakt_telefon) kontaktniPodatki.telefon = vhod.kontakt_telefon;
   if (vhod.kontakt_email) kontaktniPodatki.email = vhod.kontakt_email;
   if (vhod.kontakt_spletna_stran) kontaktniPodatki.spletna_stran = vhod.kontakt_spletna_stran;
+  if (vhod.kontakt_instagram) kontaktniPodatki.instagram = vhod.kontakt_instagram;
+  if (vhod.kontakt_facebook) kontaktniPodatki.facebook = vhod.kontakt_facebook;
 
   const { data: kmetija, error } = await supabase
     .from("kmetije")
@@ -249,13 +259,15 @@ export async function ustvariKmetijo(vhod: {
       lng: vhod.lng ?? null,
       lastnosti: vhod.lastnosti ?? [],
       posebne_ponudbe: vhod.posebne_ponudbe || null,
+      cena_noc: vhod.cena_noc ?? null,
+      max_gostov: vhod.max_gostov ?? 2,
       kontaktni_podatki: kontaktniPodatki,
       slug,
       lastnik_id: user.id,
       aktivna: false,
       premium: false,
-      naslovna_slika: "",
-      slike: [],
+      naslovna_slika: vhod.naslovna_slika || "",
+      slike: vhod.naslovna_slika ? [vhod.naslovna_slika] : [],
       stevilo_ocen: 0,
     })
     .select("id, slug")
@@ -277,7 +289,30 @@ export async function ustvariKmetijo(vhod: {
     );
   }
 
-  return { uspeh: true, slug: kmetija.slug };
+  return { uspeh: true, slug: kmetija.slug, id: kmetija.id };
+}
+
+// ─── Posodobi naslovno sliko kmetije ────────────────────────────────────────
+
+export async function posodobiNaslovnoSliko(
+  kmetija_id: string,
+  url: string
+): Promise<{ ok: boolean; napaka?: string }> {
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, napaka: "Niste prijavljeni." };
+
+  const { data: kmetija } = await supabase
+    .from("kmetije").select("lastnik_id").eq("id", kmetija_id).single();
+  if (!kmetija) return { ok: false, napaka: "Kmetija ne obstaja." };
+
+  const { data: profil } = await supabase.from("profili").select("vloga").eq("id", user.id).single();
+  if (profil?.vloga !== "super_admin" && kmetija.lastnik_id !== user.id)
+    return { ok: false, napaka: "Nimate dovoljenja." };
+
+  const { error } = await supabase
+    .from("kmetije").update({ naslovna_slika: url }).eq("id", kmetija_id);
+  return { ok: !error, napaka: error?.message };
 }
 
 // ─── Posodobi slike kmetije (doda URL v slike array) ────────────────────────

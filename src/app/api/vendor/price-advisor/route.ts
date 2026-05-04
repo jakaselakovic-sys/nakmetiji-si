@@ -7,8 +7,11 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { canUseVendorAiTools } from "@/lib/subscriptions/tiers";
+import { REGIJE } from "@/types/database";
 
 
 // ── Seasonal demand index per month (1.0 = baseline, >1 = high demand) ────────
@@ -23,6 +26,13 @@ const MONTH_NAMES_SL = [
   "", "Januar", "Februar", "Marec", "April", "Maj", "Junij",
   "Julij", "Avgust", "September", "Oktober", "November", "December",
 ];
+
+const PriceAdvisorRequestSchema = z.object({
+  currentPrice: z.number().min(10).max(9_999),
+  regija: z.string().refine((value) => REGIJE.includes(value as (typeof REGIJE)[number]), {
+    message: "Neznana regija.",
+  }).default("gorenjska"),
+});
 
 // ── Regional events by month ───────────────────────────────────────────────
 
@@ -110,8 +120,8 @@ export async function POST(req: NextRequest) {
     .select("paket")
     .eq("lastnik_id", user.id)
     .maybeSingle();
-  if (!farm || farm.paket === "free" || farm.paket == null) {
-    return NextResponse.json({ error: "Ta funkcija zahteva Premium ali Basic paket." }, { status: 403 });
+  if (!farm || !canUseVendorAiTools(farm.paket)) {
+    return NextResponse.json({ error: "Ta funkcija zahteva paket Pospešek ali Titan Elite." }, { status: 403 });
   }
 
   const rl = await checkRateLimit(user.id, "price-advisor", 60, 3_600);
@@ -122,11 +132,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const body = await req.json() as {
-    currentPrice?: number;
-    regija?: string;
-  };
-  const { currentPrice, regija = "gorenjska" } = body;
+  let parsedBody: z.infer<typeof PriceAdvisorRequestSchema>;
+  try {
+    const parsed = PriceAdvisorRequestSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: z.prettifyError(parsed.error) }, { status: 400 });
+    }
+    parsedBody = parsed.data;
+  } catch {
+    return NextResponse.json({ error: "Neveljaven JSON." }, { status: 400 });
+  }
+  const { currentPrice, regija } = parsedBody;
 
   if (!currentPrice || currentPrice < 10 || currentPrice > 9_999) {
     return NextResponse.json({ error: "Vnesite veljavno ceno (min. 10 €)." }, { status: 400 });

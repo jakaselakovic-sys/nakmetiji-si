@@ -64,7 +64,7 @@ export function VendorCTAStrip() {
                 description="Spremljaj obiske profila, povpraševanja in rezervacije."
               />
               <FeaturePill
-                icon={<TreePine size={16} className="text-rose-300" />}
+                icon={<TreePine size={16} className="text-forest-400" />}
                 title="Green Passport"
                 description="Tvoji gosti zbirajo žige — še en razlog, da se vrnejo."
               />

@@ -4,10 +4,13 @@ import { useState } from "react";
 import { createSupabaseBrowser } from "@/lib/supabase/client";
 import { Loader2, ShieldCheck, QrCode } from "lucide-react";
 
+function errorMessage(err: unknown, fallback: string) {
+  return err instanceof Error ? err.message : fallback;
+}
+
 export function MfaSetupClient() {
   const [step, setStep] = useState<"idle" | "enroll" | "verify" | "success">("idle");
   const [qrCodeSvg, setQrCodeSvg] = useState<string | null>(null);
-  const [secret, setSecret] = useState<string | null>(null);
   const [factorId, setFactorId] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,10 +27,9 @@ export function MfaSetupClient() {
 
       setFactorId(data.id);
       setQrCodeSvg(data.totp.qr_code);
-      setSecret(data.totp.secret);
       setStep("verify");
-    } catch (err: any) {
-      setError(err.message || "Napaka pri generiranju MFA.");
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Napaka pri generiranju MFA."));
     } finally {
       setLoading(false);
     }
@@ -49,8 +51,8 @@ export function MfaSetupClient() {
       if (verify.error) throw verify.error;
 
       setStep("success");
-    } catch (err: any) {
-      setError(err.message || "Neveljavna koda. Poskusite znova.");
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Neveljavna koda. Poskusite znova."));
     } finally {
       setLoading(false);
     }

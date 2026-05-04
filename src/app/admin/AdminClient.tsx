@@ -6,11 +6,12 @@ import { useRouter } from "next/navigation";
 import {
   CheckCircle, XCircle, LogOut, Shield, TreePine,
   MessageSquare, TrendingUp, AlertTriangle, Eye, Loader2,
-  RefreshCw, ChevronDown, ChevronUp, ExternalLink,
+  RefreshCw, ChevronDown, ChevronUp, ExternalLink, Crown,
 } from "lucide-react";
 import { createSupabaseBrowser } from "@/lib/supabase/client";
-import { REGIJA_LABELS } from "@/types/database";
+import { REGIJA_LABELS, PAKET_CONFIG, type KmetijaPaket } from "@/types/database";
 import type { Regija } from "@/types/database";
+import { nastaviSubscription } from "@/lib/actions/subscriptions";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -33,6 +34,7 @@ interface Kmetija {
   regija: string;
   aktivna: boolean;
   premium: boolean;
+  paket?: KmetijaPaket;
   ocena: number | null;
   stevilo_ocen: number;
   ustvarjeno: string;
@@ -540,6 +542,132 @@ function ImpersonacijaTab({ profili }: { profili: Profil[] }) {
   );
 }
 
+// ─── Kmetije Tab with Tier Management ─────────────────────────────────────────
+
+const ALL_TIERS: KmetijaPaket[] = ["korenine", "avtenticnost", "posesek", "titan_elite"];
+
+const TIER_STYLE: Record<KmetijaPaket, string> = {
+  korenine:      "bg-earth-50 text-earth-600 border-earth-200",
+  avtenticnost:  "bg-emerald-50 text-emerald-700 border-emerald-200",
+  posesek:       "bg-blue-50 text-blue-700 border-blue-200",
+  titan_elite:   "bg-amber-50 text-amber-700 border-amber-200",
+};
+
+function KmetijeTab({
+  kmetije,
+  handleAktivacijaKmetije,
+}: {
+  kmetije: Kmetija[];
+  handleAktivacijaKmetije: (id: string, aktivna: boolean) => void;
+}) {
+  const [tierLoading, setTierLoading] = useState<string | null>(null);
+  const [tierError, setTierError] = useState<string | null>(null);
+  const [localTiers, setLocalTiers] = useState<Record<string, KmetijaPaket>>(() =>
+    Object.fromEntries(kmetije.map((k) => [k.id, k.paket ?? "korenine"]))
+  );
+
+  async function handleTierChange(kmetijaId: string, newTier: KmetijaPaket) {
+    setTierLoading(kmetijaId);
+    setTierError(null);
+    const result = await nastaviSubscription(kmetijaId, newTier);
+    if (result.ok) {
+      setLocalTiers((prev) => ({ ...prev, [kmetijaId]: newTier }));
+    } else {
+      setTierError(result.napaka ?? "Napaka pri nastavitvi tira.");
+    }
+    setTierLoading(null);
+  }
+
+  return (
+    <div className="space-y-3">
+      {tierError && (
+        <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">{tierError}</div>
+      )}
+
+      <div className="rounded-2xl bg-white border border-earth-200/60 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-earth-200/60 flex items-center justify-between">
+          <h2 className="text-base font-bold text-forest-900">Vse kmetije ({kmetije.length})</h2>
+          <div className="flex items-center gap-2 text-[11px] text-earth-500">
+            <Crown size={12} className="text-amber-500" />
+            Tier nastavljaš tukaj — sprememba je takojšnja
+          </div>
+        </div>
+        <div className="divide-y divide-earth-100">
+          {kmetije.map((k) => {
+            const currentTier = localTiers[k.id] ?? "korenine";
+            const cfg = PAKET_CONFIG[currentTier];
+            return (
+              <div key={k.id} className="px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <Link
+                      href={`/kmetije/${k.slug}`}
+                      className="text-sm font-bold text-forest-900 hover:underline"
+                    >
+                      {k.ime}
+                    </Link>
+                    <span
+                      className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${TIER_STYLE[currentTier]}`}
+                    >
+                      {cfg.emoji} {cfg.label}
+                    </span>
+                    <span
+                      className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${
+                        k.aktivna
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : "bg-earth-50 text-earth-600 border-earth-200"
+                      }`}
+                    >
+                      {k.aktivna ? "Aktivna" : "V pregledu"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-earth-500">
+                    {REGIJA_LABELS[k.regija as Regija] ?? k.regija} ·{" "}
+                    {k.ocena ? `⭐ ${k.ocena.toFixed(1)}` : "Brez ocene"} · {k.stevilo_ocen} ocen
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Tier selector */}
+                  <div className="relative">
+                    <select
+                      value={currentTier}
+                      onChange={(e) => handleTierChange(k.id, e.target.value as KmetijaPaket)}
+                      disabled={tierLoading === k.id}
+                      className={`appearance-none pl-3 pr-7 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer transition-colors focus:outline-none focus:ring-1 focus:ring-forest-400 ${TIER_STYLE[currentTier]} ${tierLoading === k.id ? "opacity-50" : ""}`}
+                    >
+                      {ALL_TIERS.map((t) => (
+                        <option key={t} value={t}>
+                          {PAKET_CONFIG[t].emoji} {PAKET_CONFIG[t].label}
+                          {PAKET_CONFIG[t].cena_mesec ? ` (${PAKET_CONFIG[t].cena_mesec} €/m)` : " (brezplačno)"}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={12}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-earth-400"
+                    />
+                  </div>
+                  {tierLoading === k.id && <Loader2 size={14} className="animate-spin text-forest-600" />}
+                  <button
+                    onClick={() => handleAktivacijaKmetije(k.id, !k.aktivna)}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                      k.aktivna
+                        ? "border-red-300 text-red-600 hover:bg-red-50"
+                        : "border-green-300 text-green-600 hover:bg-green-50"
+                    }`}
+                  >
+                    {k.aktivna ? "Deaktiviraj" : "Aktiviraj"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main AdminClient ─────────────────────────────────────────────────────────
 
 const TABS: { key: AdminTab; label: string; icon: React.ReactNode; badgeFn?: (p: Props) => number }[] = [
@@ -755,39 +883,7 @@ export function AdminClient(props: Props) {
 
         {/* ── KMETIJE ───────────────────────────────────────────────── */}
         {activeTab === "kmetije" && (
-          <div className="rounded-2xl bg-white border border-earth-200/60 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-earth-200/60">
-              <h2 className="text-base font-bold text-forest-900">Vse kmetije ({kmetije.length})</h2>
-            </div>
-            <div className="divide-y divide-earth-100">
-              {kmetije.map(k => (
-                <div key={k.id} className="px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <Link href={`/kmetije/${k.slug}`} className="text-sm font-bold text-forest-900 hover:underline">{k.ime}</Link>
-                      {k.premium && <span className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-semibold">Premium</span>}
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${k.aktivna ? "bg-green-50 text-green-700 border-green-200" : "bg-earth-50 text-earth-600 border-earth-200"}`}>
-                        {k.aktivna ? "Aktivna" : "V pregledu"}
-                      </span>
-                    </div>
-                    <p className="text-xs text-earth-500">
-                      {REGIJA_LABELS[k.regija as Regija] ?? k.regija} · {k.ocena ? `⭐ ${k.ocena.toFixed(1)}` : "Brez ocene"} · {k.stevilo_ocen} ocen
-                    </p>
-                  </div>
-                  <div className="flex gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => handleAktivacijaKmetije(k.id, !k.aktivna)}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
-                        k.aktivna ? "border-red-300 text-red-600 hover:bg-red-50" : "border-green-300 text-green-600 hover:bg-green-50"
-                      }`}
-                    >
-                      {k.aktivna ? "Deaktiviraj" : "Aktiviraj"}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <KmetijeTab kmetije={kmetije} handleAktivacijaKmetije={handleAktivacijaKmetije} />
         )}
 
         {/* ── NAPAKE ────────────────────────────────────────────────── */}

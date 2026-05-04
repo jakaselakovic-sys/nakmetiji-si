@@ -5,7 +5,7 @@ export const storySchema = z.object({
   slug: z.string().min(3),
   excerpt: z.string().min(10, "Kratek povzetek je obvezen."),
   content_html: z.string().min(20, "Vsebina je prekrata."),
-  content_json: z.any().optional(), // Tiptap state
+  content_json: z.unknown().optional(), // Tiptap state
   type: z.enum(["news", "blog"]),
   category: z.enum(["nasveti", "recepti", "dogodki", "intervjuji", "splosno"]),
   status: z.enum(["draft", "published", "archived"]),

@@ -4,19 +4,20 @@
 
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Playfair_Display, Caveat } from "next/font/google";
+import { Montserrat, Geist_Mono, Cormorant_Garamond, Caveat } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { OracleConcierge } from "@/components/OracleConcierge";
 import { DemoBanner, DemoFooterStrip } from "@/components/DemoDisclaimer";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
-import { SocialProofToast } from "@/components/SocialProofToast";
 import { PageTransition } from "@/components/PageTransition";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const montserrat = Montserrat({
+  variable: "--font-montserrat",
+  subsets: ["latin", "latin-ext"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -24,10 +25,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
+const cormorant = Cormorant_Garamond({
+  variable: "--font-cormorant",
   subsets: ["latin", "latin-ext"],
-  weight: ["700", "800", "900"],
+  weight: ["300", "400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  display: "swap",
 });
 
 const caveat = Caveat({
@@ -107,17 +110,18 @@ export default function RootLayout({
   return (
     <html
       lang="sl"
-      className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${caveat.variable} h-full antialiased`}
+      className={`${montserrat.variable} ${geistMono.variable} ${cormorant.variable} ${caveat.variable} h-full antialiased scroll-smooth`}
+      data-scroll-behavior="smooth"
     >
       <head>
-        <meta name="theme-color" content="#1a3a2a" />
+        <meta name="theme-color" content="#A8D5BA" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="NaKmetiji" />
         <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
-      <body className="min-h-full flex flex-col bg-paper text-forest-900 paper-grain">
+      <body className="min-h-full flex flex-col bg-background text-foreground paper-grain">
         {/* Skip navigation — a11y for keyboard users */}
         <a
           href="#main-content"
@@ -138,7 +142,6 @@ export default function RootLayout({
         <DemoFooterStrip />
         <OracleConcierge locale="sl" />
         <ServiceWorkerRegistrar />
-        <SocialProofToast />
       </body>
     </html>
   );

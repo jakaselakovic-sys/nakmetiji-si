@@ -39,6 +39,7 @@ interface ActivityBlock {
   location: { lat: number; lng: number; name: string } | null;
   drive_minutes?: number;
   drive_km?: number;
+  distance_source?: "mapbox_matrix" | "estimated_haversine";
 }
 
 interface FarmInfo {
@@ -132,7 +133,7 @@ const ACTIVITY_TYPE_COLOR: Record<ActivityType, { bg: string; text: string; bord
   settle:   { bg: "bg-forest-50",   text: "text-forest-700",   border: "border-forest-200" },
   meal:     { bg: "bg-amber-50",    text: "text-amber-700",    border: "border-amber-200" },
   landmark: { bg: "bg-emerald-50",  text: "text-emerald-700",  border: "border-emerald-200" },
-  farm:     { bg: "bg-rose-50",     text: "text-rose-700",     border: "border-rose-200" },
+  farm:     { bg: "bg-bark-50",     text: "text-bark-700",     border: "border-bark-200" },
   buffer:   { bg: "bg-amber-50",    text: "text-amber-700",    border: "border-amber-200" },
   free:     { bg: "bg-indigo-50",   text: "text-indigo-700",   border: "border-indigo-200" },
   depart:   { bg: "bg-slate-50",    text: "text-slate-700",    border: "border-slate-200" },
@@ -392,6 +393,11 @@ function ScheduleItem({ block }: { block: ActivityBlock }) {
         <p className="text-xs text-earth-700 mt-1 leading-relaxed">
           {block.description}
         </p>
+        {block.type === "travel" && block.distance_source === "estimated_haversine" && (
+          <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
+            Ocena poti
+          </p>
+        )}
       </div>
     </li>
   );

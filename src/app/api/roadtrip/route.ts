@@ -13,6 +13,7 @@
 // =============================================================================
 
 import { NextRequest } from "next/server";
+import { z } from "zod";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { planRoadTrip, type Itinerary } from "@/lib/oracle/roadtrip";
@@ -30,6 +31,15 @@ interface Body {
   withDog?: unknown;
   message?: unknown;
 }
+
+const RoadtripRequestSchema = z.object({
+  regions: z.array(z.string().trim().max(80)).max(6).optional(),
+  days: z.number().int().min(1).max(14).optional(),
+  vibes: z.array(z.string().trim().min(1).max(40)).max(8).optional(),
+  maxGostov: z.number().int().min(1).max(50).optional(),
+  withDog: z.boolean().optional(),
+  message: z.string().trim().max(1_000).optional(),
+}).strict();
 
 function parseRegions(input: Body): Regija[] {
   const picked = new Set<Regija>();
@@ -134,7 +144,13 @@ export async function POST(req: NextRequest) {
 
   let body: Body;
   try {
-    body = (await req.json()) as Body;
+    const parsed = RoadtripRequestSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: z.prettifyError(parsed.error) }), {
+        status: 400, headers: { "Content-Type": "application/json" },
+      });
+    }
+    body = parsed.data;
   } catch {
     return new Response(JSON.stringify({ error: "Neveljaven JSON" }), {
       status: 400, headers: { "Content-Type": "application/json" },

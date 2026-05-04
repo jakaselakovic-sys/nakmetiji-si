@@ -328,7 +328,8 @@ CREATE POLICY "Javno branje izdelkov" ON izdelki
 CREATE POLICY "Javno ustvarjanje rezervacij" ON rezervacije
   FOR INSERT WITH CHECK (TRUE);
 
--- Gost lahko vidi svoje rezervacije (po emailu)
-CREATE POLICY "Branje lastnih rezervacij" ON rezervacije
-  FOR SELECT USING (TRUE);
-  -- OPOMBA: v produkciji bi tukaj omejili na auth.email() = gost_email
+-- Rezervacije ne smejo biti javno berljive. Ta osnovna shema nima stolpcev
+-- gost_id/lastnik_id za varno participantsko RLS politiko; produkcijska
+-- politika je definirana v migraciji 20260419_rls_audit.sql.
+CREATE POLICY "Brez javnega branja rezervacij" ON rezervacije
+  FOR SELECT USING (FALSE);

@@ -52,6 +52,7 @@ export interface ActivityBlock {
   location: { lat: number; lng: number; name: string } | null;
   drive_minutes?: number;    // only for travel/buffer blocks
   drive_km?: number;
+  distance_source?: "mapbox_matrix" | "estimated_haversine";
 }
 
 export interface FarmInfo {
@@ -77,6 +78,7 @@ export interface NearbyLandmark {
   lat: number;
   lng: number;
   drive_minutes: number | null;
+  distance_source: "mapbox_matrix" | "estimated_haversine";
   proximity_type: "nearby" | "izletniška";
 }
 
@@ -200,6 +202,8 @@ interface RawFarm {
   ocena: number | null;
   cena_noc: number | null;
   premium: boolean;
+  paket: import("@/types/database").KmetijaPaket | null;
+  tier_rang: number;
   max_gostov: number | null;
   vibe_tags: string[];
   dozivetja: { ime: string; slug: string }[];
@@ -221,7 +225,7 @@ async function fetchCandidateFarmsByRegion(
 ): Promise<RawFarm[]> {
   const selectFields = `
     id, slug, ime, regija, kratki_opis, naslovna_slika, lat, lng,
-    ocena, cena_noc, premium, max_gostov, vibe_tags,
+    ocena, cena_noc, premium, paket, tier_rang, max_gostov, vibe_tags,
     kmetija_dozivetje(dozivetja(ime, slug))
   `;
 
@@ -232,6 +236,7 @@ async function fetchCandidateFarmsByRegion(
     .eq("regija", region)
     .not("lat", "is", null)
     .not("lng", "is", null)
+    .order("tier_rang", { ascending: false })
     .order("premium", { ascending: false })
     .order("ocena", { ascending: false, nullsFirst: false })
     .limit(8);
@@ -255,6 +260,8 @@ async function fetchCandidateFarmsByRegion(
       ocena: (r.ocena as number) ?? null,
       cena_noc: (r.cena_noc as number) ?? null,
       premium: (r.premium as boolean) ?? false,
+      paket: (r.paket as import("@/types/database").KmetijaPaket) ?? null,
+      tier_rang: (r.tier_rang as number) ?? 0,
       max_gostov: (r.max_gostov as number) ?? null,
       vibe_tags: (r.vibe_tags as string[]) ?? [],
       dozivetja: joinRows
@@ -287,7 +294,7 @@ function scoreCandidate(f: RawFarm, input: RoadTripInput): number {
   if (input.maxGostov && f.max_gostov && f.max_gostov >= input.maxGostov) score += 2;
 
   score += (f.ocena ?? 0) * 0.8;
-  if (f.premium) score += 15;
+  score += f.tier_rang * 10;
   return score;
 }
 
@@ -445,6 +452,7 @@ async function enrichFarmWithLandmarks(
     lat: c.z.lat,
     lng: c.z.lng,
     drive_minutes: c.drive_minutes,
+    distance_source: c.drive_minutes === null ? "estimated_haversine" : "mapbox_matrix",
     proximity_type: c.proximity_type as "nearby" | "izletniška",
   }));
 }
@@ -545,16 +553,19 @@ function travelBlock(
   hhmm: string,
   drive_minutes: number,
   drive_km: number,
+  distance_source: "mapbox_matrix" | "estimated_haversine",
 ): ActivityBlock {
+  const prefix = distance_source === "mapbox_matrix" ? "" : "pribl. ";
   return {
     ...timeBlock(hhmm, drive_minutes),
     type: "travel",
     title: `Vožnja: ${from.name} → ${to.name}`,
-    description: `${drive_km} km · približno ${formatHm(drive_minutes)}.`,
+    description: `${drive_km} km · ${prefix}${formatHm(drive_minutes)}.`,
     icon: "🚗",
     location: null,
     drive_minutes,
     drive_km,
+    distance_source,
   };
 }
 
@@ -672,8 +683,9 @@ function buildDaySchedule(ctx: DayContext): ScheduleResult {
     to: { name: string; lat: number; lng: number },
     minutes: number,
     km: number,
+    source: "mapbox_matrix" | "estimated_haversine",
   ) {
-    blocks.push(travelBlock(from, to, cursor, minutes, Math.round(km * 10) / 10));
+    blocks.push(travelBlock(from, to, cursor, minutes, Math.round(km * 10) / 10, source));
     cursor = addMinutes(cursor, minutes);
     totalKm += km;
     totalDriveMin += minutes;
@@ -688,7 +700,7 @@ function buildDaySchedule(ctx: DayContext): ScheduleResult {
   if (ctx.isFirstDay) {
     cursor = "10:00";
     const driveMin = ctx.driveFromPrevMinutes ?? estimateDriveMinutes(ctx.driveFromPrevKm);
-    pushTravel(LJUBLJANA, farmLoc, driveMin, ctx.driveFromPrevKm);
+    pushTravel(LJUBLJANA, farmLoc, driveMin, ctx.driveFromPrevKm, ctx.driveFromPrevMinutes === null ? "estimated_haversine" : "mapbox_matrix");
     if (ctx.bufferOnArrival) {
       pushBlock(bufferBlock(ctx.bufferOnArrival, cursor));
     }
@@ -710,7 +722,7 @@ function buildDaySchedule(ctx: DayContext): ScheduleResult {
       pushBlock(bufferBlock(ctx.bufferOnDeparture, cursor));
     }
     const driveMin = ctx.driveToNextMinutes ?? estimateDriveMinutes(ctx.driveToNextKm);
-    pushTravel(farmLoc, LJUBLJANA, driveMin, ctx.driveToNextKm);
+    pushTravel(farmLoc, LJUBLJANA, driveMin, ctx.driveToNextKm, ctx.driveToNextMinutes === null ? "estimated_haversine" : "mapbox_matrix");
     return { schedule: blocks, summary: "Odhod proti Ljubljani", total_km: round1(totalKm), total_drive_min: totalDriveMin };
   }
 
@@ -722,7 +734,7 @@ function buildDaySchedule(ctx: DayContext): ScheduleResult {
     if (ctx.bufferOnArrival) {
       pushBlock(bufferBlock(ctx.bufferOnArrival, cursor));
     }
-    pushTravel(prevLoc, farmLoc, ctx.driveFromPrevMinutes, ctx.driveFromPrevKm);
+    pushTravel(prevLoc, farmLoc, ctx.driveFromPrevMinutes, ctx.driveFromPrevKm, "mapbox_matrix");
     pushBlock(settleBlock(ctx.baseFarm, cursor));
     if (parseHHMM(cursor) < parseHHMM("19:00")) cursor = "19:00";
     pushBlock(mealBlock("dinner", ctx.baseFarm, cursor));
@@ -756,9 +768,9 @@ function buildDaySchedule(ctx: DayContext): ScheduleResult {
     if (needed > cushion) return false;
 
     const lmLoc = { name: z.ime, lat: z.lat, lng: z.lng };
-    pushTravel(farmLoc, lmLoc, driveMin, z.razdalja_km);
+    pushTravel(farmLoc, lmLoc, driveMin, z.razdalja_km, z.distance_source);
     pushBlock(landmarkBlock(z, cursor, visitDur));
-    pushTravel(lmLoc, farmLoc, driveMin, z.razdalja_km);
+    pushTravel(lmLoc, farmLoc, driveMin, z.razdalja_km, z.distance_source);
     usedLM.add(z.ime);
     if (!isAfternoon) summary = z.ime;
     return true;

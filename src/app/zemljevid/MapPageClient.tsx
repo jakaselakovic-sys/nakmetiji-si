@@ -44,7 +44,6 @@ import {
   EXPERIENCE_LABELS,
 } from "@/types";
 import type { ExperienceTag } from "@/types";
-import { ZNAMENITOST_IKONE } from "@/types/landmarks";
 import { InfoCard } from "./InfoCard";
 import type { MapboxMapHandle, RouteInfo } from "./MapboxMap";
 import { WeatherWidget } from "@/components/WeatherWidget";
@@ -119,7 +118,7 @@ const ROUTE_PROFILES: { key: RouteProfileKey; label: string; Icon: React.Element
 
 // ═══════════════════════════════════════════════════════════════════════════
 
-type SectionKey = "region" | "experience" | "landmark";
+type SectionKey = "region" | "experience";
 
 export function MapPageClient() {
   const mapRef = useRef<MapboxMapHandle>(null);
@@ -150,16 +149,13 @@ export function MapPageClient() {
   const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
     region: true,
     experience: false,
-    landmark: false,
   });
-  const [landmarksVisible, setLandmarksVisible] = useState(20);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
 
   // Refs
   const farmRowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const landmarkSentinelRef = useRef<HTMLDivElement>(null);
 
   // ── Debounce search input (150 ms) ────────────────────────────────────
   useEffect(() => {
@@ -226,6 +222,23 @@ export function MapPageClient() {
     return out;
   }, []);
 
+  // ── Landmark → nearest farm suggestion ──────────────────────────────
+  const nearestToLandmark = useMemo(() => {
+    if (!searchQuery || searchQuery.length < 3) return null;
+    const q = searchQuery.toLowerCase();
+    const landmark = MOCK_ZNAMENITOSTI.find(
+      (z) => z.ime.toLowerCase().includes(q) || q.includes(z.ime.toLowerCase())
+    );
+    if (!landmark) return null;
+    let best: { farm: (typeof MOCK_FARMS)[0]; distKm: number } | null = null;
+    for (const farm of MOCK_FARMS) {
+      if (!farm.location) continue;
+      const d = haversineKm(landmark.lat, landmark.lng, farm.location.latitude, farm.location.longitude);
+      if (!best || d < best.distKm) best = { farm, distKm: d };
+    }
+    return best ? { landmark, farm: best.farm, distKm: best.distKm } : null;
+  }, [searchQuery]);
+
   // ── Filtered + sorted farms ───────────────────────────────────────────
   const filteredFarms = useMemo(() => {
     return MOCK_FARMS.filter((farm) => {
@@ -236,15 +249,23 @@ export function MapPageClient() {
       )
         return false;
       if (onlyGoodWeather && farmWeatherGood[farm.slug] === false) return false;
-      if (searchQuery) {
+      if (searchQuery && !nearestToLandmark) {
         const hay = `${farm.name} ${REGION_LABELS[farm.region] ?? ""} ${farm.tagline ?? ""}`.toLowerCase();
         if (!hay.includes(searchQuery)) return false;
       }
       return true;
     });
-  }, [selectedRegions, selectedExperiences, onlyGoodWeather, farmWeatherGood, searchQuery]);
+  }, [selectedRegions, selectedExperiences, onlyGoodWeather, farmWeatherGood, searchQuery, nearestToLandmark]);
 
   const sortedFarms = useMemo(() => {
+    if (nearestToLandmark) {
+      const { landmark } = nearestToLandmark;
+      return [...filteredFarms].sort((a, b) => {
+        const dA = a.location ? haversineKm(landmark.lat, landmark.lng, a.location.latitude, a.location.longitude) : Infinity;
+        const dB = b.location ? haversineKm(landmark.lat, landmark.lng, b.location.latitude, b.location.longitude) : Infinity;
+        return dA - dB;
+      });
+    }
     if (!userLocation) return filteredFarms;
     return [...filteredFarms].sort((a, b) => {
       const dA = a.location
@@ -255,14 +276,17 @@ export function MapPageClient() {
         : Infinity;
       return dA - dB;
     });
-  }, [filteredFarms, userLocation]);
+  }, [filteredFarms, userLocation, nearestToLandmark]);
 
   // ── Auto-start routing when farm + GPS location both active ───────────
   useEffect(() => {
     if (activeFarmSlug && userLocation) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRouteProfile((prev) => prev ?? "driving");
     } else {
+       
       setRouteProfile(null);
+       
       setRouteInfo(null);
     }
   }, [activeFarmSlug, userLocation]);
@@ -274,31 +298,11 @@ export function MapPageClient() {
     row?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [activeFarmSlug]);
 
-  // ── Landmark list — load more on scroll via IntersectionObserver ──────
-  useEffect(() => {
-    if (!openSections.landmark) return;
-    if (landmarksVisible >= MOCK_ZNAMENITOSTI.length) return;
-    const sentinel = landmarkSentinelRef.current;
-    if (!sentinel) return;
-    const io = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting) {
-        setLandmarksVisible((v) => Math.min(v + 20, MOCK_ZNAMENITOSTI.length));
-      }
-    }, { rootMargin: "200px" });
-    io.observe(sentinel);
-    return () => io.disconnect();
-  }, [landmarksVisible, openSections.landmark]);
-
   // ── Map ready flag — drives skeleton -> real list transition ──────────
   useEffect(() => {
     const t = setTimeout(() => setMapReady(true), 700);
     return () => clearTimeout(t);
   }, []);
-
-  const visibleLandmarks = useMemo(
-    () => MOCK_ZNAMENITOSTI.slice(0, landmarksVisible),
-    [landmarksVisible]
-  );
 
   // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -413,6 +417,40 @@ export function MapPageClient() {
         )}
       </div>
 
+      {/* Nearest-farm suggestion when a landmark is typed */}
+      {nearestToLandmark && (
+        <div className="rounded-xl bg-amber-50 border border-amber-200 p-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-amber-700 mb-2 flex items-center gap-1">
+            <Landmark size={10} />
+            Najbližja kmetija — {nearestToLandmark.landmark.ime}
+          </p>
+          <button
+            onClick={() => {
+              handleFarmClick(nearestToLandmark.farm.slug);
+              setSelectedLandmarkId(nearestToLandmark.landmark.id);
+            }}
+            className="w-full flex items-center gap-3 rounded-lg bg-white border border-amber-200 hover:border-amber-300 hover:bg-amber-50/60 p-2.5 text-left transition-all"
+          >
+            <div className="relative h-10 w-10 rounded-lg overflow-hidden flex-shrink-0">
+              <Image
+                src={nearestToLandmark.farm.coverImageUrl}
+                alt={nearestToLandmark.farm.name}
+                fill
+                className="object-cover"
+                sizes="40px"
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-forest-900 truncate">{nearestToLandmark.farm.name}</p>
+              <p className="text-[11px] text-earth-500">
+                {nearestToLandmark.distKm.toFixed(1)} km od {nearestToLandmark.landmark.ime}
+              </p>
+            </div>
+            <MapPin size={14} className="text-amber-500 flex-shrink-0" />
+          </button>
+        </div>
+      )}
+
       {/* Region — collapsible */}
       <CollapsibleSection
         title="Regija"
@@ -484,42 +522,6 @@ export function MapPageClient() {
         </div>
       </CollapsibleSection>
 
-      {/* Landmarks — collapsible + virtualized */}
-      <CollapsibleSection
-        title={`Znamenitosti (${MOCK_ZNAMENITOSTI.length})`}
-        icon={<Landmark size={12} className="inline mr-1" />}
-        open={openSections.landmark}
-        onToggle={() => toggleSection("landmark")}
-      >
-        <div className="space-y-1.5">
-          {visibleLandmarks.map((z) => (
-            <button
-              key={z.id}
-              onClick={() => {
-                setSelectedLandmarkId(z.id);
-                setActiveFarmSlug(null);
-                setMobileSheetOpen(false);
-              }}
-              className={`w-full flex items-center gap-2.5 rounded-xl px-3 py-2 text-left transition-all ${
-                selectedLandmarkId === z.id
-                  ? "bg-forest-50 border border-forest-300"
-                  : "hover:bg-earth-50 border border-transparent"
-              }`}
-            >
-              <span className="text-lg">{ZNAMENITOST_IKONE[z.kategorija]}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-forest-900 truncate">{z.ime}</p>
-                <p className="text-[11px] text-earth-500 truncate">{z.opis}</p>
-              </div>
-            </button>
-          ))}
-          {landmarksVisible < MOCK_ZNAMENITOSTI.length && (
-            <div ref={landmarkSentinelRef} className="h-6 flex items-center justify-center">
-              <Loader2 size={14} className="animate-spin text-earth-400" />
-            </div>
-          )}
-        </div>
-      </CollapsibleSection>
     </>
   );
 

@@ -14,10 +14,10 @@
     "osrednjeslovenska": "Osrednjeslovenska združuje mesto in podeželje — omeni bližino Ljubljane, Kamniške Alpe."
   },
   "wizard_greetings": {
-    "gorenjska": "Pa dajmo v hribe! Tam, kjer se nebo dotakne planin.",
-    "primorska": "Bor moj, lepo bo! Burja bo razpihala vse skrbi.",
+    "gorenjska": "Le nagni se čez prag — v hribih je zrak čist in vsaka skrb izgine.",
+    "primorska": "Bor moj, kje te gori? Pršut čaka, burja bo razpihala vse skrbi.",
     "pomurska": "Tüka je mir, boste vidli. Ravnina dušo pomiri.",
-    "stajerska": "Klopotec že zvoni! Gorice čakajo.",
+    "stajerska": "Čuj, bi rad videl, kje klopotec poje? Gorice čakajo!",
     "koroska": "Gorski zrak je najboljši zdravnik.",
     "notranjska": "Pragozd vas bo objel v tišini.",
     "dolenjska": "Cviček čaka, Krka teče. Mir.",
@@ -28,8 +28,8 @@
     "osrednjeslovenska": "Kamniške Alpe so le streljaj od mesta."
   },
   "wizard_dialect_phrases": {
-    "gorenjska": ["Pa dajmo", "Na planino"],
-    "primorska": ["Bor moj", "Lepo ko slika"],
+    "gorenjska": ["Le nagni se čez prag", "V hribih je zrak čist"],
+    "primorska": ["Bor moj", "Kje te gori"],
     "pomurska": ["Tüka je mir", "Daj si dušo na pašo"],
     "stajerska": ["Klopotec zvoni", "V goricah je raj"],
     "koroska": ["Gorski zrak", "Trd in jedrnat"],

@@ -23,6 +23,7 @@ import {
   XCircle,
   MapPin,
   ArrowRight,
+  User,
 } from "lucide-react";
 import type { Rezervacija, StampRow, WishlistRow, RoadtripRow } from "./page";
 import { MfaSetupClient } from "./MfaSetupClient";
@@ -78,9 +79,6 @@ export function MojRacunClient({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // URL is the SOLE source of truth — `?tab=passport` deep-links + survives
-  // reloads, bookmarks, and back/forward navigation without any state-sync
-  // useEffect (which would have caused cascading renders).
   const urlTab = searchParams.get("tab");
   const active: TabKey = TABS.some((t) => t.key === urlTab)
     ? (urlTab as TabKey)
@@ -97,66 +95,74 @@ export function MojRacunClient({
     [router, searchParams],
   );
 
-  const greeting =
-    profilIme && profilIme.trim().length > 0
-      ? `Dobrodošli, ${profilIme.split(" ")[0]}.`
-      : "Dobrodošli.";
+  const firstName = profilIme?.split(" ")[0] || null;
 
   return (
     <div className="min-h-screen bg-paper">
-      <div className="mx-auto max-w-6xl px-6 py-10 lg:py-14">
-        {/* Heading */}
-        <div className="mb-10">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-forest-600/70 mb-2">
-            Moj račun
-          </p>
-          <h1 className="font-display font-black text-3xl sm:text-5xl text-forest-900 tracking-tight">
-            {greeting}
-          </h1>
-          <p className="handwritten text-2xl text-forest-700/80 mt-2">
-            Tukaj so vaše kmetije, žigi in poti.
-          </p>
-        </div>
+      {/* ── Hero header — full-width dark band above content ── */}
+      <div className="bg-forest-900 pt-[72px]">
+        <div className="mx-auto max-w-6xl px-6 py-10 lg:py-14">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+            {/* Avatar circle */}
+            <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-forest-700 border-2 border-forest-500 flex items-center justify-center text-white">
+              <User size={28} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-400/70 mb-1">
+                Moj račun
+              </p>
+              <h1 className="font-display font-black text-2xl sm:text-4xl text-white tracking-tight truncate">
+                {firstName ? `Dobrodošli, ${firstName}.` : "Dobrodošli."}
+              </h1>
+              <p className="text-sm text-white/50 mt-1 truncate">{email}</p>
+            </div>
+          </div>
 
-        {/* Quick stats strip — unified palette: forest for the primary
-            counts, amber for "engagement" counts (saved + roadtripi). */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
-          <QuickStat label="Rezervacije" value={rezervacije.length} accent="#2D5A27" />
-          <QuickStat label="Zbranih žigov" value={stamps.length} accent="#2D5A27" />
-          <QuickStat label="Shranjene" value={wishlist.length} accent="#d97706" />
-          <QuickStat label="Road tripi" value={roadtripi.length} accent="#d97706" />
+          {/* Stats strip inside dark header */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8">
+            <HeroStat label="Rezervacije" value={rezervacije.length} color="text-emerald-300" />
+            <HeroStat label="Zbrani žigi" value={stamps.length} color="text-emerald-300" />
+            <HeroStat label="Shranjene" value={wishlist.length} color="text-amber-300" />
+            <HeroStat label="Road tripi" value={roadtripi.length} color="text-amber-300" />
+          </div>
         </div>
+      </div>
 
-        {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = tab.key === active;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => switchTab(tab.key)}
-                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium border transition-all ${
-                  isActive
-                    ? "bg-forest-700 text-white border-forest-700 shadow-md"
-                    : "bg-white text-forest-800 border-earth-200 hover:border-forest-400"
-                }`}
-              >
-                <Icon size={14} />
-                {tab.label}
-              </button>
-            );
-          })}
+      {/* ── Tab bar — sticks to bottom of dark header ── */}
+      <div className="bg-forest-900 border-b border-forest-700/60">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-px -mb-px">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = tab.key === active;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => switchTab(tab.key)}
+                  className={`flex items-center gap-2 px-4 py-3.5 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+                    isActive
+                      ? "border-emerald-400 text-emerald-300"
+                      : "border-transparent text-white/50 hover:text-white/80 hover:border-white/20"
+                  }`}
+                >
+                  <Icon size={14} />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
+      </div>
 
-        {/* Panels */}
+      {/* ── Content panels ── */}
+      <div className="mx-auto max-w-6xl px-6 py-8 lg:py-10">
         <AnimatePresence mode="wait">
           <motion.div
             key={active}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.18 }}
           >
             {active === "rezervacije" && (
               <RezervacijePanel rezervacije={rezervacije} />
@@ -180,28 +186,11 @@ export function MojRacunClient({
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function QuickStat({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: number;
-  accent: string;
-}) {
+function HeroStat({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="rounded-2xl bg-white border border-earth-200 p-4 relative overflow-hidden">
-      <div
-        aria-hidden="true"
-        className="absolute top-0 right-0 w-16 h-16 rounded-full blur-2xl opacity-20"
-        style={{ background: accent }}
-      />
-      <p className="font-display text-3xl font-black text-forest-900 leading-none">
-        {value}
-      </p>
-      <p className="text-[11px] font-bold uppercase tracking-wider text-earth-500 mt-2">
-        {label}
-      </p>
+    <div className="rounded-xl bg-white/5 border border-white/10 p-4">
+      <p className={`font-display text-3xl font-black leading-none ${color}`}>{value}</p>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-white/40 mt-1.5">{label}</p>
     </div>
   );
 }
@@ -211,11 +200,11 @@ function StatusBadge({ status }: { status: Rezervacija["status"] }) {
     Rezervacija["status"],
     { label: string; bg: string; fg: string; Icon: typeof CheckCircle2 }
   > = {
-    cakanje:   { label: "V obravnavi",  bg: "bg-amber-50",   fg: "text-amber-700",   Icon: Clock },
-    potrjena:  { label: "Potrjena",     bg: "bg-forest-50",  fg: "text-forest-700",  Icon: CheckCircle2 },
-    zavrnjena: { label: "Zavrnjena",    bg: "bg-red-50",     fg: "text-red-700",     Icon: XCircle },
-    preklicana:{ label: "Preklicana",   bg: "bg-earth-100",  fg: "text-earth-600",   Icon: XCircle },
-    zakljucena:{ label: "Zaključena",   bg: "bg-earth-50",   fg: "text-earth-700",   Icon: CheckCircle2 },
+    cakanje:    { label: "V obravnavi",  bg: "bg-amber-50",   fg: "text-amber-700",   Icon: Clock },
+    potrjena:   { label: "Potrjena",     bg: "bg-forest-50",  fg: "text-forest-700",  Icon: CheckCircle2 },
+    zavrnjena:  { label: "Zavrnjena",    bg: "bg-red-50",     fg: "text-red-700",     Icon: XCircle },
+    preklicana: { label: "Preklicana",   bg: "bg-earth-100",  fg: "text-earth-600",   Icon: XCircle },
+    zakljucena: { label: "Zaključena",   bg: "bg-earth-50",   fg: "text-earth-700",   Icon: CheckCircle2 },
   };
   const v = map[status];
   const Icon = v.Icon;
@@ -346,27 +335,28 @@ function WishlistPanel({ wishlist }: { wishlist: WishlistRow[] }) {
       <EmptyState
         icon={<Heart size={28} />}
         title="Ni shranjenih kmetij."
-        note="Tapni srčke, ki jih najdeš na profilih kmetij, da jih shraniš."
+        note="Na profilu kmetije tapni ikono srca, da jo shraniš sem."
         cta={{ href: "/kmetije", label: "Razišči kmetije" }}
       />
     );
   }
   return (
-    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {wishlist.map((w) => (
         <li
           key={w.kmetija_id}
-          className="rounded-2xl bg-white border border-earth-200 overflow-hidden hover:shadow-md transition-all"
+          className="rounded-2xl bg-white border border-earth-200 overflow-hidden hover:shadow-md transition-all group"
         >
           <Link href={`/kmetije/${w.slug}`} className="block">
-            <div className="relative h-32 bg-earth-100">
+            <div className="relative h-36 bg-earth-100 overflow-hidden">
               <Image
                 src={w.naslovna_slika || "/images/placeholder-farm.jpg"}
                 alt={w.ime}
                 fill
-                className="object-cover"
-                sizes="(min-width: 640px) 300px, 100vw"
+                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                sizes="(min-width: 1024px) 300px, (min-width: 640px) 50vw, 100vw"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
             </div>
             <div className="p-4">
               <p className="text-[10px] font-bold uppercase tracking-wider text-earth-500 mb-0.5 flex items-center gap-1">
@@ -376,15 +366,15 @@ function WishlistPanel({ wishlist }: { wishlist: WishlistRow[] }) {
               <h3 className="font-display font-bold text-forest-900 leading-tight">
                 {w.ime}
               </h3>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1.5">
                 {w.ocena !== null && (
-                  <span className="text-xs text-gold-600 font-semibold flex items-center gap-0.5">
-                    <Star size={11} className="fill-gold-500 text-gold-500" />
+                  <span className="text-xs text-amber-700 font-semibold flex items-center gap-0.5">
+                    <Star size={11} className="fill-amber-500 text-amber-500" />
                     {w.ocena.toFixed(1)}
                   </span>
                 )}
                 {w.cena_noc !== null && (
-                  <span className="text-xs text-earth-600">
+                  <span className="text-xs text-earth-500">
                     od {w.cena_noc} €/noč
                   </span>
                 )}
@@ -416,7 +406,7 @@ function RoadtripiPanel({ roadtripi }: { roadtripi: RoadtripRow[] }) {
           className="rounded-2xl bg-white border border-earth-200 p-5 hover:shadow-md transition-all"
         >
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h3 className="font-display font-bold text-forest-900">{t.naslov}</h3>
               <p className="text-sm text-earth-600 mt-0.5">
                 {t.regije.map((r) => REGION_LABELS_SHORT[r] ?? r).join(" → ")}
@@ -429,7 +419,7 @@ function RoadtripiPanel({ roadtripi }: { roadtripi: RoadtripRow[] }) {
             {t.share_slug && (
               <Link
                 href={`/pot?id=${t.share_slug}`}
-                className="inline-flex items-center gap-1 text-sm font-semibold text-forest-700 hover:text-forest-500"
+                className="flex-shrink-0 inline-flex items-center gap-1 rounded-xl bg-forest-50 border border-forest-200 px-3 py-2 text-sm font-semibold text-forest-700 hover:bg-forest-100 transition-colors"
               >
                 Odpri <ArrowRight size={12} />
               </Link>
@@ -449,32 +439,31 @@ function NastavitvePanel({
   profilIme: string;
 }) {
   return (
-    <div className="rounded-2xl bg-white border border-earth-200 p-6 max-w-xl space-y-4">
-      <div>
-        <p className="text-[11px] font-bold uppercase tracking-wider text-earth-500 mb-1">
-          Ime
-        </p>
-        <p className="text-base text-forest-900">{profilIme || "—"}</p>
+    <div className="max-w-xl space-y-4">
+      <div className="rounded-2xl bg-white border border-earth-200 p-6 space-y-4">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-earth-500 mb-1">Ime</p>
+          <p className="text-base text-forest-900">{profilIme || "—"}</p>
+        </div>
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-earth-500 mb-1">E-pošta</p>
+          <p className="text-base text-forest-900">{email}</p>
+        </div>
+        <div className="pt-3 border-t border-earth-100 text-sm text-earth-600 leading-relaxed">
+          Spremembe imena, gesla in nastavitve obvestil so v pripravi.
+          Če potrebuješ pomoč, nam piši na{" "}
+          <a href="mailto:info@nakmetiji.si" className="text-forest-700 underline underline-offset-2">
+            info@nakmetiji.si
+          </a>.
+        </div>
       </div>
-      <div>
-        <p className="text-[11px] font-bold uppercase tracking-wider text-earth-500 mb-1">
-          E-pošta
-        </p>
-        <p className="text-base text-forest-900">{email}</p>
-      </div>
-      <div className="pt-3 border-t border-earth-100 text-sm text-earth-600 leading-relaxed">
-        Spremembe imena, gesla in nastavitve obvestil so v pripravi.
-        Če potrebuješ pomoč, nam piši na{" "}
-        <a href="mailto:info@nakmetiji.si" className="text-forest-700 underline underline-offset-2">
-          info@nakmetiji.si
-        </a>.
-      </div>
-      <div className="pt-4 border-t border-earth-100">
-        <h4 className="text-sm font-bold text-forest-900 mb-2">Varnost računa</h4>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-earth-200 bg-earth-50 gap-4">
+
+      <div className="rounded-2xl bg-white border border-earth-200 p-6">
+        <h4 className="text-sm font-bold text-forest-900 mb-3">Varnost računa</h4>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-earth-200 bg-earth-50 p-4 gap-4">
           <div>
             <p className="font-semibold text-forest-900 text-sm">Dvostopenjska avtentikacija (MFA)</p>
-            <p className="text-xs text-earth-600 mt-1">Zavarujte svoj račun z aplikacijo Google Authenticator ali Authy.</p>
+            <p className="text-xs text-earth-600 mt-1">Zavarujte račun z Google Authenticator ali Authy.</p>
           </div>
           <MfaSetupClient />
         </div>
@@ -499,9 +488,7 @@ function EmptyState({
       <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-earth-50 text-forest-700 mb-4">
         {icon}
       </div>
-      <h3 className="font-display text-xl font-bold text-forest-900 mb-2">
-        {title}
-      </h3>
+      <h3 className="font-display text-xl font-bold text-forest-900 mb-2">{title}</h3>
       <p className="text-sm text-earth-600 mb-5 max-w-sm mx-auto">{note}</p>
       {cta && (
         <Link

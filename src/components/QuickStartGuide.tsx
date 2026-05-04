@@ -77,7 +77,7 @@ export function QuickStartGuide() {
       title: "Zbiraj žige",
       description: "Vsak obisk = nov žig. 12 regij, 5 nivojev, realne nagrade.",
       href: "/green-passport",
-      accentClass: "bg-rose-50 text-rose-700 border-rose-200",
+      accentClass: "bg-bark-50 text-bark-700 border-bark-200",
     },
   ];
 

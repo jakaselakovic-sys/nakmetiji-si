@@ -11,8 +11,9 @@ import { PregledView } from "./views/PregledView";
 import { AnalyticsView } from "./views/AnalyticsView";
 import { SettingsView } from "./views/SettingsView";
 import { UrediKmetijoView } from "./views/UrediKmetijoView";
-import { MagicVendorSuite } from "@/components/vendor/MagicVendorSuite";
+import { VendorOptimizationService } from "@/components/vendor/VendorOptimizationService";
 import { OnboardingChecklist } from "@/components/dashboard/OnboardingChecklist";
+import { StrategistAdvisor } from "@/components/dashboard/StrategistAdvisor";
 
 type DashboardTab = "pregled" | "uredi" | "analitika" | "ai-orodja" | "nastavitve";
 
@@ -279,13 +280,10 @@ export function DashboardClient({ userEmail, profilIme, vloga, kmetija, rezervac
             />
           )}
           {activeTab === "ai-orodja" && kmetija && (
-            <MagicVendorSuite
-              kmetijaId={kmetija.id}
-              kmetijaIme={kmetija.ime}
-              kmetijaRegija={kmetija.regija}
-              cenaNoc={kmetija.cena_noc}
-              paket={kmetija.paket}
-            />
+            <div className="space-y-10">
+              <StrategistAdvisor farm={kmetija} rezervacije={rezervacije} />
+              <VendorOptimizationService />
+            </div>
           )}
           {activeTab === "ai-orodja" && !kmetija && (
             <div className="rounded-3xl border-2 border-dashed border-earth-300 bg-white/60 p-12 text-center">

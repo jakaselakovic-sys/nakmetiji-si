@@ -9,9 +9,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
-import { createClient } from "@supabase/supabase-js";
-import type { Dozivetje } from "@/types/database";
-import { normalizirajKmetijo } from "@/lib/utils/normaliziraj-kmetijo";
+import { getPublicFarmListingDTOs } from "@/lib/dal/farms";
 import { KmetijeClient } from "./KmetijeClient";
 
 // ISR: revalidate every 60 seconds (stale-while-revalidate semantics)
@@ -50,37 +48,14 @@ export const metadata: Metadata = {
 // rows where aktivna = true (standard Supabase public-listing policy).
 const getCachedFarmData = unstable_cache(
   async () => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    const [{ data: kmetijeSurov }, { data: dozivetjaSurov }] = await Promise.all([
-      supabase
-        .from("kmetije")
-        .select(`*, kmetija_dozivetje(dozivetja(*))`)
-        .eq("aktivna", true)
-        .order("ocena", { ascending: false, nullsFirst: false }),
-      supabase
-        .from("dozivetja")
-        .select("*")
-        .order("vrstni_red"),
-    ]);
-
-    return {
-      kmetijeSurov: (kmetijeSurov ?? []) as Record<string, unknown>[],
-      dozivetjaSurov: (dozivetjaSurov ?? []) as Dozivetje[],
-    };
+    return getPublicFarmListingDTOs();
   },
   ["public-farms-listing"],
   { revalidate: 60, tags: ["farms"] }
 );
 
 export default async function KmetijePage() {
-  const { kmetijeSurov, dozivetjaSurov } = await getCachedFarmData();
-
-  const kmetije = kmetijeSurov.map(normalizirajKmetijo);
-  const dozivetja = dozivetjaSurov;
+  const { kmetije, dozivetja } = await getCachedFarmData();
 
   return (
     <div className="min-h-screen bg-cream">

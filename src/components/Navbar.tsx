@@ -10,8 +10,9 @@ const NAV_LINKS = [
   { label: "Domov", href: "/" },
   { label: "Kmetije", href: "/kmetije" },
   { label: "Zemljevid", href: "/zemljevid" },
+  { label: "Paketi", href: "/paketi" },
   { label: "Blog", href: "/blog" },
-  { label: "Naša zgodba", href: "/o-nas" },
+  { label: "O nas", href: "/o-nas" },
 ] as const;
 
 export async function Navbar() {

@@ -3,7 +3,8 @@
 import { useRef, useEffect, useState, useMemo } from "react";
 import { useScroll, useTransform, useSpring, motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
-import { HeroSearch } from "@/components/HeroSearch";
+import { SearchWidget } from "@/components/SearchWidget";
+import { JozeConcierge } from "@/components/JozeConcierge";
 import { useVibeStore, VIBE_HERO_SUBTITLES, type VibeTag } from "@/lib/vibeStore";
 
 // ---------------------------------------------------------------------------
@@ -18,7 +19,7 @@ const BG_OPACITY_3 = { input: [0.30, 0.45, 0.55, 0.70], output: [0, 1, 1, 0] };
 const BG_OPACITY_4 = { input: [0.55, 0.70, 1.0],  output: [0, 1, 1] };
 
 const THEME_INPUT  = [0, 0.15, 0.25, 0.35, 0.45, 0.55, 0.70];
-const THEME_OUTPUT = ["#f8fafc", "#f8fafc", "#fef08a", "#fef08a", "#99f6e4", "#99f6e4", "#bae6fd"];
+const THEME_OUTPUT = ["#F7F4EE", "#F7F4EE", "#dcc4a0", "#dcc4a0", "#a8d4e8", "#a8d4e8", "#D4AF37"];
 
 /** Accent color overrides per vibe — applied to the scrolling theme tint */
 const VIBE_TINT: Record<VibeTag, string[]> = {
@@ -223,16 +224,15 @@ export function ScrollytellingWrapper({
             </div>
           </div>
 
-          {/* Above-the-fold search — fixed to bottom third of the sticky hero.
-              pointer-events-auto only on this block so the background stays
-              interactive via scroll. */}
+          {/* Above-the-fold search + Jože contextual prompt */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.9, ease: "easeOut", delay: 0.8 }}
-            className="pointer-events-auto mt-auto mb-[10vh] w-full max-w-4xl"
+            className="pointer-events-auto mt-auto mb-[8vh] w-full max-w-xl flex flex-col gap-3"
           >
-            <HeroSearch dozivetja={dozivetja} />
+            <SearchWidget dozivetja={dozivetja} variant="full" />
+            <JozeConcierge variant="hero" />
           </motion.div>
         </div>
 

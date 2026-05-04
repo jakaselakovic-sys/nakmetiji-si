@@ -31,7 +31,7 @@ function PrijavaForm() {
 
     startTransition(async () => {
       const supabase = createSupabaseBrowser();
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: geslo,
       });
@@ -86,7 +86,7 @@ function PrijavaForm() {
 
         router.push(redirect);
         router.refresh();
-      } catch (err: any) {
+      } catch {
         setNapaka("Neveljavna MFA koda.");
       }
     });

@@ -7,13 +7,32 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import Groq from "groq-sdk";
+import { z } from "zod";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { logNapako } from "@/lib/logNapako";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { canUseVendorAiTools } from "@/lib/subscriptions/tiers";
 
 export const maxDuration = 30;
 
 const MODEL = "llama-3.3-70b-versatile";
+
+const StorytellerRequestSchema = z.object({
+  bullets: z.array(z.string().trim().min(1).max(400)).min(2).max(8),
+  kmetijaIme: z.string().trim().min(2).max(200),
+  regija: z.string().trim().max(80).optional(),
+});
+
+const StorytellerResponseSchema = z.object({
+  sl: z.string().trim().min(20).max(1_500),
+  en: z.string().trim().min(20).max(1_500),
+  de: z.string().trim().min(20).max(1_500),
+  it: z.string().trim().min(20).max(1_500),
+  seo_keywords: z.object({
+    sl: z.array(z.string().trim().max(80)).max(8).optional(),
+    en: z.array(z.string().trim().max(80)).max(8).optional(),
+  }).optional(),
+});
 
 export async function POST(req: NextRequest) {
   const supabase = await createSupabaseServer();
@@ -26,8 +45,8 @@ export async function POST(req: NextRequest) {
     .select("paket")
     .eq("lastnik_id", user.id)
     .maybeSingle();
-  if (!farm || farm.paket === "free" || farm.paket == null) {
-    return NextResponse.json({ error: "Ta funkcija zahteva Premium ali Basic paket." }, { status: 403 });
+  if (!farm || !canUseVendorAiTools(farm.paket)) {
+    return NextResponse.json({ error: "Ta funkcija zahteva paket Pospešek ali Titan Elite." }, { status: 403 });
   }
 
   // 20 generations per hour per user
@@ -39,14 +58,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const body = await req.json() as {
-    bullets?: string[];
-    kmetijaIme?: string;
-    regija?: string;
-  };
-  const { bullets = [], kmetijaIme = "", regija } = body;
-
-  const filled = bullets.filter((b) => b?.trim());
+  let parsedBody: z.infer<typeof StorytellerRequestSchema>;
+  try {
+    const body = await req.json();
+    const parsed = StorytellerRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: z.prettifyError(parsed.error) }, { status: 400 });
+    }
+    parsedBody = parsed.data;
+  } catch {
+    return NextResponse.json({ error: "Neveljaven JSON." }, { status: 400 });
+  }
+  const { bullets: filled, kmetijaIme, regija } = parsedBody;
   if (filled.length < 2) {
     return NextResponse.json({ error: "Vnesite vsaj 2 ključni točki." }, { status: 400 });
   }
@@ -118,10 +141,7 @@ Respond with ONLY raw JSON, no markdown fences:
     .trim();
 
   try {
-    const result = JSON.parse(raw) as {
-      sl: string; en: string; de: string; it: string;
-      seo_keywords?: { sl?: string[]; en?: string[] };
-    };
+    const result = StorytellerResponseSchema.parse(JSON.parse(raw));
     // Validate all 4 required languages — partial response is unusable
     if (!result.sl?.trim() || !result.en?.trim() || !result.de?.trim() || !result.it?.trim()) {
       throw new Error("Manjkajoči jeziki v odgovoru");

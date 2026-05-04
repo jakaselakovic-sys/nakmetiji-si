@@ -12,6 +12,7 @@
     "test:headed": "playwright test --headed",
     "db:seed": "node scripts/seed.mjs",
     "db:export": "node scripts/db-export.mjs",
+    "audit:rls": "node scripts/rls-audit.mjs",
     "prepare": "husky",
     "check:all": "node scripts/check-all.mjs"
   },

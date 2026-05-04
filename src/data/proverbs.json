@@ -3,55 +3,110 @@
     "Lepa beseda lepo mesto najde.",
     "Ljubo doma, kdor ga ima.",
     "Kdor prej pride, prej melje.",
-    "Boljši sosed blizu kot brat daleč."
+    "Boljši sosed blizu kot brat daleč.",
+    "Gost v hišo, Bog v hišo.",
+    "Kdor dobro sprejme gosta, ta dobrega gosta dobi."
   ],
   "hrana": [
     "Lakota je najboljša kuharica.",
     "Brez dela ni jela.",
     "Če kruhek pade ti na tla, poberi in poljubi ga.",
-    "Kjer je dim, je tudi ogenj."
+    "Kjer je dim, je tudi ogenj.",
+    "Domači kruh je najslajši.",
+    "Sita hiša — vesela hiša."
   ],
   "vino": [
     "Voda za obraz, vino za dušo.",
     "V vinu je resnica.",
     "Dobra kaplja kri krepi.",
-    "Staro vino, stari prijatelji — oboje z leti le boljše."
+    "Staro vino, stari prijatelji — oboje z leti le boljše.",
+    "Vinska trta ima korenine globlje od vsake skrbi.",
+    "Kdor vino pije zmerno, živi dolgo."
   ],
   "potrpezljivost": [
     "Zrno do zrna — pogača, kamen na kamen — palača.",
     "Počasi se daleč pride.",
     "Tiha voda bregove dere.",
-    "Kar se Janezek nauči, to Janez zna."
+    "Kar se Janezek nauči, to Janez zna.",
+    "Potrpežljivost je mati modrosti.",
+    "Kar je zrelo, samo pade."
   ],
   "narava": [
     "Drevo se po sadu pozna.",
     "Dosti snega, dosti sena.",
     "Ena lastovka še ne prinese pomladi.",
-    "Kakor sejemo, tako žanjemo."
+    "Kakor sejemo, tako žanjemo.",
+    "Na vsak cvet pride čebela.",
+    "Drevje raste počasi, a pade hitro.",
+    "Gozd je bogastvo, ki ga ne moreš ukrasti."
   ],
   "dom": [
     "Boljša domača gruda kot na tujem zlata ruda.",
     "Vsak lonec svoj pokrov najde.",
-    "Dom je tam, kjer dim diši po kruhu."
+    "Dom je tam, kjer dim diši po kruhu.",
+    "Hiša brez ognja je kakor dan brez sonca.",
+    "Kdor doma ni vesel, tujina mu ne pomaga."
   ],
   "resnica": [
     "Laž ima kratke noge.",
     "Kdor ne tvega, ne dobi.",
-    "Pravica je kakor glavnik — vsakomur vlasi razčeše."
+    "Pravica je kakor glavnik — vsakomur vlasi razčeše.",
+    "Resnica je hčerka časa.",
+    "Beseda je srebro, molk je zlato."
   ],
   "opravicilo": [
     "Vsega pač ne more biti pod eno streho.",
     "Tudi megla se enkrat razkadi.",
-    "Kjer je veliko sonca, je tudi malo sence."
+    "Kjer je veliko sonca, je tudi malo sence.",
+    "Po dežju posije sonce.",
+    "Vsaka nevihta ima konec."
   ],
   "druzina": [
     "Kri ni voda.",
     "Jabolko ne pade daleč od drevesa.",
-    "Kjer se prepevajo otroci, tam je pravi dom."
+    "Kjer se prepevajo otroci, tam je pravi dom.",
+    "Oče gradi, sin zida, vnuk podira.",
+    "Kdor spoštuje starše, spoštuje sebe."
   ],
   "pot": [
     "Vsaka pot ima svoj konec.",
     "Kdor ima voljo, ima pot.",
-    "Po bregu navzdol je vsak junak."
+    "Po bregu navzdol je vsak junak.",
+    "Kdor dalj hodi, več vidi.",
+    "Pot do cilja vodi skozi trud.",
+    "Popotnik, ki se vrne, prinese bogatejše srce."
+  ],
+  "pogum": [
+    "Kdor se boji, ne pojde v vojsko.",
+    "Pogum je polovica zmage.",
+    "Strah ima velike oči.",
+    "Bolje enkrat videti kot stokrat slišati.",
+    "Kdor se boji grma, ne hodi v gozd."
+  ],
+  "skupnost": [
+    "Skupaj se doseže več kot vsak zase.",
+    "Enotnost je moč, prepir je slabost.",
+    "Dva sta moč, eden je nič.",
+    "V slogi je moč."
+  ],
+  "zivali": [
+    "Pes laja, voz gre naprej.",
+    "Vsak petelin na svojem smetišču lepo poje.",
+    "Ena vrana druge ne izkljuje.",
+    "Krava je pri sosedih vedno lepša.",
+    "Tih konj daleč nosi."
+  ],
+  "modrost": [
+    "Kdor vpraša, ne zgreši poti.",
+    "Star metlišče, nova metla.",
+    "Bolje malo in mirno kot vse in nemirno.",
+    "Modrost pride z leti, ne z zlatom.",
+    "Pametno uho malo posluša, a dobro razume."
+  ],
+  "sezona": [
+    "Vsaka ura ima svojo uro.",
+    "Čas je zlato, ki ga nikogar ne dobiš nazaj.",
+    "Kdor zamudi pomlad, zamudi leto.",
+    "Trgatev čaka na nikogar."
   ]
 }

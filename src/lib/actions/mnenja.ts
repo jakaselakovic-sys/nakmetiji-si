@@ -46,28 +46,45 @@ export async function pridobiMnenja(
 export async function oddajMnenje(
   input: UstvariMnenjeInput
 ): Promise<{ uspeh: boolean; napaka?: string }> {
-  // Validacija
+  // Validacija vhodnih podatkov
   if (!input.uporabnik_ime || input.uporabnik_ime.trim().length < 2) {
     return { uspeh: false, napaka: "Ime mora imeti vsaj 2 znaka." };
   }
-
   if (!input.ocena || input.ocena < 1 || input.ocena > 5) {
     return { uspeh: false, napaka: "Ocena mora biti med 1 in 5." };
   }
-
   if (!input.kmetija_id) {
     return { uspeh: false, napaka: "Manjka ID kmetije." };
   }
 
   const supabase = await createSupabaseServer();
 
+  // ── Auth check: samo registrirani gosti lahko ocenijo ───────────────────
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { uspeh: false, napaka: "Za oddajo mnenja se morate prijaviti ali registrirati." };
+  }
+
+  // ── Prepreči dvojna mnenja istega uporabnika za isto kmetijo ────────────
+  const { data: existing } = await supabase
+    .from("mnenja")
+    .select("id")
+    .eq("kmetija_id", input.kmetija_id)
+    .eq("uporabnik_id", user.id)
+    .maybeSingle();
+
+  if (existing) {
+    return { uspeh: false, napaka: "Za to kmetijo ste že oddali mnenje." };
+  }
+
   const { error } = await supabase.from("mnenja").insert({
     kmetija_id: input.kmetija_id,
+    uporabnik_id: user.id,
     uporabnik_ime: input.uporabnik_ime.trim(),
-    uporabnik_email: input.uporabnik_email?.trim() || null,
+    uporabnik_email: input.uporabnik_email?.trim() || user.email || null,
     ocena: input.ocena,
     komentar: input.komentar?.trim() || null,
-    status: "cakanje", // čaka na moderacijo
+    status: "cakanje",
   });
 
   if (error) {

@@ -231,6 +231,21 @@ export interface Izdelek {
   posodobljeno: string;
 }
 
+// ─── Dogodek (Boutique Event) ───────────────────────────────────────────────
+
+export interface Dogodek {
+  id: string;
+  kmetija_id: string;
+  ime: string;
+  opis: string;
+  datum_od: string;
+  datum_do: string;
+  cena: number | null;
+  max_oseb: number | null;
+  slika_url: string | null;
+  ustvarjeno: string;
+}
+
 // ─── Rezervacija (Booking) ──────────────────────────────────────────────────
 
 export type RezervacijaStatus =
@@ -568,4 +583,89 @@ export interface Database {
 }
 
 
-export type KmetijaPaket = 'free' | 'basic' | 'premium';
+// ─── Naročniški paketi (Subscription tiers) ─────────────────────────────────
+
+export type KmetijaPaket = 'korenine' | 'avtenticnost' | 'posesek' | 'titan_elite';
+
+export const VIDEO_OSNOVNA_CENA = 400; // € brez popusta
+
+export interface PaketConfig {
+  label: string;
+  opis: string;
+  cena_mesec: number | null; // null = brezplačno
+  video_popust: number;       // 0.00 – 0.10 (decimalni odstotek)
+  tier_rang: number;          // 0–3 za SQL ORDER BY
+  iskalna_prioriteta: string;
+  joze_status: string;
+  barva: string;
+  barva_bg: string;
+  emoji: string;
+}
+
+export const PAKET_CONFIG: Record<KmetijaPaket, PaketConfig> = {
+  korenine: {
+    label: "Korenine",
+    opis: "Začnite svojo pot na NaKmetiji.si",
+    cena_mesec: null,
+    video_popust: 0,
+    tier_rang: 0,
+    iskalna_prioriteta: "Zadnja mesta",
+    joze_status: "Osnovni opis",
+    barva: "#6b7280",
+    barva_bg: "#f9fafb",
+    emoji: "🌱",
+  },
+  avtenticnost: {
+    label: "Avtentičnost",
+    opis: "Za kmetije, ki so pripravljene na rast",
+    cena_mesec: 12,
+    video_popust: 0.025,
+    tier_rang: 1,
+    iskalna_prioriteta: "Sredina",
+    joze_status: "Lokalna omemba",
+    barva: "#059669",
+    barva_bg: "#ecfdf5",
+    emoji: "🌿",
+  },
+  posesek: {
+    label: "Pospešek",
+    opis: "Maksimalna vidnost, realen ROI",
+    cena_mesec: 29,
+    video_popust: 0.05,
+    tier_rang: 2,
+    iskalna_prioriteta: "Visoka prioriteta",
+    joze_status: "Aktivno priporočilo",
+    barva: "#2563eb",
+    barva_bg: "#eff6ff",
+    emoji: "🚀",
+  },
+  titan_elite: {
+    label: "Titan Elite",
+    opis: "Absolutni vrh — samo za elitne kmetije",
+    cena_mesec: 49,
+    video_popust: 0.10,
+    tier_rang: 3,
+    iskalna_prioriteta: "Absolutni vrh (Spotlight)",
+    joze_status: "Jože's Choice",
+    barva: "#d4a853",
+    barva_bg: "#fefce8",
+    emoji: "👑",
+  },
+};
+
+/** Izračuna ceno videa glede na tier (400 € − popust) */
+export function izracunajCenoVidea(tier: KmetijaPaket): number {
+  const safeDiscount = Math.min(0.10, Math.max(0, PAKET_CONFIG[tier].video_popust));
+  return Math.round(VIDEO_OSNOVNA_CENA * (1 - safeDiscount));
+}
+
+export interface Subscription {
+  id: string;
+  kmetija_id: string;
+  tier: KmetijaPaket;
+  video_discount_rate: number;
+  is_priority_search: boolean;
+  active_until: string | null;
+  ustvarjeno: string;
+  posodobljeno: string;
+}

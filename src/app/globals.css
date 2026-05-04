@@ -8,7 +8,7 @@
 /* ── Barvna paleta ───────────────────────────────────────────────────────── */
 
 @theme inline {
-  /* Zelena — Forest / Gozd */
+  /* Forest Green — backward compat */
   --color-forest-950: #0f2318;
   --color-forest-900: #1a3a2a;
   --color-forest-800: #1f4d35;
@@ -21,7 +21,7 @@
   --color-forest-100: #e8f7ed;
   --color-forest-50: #f0faf4;
 
-  /* Zemeljska — Earth / Narava */
+  /* Earth tones — backward compat */
   --color-earth-900: #3d2c1e;
   --color-earth-800: #5c4033;
   --color-earth-700: #7b5b43;
@@ -33,35 +33,64 @@
   --color-earth-100: #f5f0e8;
   --color-earth-50: #faf8f4;
 
-  /* Akcentne */
-  --color-cream: #F4F1EA;
-  --color-cream-warm: #f0e8d8;
-  --color-paper: #FDFBF7;
-  --color-gold-500: #d4a853;
-  --color-gold-600: #b8912e;
+  /* Bark/Les — Primarna akcija (zamenja rose) */
+  --color-bark-950: #1a0e08;
+  --color-bark-900: #2e1a0e;
+  --color-bark-800: #4a2c1a;
+  --color-bark-700: #6b3f24;
+  --color-bark-600: #8b5a38;
+  --color-bark-500: #a67c5b;
+  --color-bark-400: #c4a07a;
+  --color-bark-300: #dcc4a0;
+  --color-bark-200: #ede3d0;
+  --color-bark-100: #f5f0e8;
+  --color-bark-50:  #faf8f4;
 
-  /* Semantične */
-  --color-background: #F4F1EA;
-  --color-foreground: #1a3a2a;
-  --color-card-bg: #ffffff;
-  --color-card-border: #ede5da;
-  --color-muted: #9a7b5b;
+  /* Voda — Sekundarna (zamenja sage) */
+  --color-water-950: #0a1a2e;
+  --color-water-900: #0f2744;
+  --color-water-800: #1a3d5c;
+  --color-water-700: #1e5273;
+  --color-water-600: #2e7ea8;
+  --color-water-500: #4a9bc4;
+  --color-water-400: #7ab8d8;
+  --color-water-300: #a8d4e8;
+  --color-water-200: #d0eaf5;
+  --color-water-100: #e8f5fb;
+  --color-water-50:  #f3fafd;
 
-  /* Fonti */
-  --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  /* Accent */
+  --color-cream: #F7F4EE;
+  --color-cream-warm: #ede3d0;
+  --color-paper: #F7F4EE;
+  --color-gold-500: #D4AF37;
+  --color-gold-600: #b8932e;
+
+  /* Semantic */
+  --color-background: #F7F4EE;
+  --color-foreground: #2D3436;
+  --color-primary: #a67c5b;
+  --color-secondary: #4a9bc4;
+  --color-card-bg: #FDFBF7;
+  --color-card-border: #dcc4a0;
+  --color-muted: #8b7355;
+
+  /* Typography — Cormorant Garamond + Montserrat */
+  --font-sans: var(--font-montserrat), "Montserrat", system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
-  --font-display: var(--font-playfair), Georgia, "Times New Roman", serif;
+  --font-display: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
   --font-script: var(--font-script), "Caveat", cursive;
+  --font-display-weight: 400;
 
-  /* Shadow scale — 3 tokens for consistent elevation */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 16px rgba(45, 90, 39, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 12px 48px rgba(45, 90, 39, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
+  /* Soft shadows — zemeljsko rjave, naravne */
+  --shadow-sm: 0 2px 8px rgba(106, 63, 36, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 20px rgba(106, 63, 36, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 12px 48px rgba(106, 63, 36, 0.16), 0 4px 16px rgba(0, 0, 0, 0.05);
 
-  /* Border-radius scale — 3 semantic tokens */
-  --radius-sm: 12px;   /* inputs, badges, small buttons */
-  --radius-md: 20px;   /* cards, modals, sections */
-  --radius-lg: 32px;   /* nav islands, hero elements, pills */
+  /* Border-radius scale */
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 32px;
 }
 
 /* ── Z-index scale ───────────────────────────────────────────────────────── */
@@ -102,39 +131,38 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-forest-300);
+  background: var(--color-bark-300);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-forest-500);
+  background: var(--color-bark-500);
 }
 
 /* ── Selection ───────────────────────────────────────────────────────────── */
 
 ::selection {
-  background: var(--color-forest-200);
-  color: var(--color-forest-900);
+  background: var(--color-bark-200);
+  color: var(--color-foreground);
 }
 
 /* ── Focus visible — keyboard accessibility ─────────────────────────────── */
 
 *:focus-visible {
-  outline: 2px solid var(--color-forest-600);
+  outline: 2px solid var(--color-bark-600);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-/* Reset outline on elements that have their own focus styles */
 button:focus-visible,
 a:focus-visible {
-  outline: 2px solid var(--color-forest-500);
+  outline: 2px solid var(--color-bark-500);
   outline-offset: 2px;
 }
 
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--color-forest-400);
+  outline: 2px solid var(--color-water-500);
   outline-offset: 0;
   border-radius: inherit;
 }
@@ -142,35 +170,35 @@ select:focus-visible {
 /* ── Glassmorphism utilities ─────────────────────────────────────────────── */
 
 .glass {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(247, 244, 238, 0.75);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(166, 124, 91, 0.2);
 }
 
 .glass-dark {
-  background: rgba(26, 58, 42, 0.55);
+  background: rgba(26, 58, 92, 0.6);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(74, 155, 196, 0.15);
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(253, 251, 247, 0.88);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(166, 124, 91, 0.15);
   box-shadow:
     0 4px 6px -1px rgba(0, 0, 0, 0.05),
     0 2px 4px -2px rgba(0, 0, 0, 0.03);
 }
 
 .glass-nav {
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(247, 244, 238, 0.95);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(166, 124, 91, 0.15);
+  box-shadow: 0 2px 12px rgba(106, 63, 36, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 /* ── Animacije ───────────────────────────────────────────────────────────── */
@@ -748,6 +776,47 @@ select:focus-visible {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* ── Farm hover tooltip popup ───────────────────────────────────────────── */
+
+.farm-hover-popup .mapboxgl-popup-content {
+  padding: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.12);
+  border: none;
+  background: transparent;
+}
+
+.farm-hover-popup .mapboxgl-popup-tip {
+  border-top-color: white;
+}
+
+.farm-hover-tooltip {
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  background: white;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.farm-hover-tooltip__img {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  display: block;
+}
+
+.farm-hover-tooltip__name {
+  display: block;
+  padding: 8px 12px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a2d19;
+  line-height: 1.3;
+  font-family: var(--font-sans);
+}
+
 /* ── Activity Pulse — "Living Map" social proof ─────────────────────────── */
 
 @keyframes pulse-activity-green {
@@ -954,22 +1023,22 @@ select:focus-visible {
 /* ── Glassmorphic Navigation Island ────────────────────────────────────── */
 
 .glass-island {
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(253, 251, 247, 0.92);
   backdrop-filter: blur(28px) saturate(190%);
   -webkit-backdrop-filter: blur(28px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(166, 124, 91, 0.18);
   border-radius: 32px;
   box-shadow:
-    0 8px 32px rgba(45, 90, 39, 0.08),
+    0 8px 32px rgba(106, 63, 36, 0.10),
     0 2px 8px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .glass-island-dark {
-  background: rgba(26, 58, 42, 0.65);
+  background: rgba(26, 58, 92, 0.65);
   backdrop-filter: blur(28px) saturate(190%);
   -webkit-backdrop-filter: blur(28px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(74, 155, 196, 0.12);
   border-radius: 32px;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.15),
@@ -1309,10 +1378,42 @@ select:focus-visible {
 /* ── Mobile bottom navigation ──────────────────────────────────────────── */
 
 .mobile-bottom-nav {
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(247, 244, 238, 0.95);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-top: 1px solid rgba(45, 90, 39, 0.08);
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.06);
+  border-top: 1px solid rgba(166, 124, 91, 0.15);
+  box-shadow: 0 -4px 20px rgba(106, 63, 36, 0.08);
   padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 767px) {
+  html {
+    scroll-padding-top: 72px;
+  }
+
+  body {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-bottom-nav {
+    min-height: calc(58px + env(safe-area-inset-bottom));
+  }
+
+  .nav-pill,
+  .glass-island,
+  .glass-nav {
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

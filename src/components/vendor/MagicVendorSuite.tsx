@@ -717,12 +717,12 @@ interface MagicVendorSuiteProps {
   paket?: KmetijaPaket;
 }
 
-export function MagicVendorSuite({ kmetijaId, kmetijaIme = "", kmetijaRegija = "gorenjska", cenaNoc, paket = "free" }: MagicVendorSuiteProps) {
+export function MagicVendorSuite({ kmetijaId, kmetijaIme = "", kmetijaRegija = "gorenjska", cenaNoc, paket = "korenine" }: MagicVendorSuiteProps) {
   const [activeTool, setActiveTool] = useState<ToolKey>("none");
 
   // Granularni dostop
-  const isFree = paket === "free";
-  const isPremium = paket === "premium";
+  const isFree = paket === "korenine";
+  const isPremium = paket === "titan_elite" || paket === "posesek";
   const isToolsAvailable = !isFree; // Free sploh ne more klikati
 
   return (

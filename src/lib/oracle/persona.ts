@@ -97,10 +97,54 @@ const PERSONALITY_IT = `Sei Jože, una guida per l'agriturismo sloveno su NaKmet
 // ---------------------------------------------------------------------------
 
 const LANG_GUARDIAN_SI = `
-JEZIK: Slovenščina mora biti brezhibna — šumniki (č/š/ž), pravilna sklanjatev ("na kmetiji", ne "na kmetija"), pravilna spregatev. Brez anglicizmov ("doživetje" ne "experience"). Brez kalkov ("to je tisto, kar iščeš" je OK, "to je to, kar si iskal" ni).`;
+JEZIK: Slovenščina mora biti brezhibna — šumniki (č/š/ž), pravilna sklanjatev ("na kmetiji", ne "na kmetija"), pravilna spregatev. Brez anglicizmov ("rezervacija" ne "booking", "vzdušje" ne "vibe", "doživetje" ne "experience"). Tikanje vedno.`;
 
 const LANG_GUARDIAN_EN = `
 LANGUAGE: Natural English. Keep Slovenian terms (kozolec, klet, jota) intact. Brief inline gloss the first time only. Consistent spelling (US or UK).`;
+
+// ---------------------------------------------------------------------------
+// Seasonal intelligence — Jože ve, kateri mesec je
+// ---------------------------------------------------------------------------
+
+const SEASONAL_HINTS: Record<number, string> = {
+  1:  "Januar: koline, dimljeno meso, topla klet. Predlagaj notranje zimske aktivnosti in ognjišče.",
+  2:  "Februar: pust, jotca, topla peč. Idealno za zimski umik na kmetiji.",
+  3:  "Marec: šparglji, mlado zelje, spomladanski pohodi. Narava se prebuja.",
+  4:  "April: češnje cvetijo, kmečke delavnice, jagodičje začenja rasti.",
+  5:  "Maj: češnje, jagode, zelišča v polnem pogonu. Idealno za piknik in pohode.",
+  6:  "Junij: jagode, zelišča, bučke, čebele in sveži med.",
+  7:  "Julij: poletna sezona — gozd, reke, osvežilni izleti v hribe.",
+  8:  "Avgust: zrelo poletje — mošt se pripravlja, fige, buče.",
+  9:  "September: TRGATEV — grozdje, mošt, jesenski plodovi. Idealen čas za Štajersko in Primorje!",
+  10: "Oktober: jabolka, bučno olje, koline se bližajo. Jesenski mir in barve.",
+  11: "November: koline, koruza, dimljene dobrote, ogenj na kmečkem ognjišču.",
+  12: "December: advent na kmetiji, domač med in pekovske dobrote za darila.",
+};
+
+// ---------------------------------------------------------------------------
+// Elite business logic — subscription tier selling rules
+// ---------------------------------------------------------------------------
+
+const TIER_SELLING_RULES = `
+PRODAJNA HIERARHIJA (stroga — ne preskakuj):
+- ✦ TITAN ELITE (tier_rang=3): Prodajaj kot "kraljevsko destinacijo" — "izjemna", "enkratna izkušnja", "prestiž med kmetijami". Če kmetija ima video (has_video=true), omeni "4K cinematičen video".
+- 🎯 POSPEŠEK (tier_rang=2): "Najboljše razmerje med kakovostjo in ceno — to bi izbral jaz, ko iščem ravno pravo."
+- ✓ AVTENTIČNOST (tier_rang=1): "Skrit dragulj — za tiste, ki vedo, kaj iščejo."
+- KORENINE (tier_rang=0): Omeni samo, če v bližini ni nobene višje kmetije ali gre za posebno nišno ponudbo.`;
+
+// ---------------------------------------------------------------------------
+// Video sales protocol
+// ---------------------------------------------------------------------------
+
+const VIDEO_PROTOCOL = `
+VIDEO: Če has_video=true, naravno omeni "4K cinematičen video" ali "virtualni ogled". Če has_video=false, ne omenjaj videa.`;
+
+// ---------------------------------------------------------------------------
+// Mapbox Matrix distance rule — precision over vagueness
+// ---------------------------------------------------------------------------
+
+const MATRIX_DISTANCE_RULE = `
+RAZDALJE: Nikoli ne reci "blizu" ali "v bližini" — vedno navedi minutažo iz KONTEKSTA: "Do tam je X minut preudarne vožnje." Če drive_minutes ni v kontekstu, ne ugibaj razdalje.`;
 
 // ---------------------------------------------------------------------------
 // Builder
@@ -110,6 +154,7 @@ export function buildPersona(
   locale: Locale,
   isSlovenian: boolean,
   effectiveRegion: Regija | null,
+  month?: number,
 ): string {
   const base = !isSlovenian
     ? locale === "de"
@@ -124,8 +169,17 @@ export function buildPersona(
       ? `\n\nREGIJA: ${REGIONAL_FLAVOR[effectiveRegion]}`
       : "";
 
+  const seasonHint =
+    month && SEASONAL_HINTS[month]
+      ? `\n\nSEZONA (${month}. mesec): ${SEASONAL_HINTS[month]}`
+      : "";
+
   const stopRules = isSlovenian ? STOP_RULES_SI : STOP_RULES_EN;
   const langGuardian = isSlovenian ? LANG_GUARDIAN_SI : LANG_GUARDIAN_EN;
 
-  return `${base}${regionFlavor}\n${COV_PROTOCOL}\n${stopRules}\n${langGuardian}`;
+  const tierRules = isSlovenian ? TIER_SELLING_RULES : "";
+  const videoProtocol = isSlovenian ? VIDEO_PROTOCOL : "";
+  const matrixRule = MATRIX_DISTANCE_RULE;
+
+  return `${base}${regionFlavor}${seasonHint}\n${tierRules}${videoProtocol}\n${COV_PROTOCOL}${matrixRule}\n${stopRules}\n${langGuardian}`;
 }

@@ -23,6 +23,7 @@
 import { NextRequest } from "next/server";
 import Groq from "groq-sdk";
 import Anthropic from "@anthropic-ai/sdk";
+import { z } from "zod";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import * as Sentry from "@sentry/nextjs";
 import type { Znamenitost } from "@/types/landmarks";
@@ -46,6 +47,16 @@ interface OracleMessage {
 }
 
 type Locale = "sl" | "en" | "de" | "it";
+
+const OracleRequestSchema = z.object({
+  message: z.string().trim().min(1).max(500),
+  locale: z.enum(["sl", "en", "de", "it"]).optional(),
+  history: z.array(z.object({
+    role: z.enum(["user", "assistant"]),
+    content: z.string().trim().min(1).max(1_500),
+  })).max(12).optional(),
+  farm_slug: z.string().trim().regex(/^[a-z0-9-]+$/).max(120).optional(),
+}).strict();
 
 interface ExtractedIntent {
   vibes: string[];
@@ -86,6 +97,8 @@ interface FarmResult {
   ocena: number | null;
   stevilo_ocen: number;
   premium: boolean;
+  paket: import("@/types/database").KmetijaPaket | null;
+  tier_rang: number;
   vibe_tags: string[];
   cena_noc: number | null;
   max_gostov: number | null;
@@ -96,6 +109,7 @@ interface FarmResult {
   availability_note: string | null;
   lastnosti: string[];
   posebne_ponudbe: string | null;
+  has_video: boolean;
 }
 
 /** Internal audit trail for dev-mode debugging */
@@ -313,7 +327,7 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number): numb
 const FARM_SELECT_FIELDS = `
   id, slug, ime, kratki_opis, opis, regija,
   naslov, obcina, postna_stevilka, lat, lng,
-  naslovna_slika, ocena, stevilo_ocen, premium, vibe_tags,
+  naslovna_slika, video_url, ocena, stevilo_ocen, premium, paket, tier_rang, vibe_tags,
   cena_noc, max_gostov, kontaktni_podatki,
   lastnosti, posebne_ponudbe,
   kmetija_dozivetje(dozivetja(ime, slug, ikona)),
@@ -515,6 +529,8 @@ function normalizeFarms(raw: Record<string, unknown>[]): FarmResult[] {
       ocena: (r.ocena as number) ?? null,
       stevilo_ocen: (r.stevilo_ocen as number) ?? 0,
       premium: (r.premium as boolean) ?? false,
+      paket: (r.paket as import("@/types/database").KmetijaPaket) ?? null,
+      tier_rang: (r.tier_rang as number) ?? 0,
       vibe_tags: (r.vibe_tags as string[]) ?? [],
       cena_noc: (r.cena_noc as number) ?? null,
       max_gostov: (r.max_gostov as number) ?? null,
@@ -527,6 +543,7 @@ function normalizeFarms(raw: Record<string, unknown>[]): FarmResult[] {
       availability_note: null,
       lastnosti: (r.lastnosti as string[]) ?? [],
       posebne_ponudbe: (r.posebne_ponudbe as string) ?? null,
+      has_video: !!(r.video_url as string | null),
     };
   });
 }
@@ -632,7 +649,8 @@ function vibeRank(farms: FarmResult[], intent: ExtractedIntent): FarmResult[] {
       if (intent.zivali && dozSlugs.includes("zivali")) score += 3;
       if (intent.hrana && (dozSlugs.includes("kulinarika") || f.izdelki.length > 0)) score += 3;
       score += (f.ocena ?? 0) * 0.5;
-      if (f.premium) score += 20;
+      // Tier boosts: Titan Elite = 30, Pospešek = 20, Avtentičnost = 10
+      score += f.tier_rang * 10;
       return { farm: f, score };
     })
     .sort((a, b) => b.score - a.score)
@@ -804,11 +822,17 @@ function formatFarmContext(f: FarmResult, i: number): string {
     ? `\n  Posebna ponudba (od lastnika): ${f.posebne_ponudbe.slice(0, 200)}`
     : "";
 
+  const tierLabel = f.paket === "titan_elite" ? " ✦ TITAN ELITE" :
+                    f.paket === "posesek" ? " 🎯 POSPEŠEK" :
+                    f.paket === "avtenticnost" ? " ✓ AVTENTIČNOST" : " KORENINE";
+
+  const videoLine = `\n  has_video: ${f.has_video}`;
+
   return `
-FARM ${i + 1}${f.premium ? " ⭐ PREMIUM" : ""}: "${f.ime}"
+FARM ${i + 1}${tierLabel}: "${f.ime}"
   REGIJA (verified): ${f.regija}
   Lokacija: ${locationStr || "Slovenija"}
-  ${coordStr}${availStr}
+  ${coordStr}${availStr}${videoLine}
   Opis: ${f.kratki_opis ?? f.opis.slice(0, 200)}...
   Kar ponujamo: ${dozivetjaStr}${lastnostiStr}${ponudbaStr}
   Zmogljivost: ${gostjeStr}
@@ -824,8 +848,8 @@ ${nearbyStr}${izletniška_str}`;
 // Sidebar system prompt — Jože as dedicated concierge for a single farm
 // ---------------------------------------------------------------------------
 
-function buildSidebarPrompt(farm: FarmResult, locale: Locale): string {
-  const persona = buildPersona(locale, locale === "sl", farm.regija as import("@/types/database").Regija);
+function buildSidebarPrompt(farm: FarmResult, locale: Locale, month?: number): string {
+  const persona = buildPersona(locale, locale === "sl", farm.regija as import("@/types/database").Regija, month);
   const ctx = formatFarmContext(farm, 0);
   const isSl = locale === "sl";
   const guidance = isSl
@@ -847,9 +871,10 @@ function buildSystemPrompt(
   fallbackRegion: Regija | null,
   vibeMemory: string[],
   weatherContext: string,
+  month: number,
 ): string {
   const isSlovenian = intent.locale_hint === "si";
-  const personality = buildPersona(locale, isSlovenian, regionUsed ?? fallbackRegion);
+  const personality = buildPersona(locale, isSlovenian, regionUsed ?? fallbackRegion, month);
 
   // Context block — empty / fallback / normal cases
   const farmsContext = farms.length === 0
@@ -884,11 +909,21 @@ function buildSystemPrompt(
 - After each farm's paragraph, append exactly: [BOOK_WIDGET:slug]
 - No bullet lists. No marketing opener. Just go straight to substance.`;
 
+  const validFarmSlugs = farms.map((f) => f.slug).join(", ") || "(none)";
+  const validLandmarks = Array.from(new Set(
+    farms.flatMap((f) => f.nearby.map((z: NearbyLandmark) => z.ime)),
+  )).join("; ") || "(none)";
+
   return `${personality}
 
 ${regionUsed ? `Filter regije: ${regionUsed} (vse kmetije spodaj so iz te regije).` : "Brez filtra regije — najboljše ujemanje."}${fallbackRegion ? ` Iskana regija "${regionUsed}" je prazna; spodaj so alternative iz sosednje "${fallbackRegion}" — to gostu povej naravnost.` : ""}
 ${vibeMemoryStr}
 ${weatherContext}
+
+VERIFICIRANI ID-JI:
+- Dovoljeni farm slugi: ${validFarmSlugs}
+- Dovoljene znamenitosti: ${validLandmarks}
+- Če ime kmetije, slug ali znamenitost ni v tem seznamu oziroma v KONTEKSTU KMETIJ, ga ne omeni. Ne ugibaj.
 
 KONTEKST KMETIJ:
 ${farmsContext}${pantryHint}
@@ -904,12 +939,22 @@ ${formatHint}`;
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
-  const body = await req.json() as {
-    message: string;
-    locale?: Locale;
-    history?: OracleMessage[];
-    farm_slug?: string;  // sidebar mode: skip search, focus on one farm
-  };
+  let body: z.infer<typeof OracleRequestSchema>;
+  try {
+    const parsed = OracleRequestSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: z.prettifyError(parsed.error) }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    body = parsed.data;
+  } catch {
+    return new Response(JSON.stringify({ error: "Neveljaven JSON." }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   const toggles = await getSystemToggles();
   if (!toggles.oracle_enabled) {
@@ -1142,7 +1187,7 @@ export async function POST(req: NextRequest) {
           });
 
           sendEvent("status", { phase: "pitch" });
-          const sidebarPrompt = buildSidebarPrompt(enriched, locale);
+          const sidebarPrompt = buildSidebarPrompt(enriched, locale, new Date().getMonth() + 1);
 
           for await (const chunk of streamLLMWithFallback(sidebarPrompt, recentHistory, message)) {
             send(scrubPii(chunk.text));
@@ -1296,6 +1341,7 @@ export async function POST(req: NextRequest) {
         sendEvent("status", { phase: "pitch" });
         const systemPrompt = buildSystemPrompt(
           intent, farms, locale, regionUsed, fallbackRegion, vibeMemory, weatherContext,
+          new Date().getMonth() + 1,
         );
 
         let providerUsed: "groq" | "anthropic" = "groq";

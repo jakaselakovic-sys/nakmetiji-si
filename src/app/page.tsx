@@ -34,23 +34,18 @@ import { Suspense } from "react";
 import { createSupabaseServer } from "@/lib/supabase/server";
 
 // UI components — HeroSearch lives inside ScrollytellingWrapper now.
-import { FarmOfMonth } from "@/components/FarmOfMonth";
-import { StatsBar } from "@/components/StatsBar";
 import { FeaturedFarms } from "@/components/FeaturedFarms";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 
 // Scrollytelling hero
 import { ScrollytellingWrapper } from "@/components/ScrollytellingWrapper";
 
-// Demo / booking — swap ReservationDemoSplit for real RezervacijaForm entry in production
-import { ReservationDemoSplit } from "@/components/ReservationDemoSplit";
 import { GreenPassportShowcase } from "@/components/GreenPassportShowcase";
 import { BackgroundOrnaments } from "@/components/BackgroundOrnaments";
 import { QuickStartGuide } from "@/components/QuickStartGuide";
 import { VendorCTAStrip } from "@/components/VendorCTAStrip";
+import { PolaroidGallery } from "@/components/PolaroidGallery";
 
-// Feature flags
-import { MOCK_BOOKING } from "@/lib/config/demo";
 
 function JsonLd() {
   const websiteSchema = {
@@ -147,9 +142,6 @@ export default async function HomePage() {
           {/* Search lives in the Hero overlay; categories were removed — both
               were redundant entry points to the same destination (/kmetije). */}
 
-          {/* ── Stats strip ───────────────────────────────────────────── */}
-          <StatsBar />
-
           {/* ── First-visit Quick Start guide ─────────────────────────── */}
           <QuickStartGuide />
 
@@ -168,25 +160,38 @@ export default async function HomePage() {
             <FeaturedFarms />
           </Suspense>
 
-          <FarmOfMonth />
+          {/* ── Polaroid gallery ──────────────────────────────────────── */}
+          <section className="py-16 px-6 lg:px-8">
+            <div className="mx-auto max-w-5xl">
+              <PolaroidGallery
+                items={[
+                  {
+                    src: "/images/farms/gallery-zivali.png",
+                    alt: "Ovce na kmetiji",
+                    caption: "pri ovcah",
+                    date: "jun 24",
+                    pinColor: "red",
+                  },
+                  {
+                    src: "/images/farms/gallery-kulinarika.png",
+                    alt: "Domača štruklja",
+                    caption: "domača štruklja",
+                    date: "avg 24",
+                    pinColor: "gold",
+                  },
+                  {
+                    src: "/images/farms/kmetija-janezu.png",
+                    alt: "Jutro v Bohinju",
+                    caption: "jutro v Bohinju",
+                    date: "sep 24",
+                    pinColor: "blue",
+                  },
+                ]}
+              />
+            </div>
+          </section>
         </div>
       </div>
-
-      {/* ════════════════════════════════════════════════════════════════════
-          SECTION 3 — RESERVATION DEMO (60/40 scrapbook spread)
-          Lifestyle photo + handwritten testimonial on the left, booking form
-          on the right. MOCK_BOOKING=true uses the mock form (no DB writes).
-          To go commercial, swap MockBookingForm for RezervacijaForm inside
-          ReservationDemoSplit — props are identical.
-          ════════════════════════════════════════════════════════════════════ */}
-      {MOCK_BOOKING && (
-        <ReservationDemoSplit
-          kmetijaId="demo-farm-homepage"
-          kmetijaIme="Kmetija Pr' Planšar (Demo)"
-          cenaNoc={75}
-          maxGostov={6}
-        />
-      )}
 
       {/* ════════════════════════════════════════════════════════════════════
           SECTION 4 — GREEN PASSPORT STAMP BOOK SHOWCASE

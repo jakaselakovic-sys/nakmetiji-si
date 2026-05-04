@@ -18,7 +18,7 @@ import { useOracleStore } from "@/lib/oracleStore";
 
 const REGIJE_OPTIONS = REGIJE.map((value) => ({ value, label: REGIJA_LABELS[value] }));
 
-interface DozivetjeOption {
+export interface DozivetjeOption {
   id: string;
   ime: string;
   slug: string;
@@ -28,7 +28,7 @@ interface DozivetjeOption {
 // Discovery Overlay — Jože-first
 // ---------------------------------------------------------------------------
 
-function SearchOverlay({
+export function SearchOverlay({
   open,
   onClose,
   dozivetja,
@@ -59,11 +59,6 @@ function SearchOverlay({
   // Focus AI input when overlay opens
   useEffect(() => {
     if (open) setTimeout(() => aiInputRef.current?.focus(), 250);
-  }, [open]);
-
-  // Reset transient state on close
-  useEffect(() => {
-    if (!open) setFiltersExpanded(false);
   }, [open]);
 
   // Auto-resize AI textarea
@@ -214,12 +209,12 @@ function SearchOverlay({
                   </span>
                   <ChevronDown
                     size={15}
-                    className={`text-earth-400 transition-transform ${filtersExpanded ? "rotate-180" : ""}`}
+                    className={`text-earth-400 transition-transform ${(open && filtersExpanded) ? "rotate-180" : ""}`}
                   />
                 </button>
 
                 <AnimatePresence initial={false}>
-                  {filtersExpanded && (
+                  {(open && filtersExpanded) && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
@@ -314,11 +309,29 @@ function SearchOverlay({
                   )}
                 </AnimatePresence>
 
-                {/* ── Tertiary: Road trip ── */}
+                {/* ── Tertiary: Map search ── */}
+                <Link
+                  href="/zemljevid"
+                  onClick={onClose}
+                  className="group mt-4 flex items-center gap-3 rounded-2xl bg-white border border-sky-200/70 hover:border-sky-300 hover:bg-sky-50/50 p-4 transition-all"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 group-hover:bg-sky-200 transition-colors">
+                    <MapPin size={17} className="text-sky-700" />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-forest-900 text-sm">Iskanje po zemljevidu</p>
+                    <p className="text-[11px] text-earth-600 mt-0.5 leading-snug">
+                      Poišči kmetije po regiji — interaktivni zemljevid Slovenije.
+                    </p>
+                  </div>
+                  <ArrowRight size={14} className="text-earth-400 group-hover:text-sky-700 group-hover:translate-x-0.5 transition-all" />
+                </Link>
+
+                {/* ── Quaternary: Road trip ── */}
                 <Link
                   href="/pot"
                   onClick={onClose}
-                  className="group mt-4 flex items-center gap-3 rounded-2xl bg-white border border-emerald-200/70 hover:border-emerald-300 hover:bg-emerald-50/50 p-4 transition-all"
+                  className="group mt-3 flex items-center gap-3 rounded-2xl bg-white border border-emerald-200/70 hover:border-emerald-300 hover:bg-emerald-50/50 p-4 transition-all"
                 >
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 group-hover:bg-emerald-200 transition-colors">
                     <Route size={17} className="text-emerald-700" />
@@ -384,6 +397,7 @@ export function HeroSearch({ dozivetja = [] }: { dozivetja?: DozivetjeOption[] }
             <Sparkles size={10} />
           </motion.span>
         </motion.button>
+
       </motion.div>
 
       <SearchOverlay

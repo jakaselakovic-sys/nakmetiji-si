@@ -7,13 +7,31 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import Groq from "groq-sdk";
+import { z } from "zod";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { logNapako } from "@/lib/logNapako";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { canUseVendorAiTools } from "@/lib/subscriptions/tiers";
 
 export const maxDuration = 30;
 
 const VISION_MODEL = "llama-3.2-11b-vision-preview";
+
+const AppleifyRequestSchema = z.object({
+  imageUrl: z.string().url().refine((url) => url.startsWith("https://"), {
+    message: "URL slike mora uporabljati HTTPS.",
+  }),
+});
+
+const AppleifyResponseSchema = z.object({
+  score: z.number().int().min(1).max(10),
+  composition: z.string().trim().min(1).max(500),
+  lighting: z.string().trim().min(1).max(500),
+  mood: z.enum(["rustic", "authentic", "professional", "amateur", "warm", "cold", "vibrant", "flat"]),
+  improvements: z.array(z.string().trim().min(1).max(240)).min(1).max(5),
+  upscale_benefit: z.boolean(),
+  heroworthy: z.boolean(),
+});
 
 export async function POST(req: NextRequest) {
   const supabase = await createSupabaseServer();
@@ -26,8 +44,8 @@ export async function POST(req: NextRequest) {
     .select("paket")
     .eq("lastnik_id", user.id)
     .maybeSingle();
-  if (!farm || farm.paket === "free" || farm.paket == null) {
-    return NextResponse.json({ error: "Ta funkcija zahteva Premium ali Basic paket." }, { status: 403 });
+  if (!farm || !canUseVendorAiTools(farm.paket)) {
+    return NextResponse.json({ error: "Ta funkcija zahteva paket Pospešek ali Titan Elite." }, { status: 403 });
   }
 
   // 10 analyses per hour per user — Groq vision is expensive
@@ -39,12 +57,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const body = await req.json() as { imageUrl?: string };
-  const { imageUrl } = body;
-
-  // Require HTTPS to prevent unencrypted fetches and SSRF via http://
-  if (!imageUrl || !/^https:\/\/.+\..+/i.test(imageUrl)) {
-    return NextResponse.json({ error: "Neveljaven URL slike (zahteva HTTPS)." }, { status: 400 });
+  let imageUrl: string;
+  try {
+    const parsed = AppleifyRequestSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: z.prettifyError(parsed.error) }, { status: 400 });
+    }
+    imageUrl = parsed.data.imageUrl;
+  } catch {
+    return NextResponse.json({ error: "Neveljaven JSON." }, { status: 400 });
   }
 
   // Guard: AI service unavailable if GROQ_API_KEY is not configured
@@ -106,7 +127,7 @@ Fields:
     .trim();
 
   try {
-    const result = JSON.parse(raw);
+    const result = AppleifyResponseSchema.parse(JSON.parse(raw));
     return NextResponse.json({ ok: true, analysis: result });
   } catch {
     logNapako({

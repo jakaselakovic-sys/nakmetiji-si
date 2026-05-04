@@ -47,6 +47,8 @@ import { FarmVideoModal } from "@/components/FarmVideoModal";
 import { JozeSidebar } from "@/components/JozeSidebar";
 import { WeatherWidget } from "@/components/WeatherWidget";
 import { FarmRewardsDisplay } from "@/components/FarmRewardsDisplay";
+import { OceniKmetijoForm } from "@/components/OceniKmetijoForm";
+import { WishlistButton } from "@/components/WishlistButton";
 import * as Sentry from "@sentry/nextjs";
 
 // ─── Share buttons ──────────────────────────────────────────────────────────
@@ -212,7 +214,7 @@ export function FarmProfileClient({ kmetija, regionLabel, stampWidget }: Props) 
       vibeTags,
       dozivetkaSlugs: kmetija.dozivetja.map((d) => d.slug),
     });
-  }, [kmetija.slug, kmetija.dozivetja, trackView]);
+  }, [kmetija, trackView]);
 
   // Helper: ali je datum zaseden
   function isDatumZaseden(datum: string): boolean {
@@ -287,7 +289,7 @@ export function FarmProfileClient({ kmetija, regionLabel, stampWidget }: Props) 
         </motion.div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/10" />
 
-        {/* Hero controls — gallery + video (bottom-right) */}
+        {/* Hero controls — gallery + video + wishlist (bottom-right) */}
         <div className="absolute bottom-6 right-6 z-10 flex items-center gap-2">
           {kmetija.video_url && (
             <FarmVideoModal videoUrl={kmetija.video_url} farmIme={kmetija.ime} />
@@ -299,6 +301,7 @@ export function FarmProfileClient({ kmetija, regionLabel, stampWidget }: Props) 
             <Camera size={18} />
             Vse slike ({allImages.length})
           </button>
+          <WishlistButton kmetijaId={kmetija.id} className="w-11 h-11" />
         </div>
 
         {/* Bottom info bar */}
@@ -579,20 +582,25 @@ export function FarmProfileClient({ kmetija, regionLabel, stampWidget }: Props) 
             )}
 
             {/* ═════════════════════════════════════════════════════════════
-                3. MNENJA / KOMENTARJI z AI prevajanjem
+                3. MNENJA / KOMENTARJI + OCENJEVALNI OBRAZEC
                 ═════════════════════════════════════════════════════════════ */}
-            {kmetija.mnenja.length > 0 && (
-              <div className="mb-12">
-                <h2 className="text-2xl font-bold text-forest-900 mb-6 flex items-center gap-2">
-                  <MessageSquare size={24} className="text-forest-600" />
-                  Mnenja gostov ({kmetija.mnenja.length})
-                </h2>
-                <div className="space-y-4">
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold text-forest-900 mb-6 flex items-center gap-2">
+                <MessageSquare size={24} className="text-forest-600" />
+                Mnenja gostov
+                {kmetija.mnenja.length > 0 && (
+                  <span className="text-base font-normal text-earth-500">
+                    ({kmetija.mnenja.length})
+                  </span>
+                )}
+              </h2>
+
+              {kmetija.mnenja.length > 0 ? (
+                <div className="space-y-4 mb-8">
                   {kmetija.mnenja.map((mnenje) => (
                     <div key={mnenje.id} className="rounded-2xl bg-white border border-earth-200/60 p-5 shadow-sm">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          {/* Avatar */}
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-forest-100 text-forest-700 font-bold text-sm">
                             {mnenje.uporabnik_ime.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                           </div>
@@ -600,7 +608,7 @@ export function FarmProfileClient({ kmetija, regionLabel, stampWidget }: Props) 
                             <span className="font-semibold text-forest-900 text-sm">{mnenje.uporabnik_ime}</span>
                             <div className="flex items-center gap-1 mt-0.5">
                               {[1, 2, 3, 4, 5].map((s) => (
-                                <Star key={s} size={12} className={s <= mnenje.ocena ? "text-gold-500 fill-gold-500" : "text-earth-300"} />
+                                <Star key={s} size={12} className={s <= mnenje.ocena ? "text-amber-400 fill-amber-400" : "text-earth-300"} />
                               ))}
                               <span className="text-xs text-earth-400 ml-1">
                                 {new Date(mnenje.datum).toLocaleDateString("sl-SI")}
@@ -608,22 +616,26 @@ export function FarmProfileClient({ kmetija, regionLabel, stampWidget }: Props) 
                             </div>
                           </div>
                         </div>
-
-                        {/* Jezik badge */}
                         <span className="flex items-center gap-1 rounded-lg bg-earth-50 border border-earth-200 px-2.5 py-1 text-[11px] font-medium text-earth-500">
                           <Globe size={11} />
                           Slovenščina
                         </span>
                       </div>
-
-                      {/* Comment text */}
-                      <p className="text-sm text-earth-700 leading-relaxed">{mnenje.komentar}</p>
-
+                      {mnenje.komentar && (
+                        <p className="text-sm text-earth-700 leading-relaxed">{mnenje.komentar}</p>
+                      )}
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-earth-400 mb-6">
+                  Bodite prvi, ki ocenite to kmetijo.
+                </p>
+              )}
+
+              {/* Obrazec za ocenjevanje (prikaže login gate če ni prijavljen) */}
+              <OceniKmetijoForm kmetijaId={kmetija.id} />
+            </div>
 
             {/* ── Weather + Location ── */}
             {kmetija.lat && kmetija.lng && (

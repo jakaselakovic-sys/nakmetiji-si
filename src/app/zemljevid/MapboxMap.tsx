@@ -6,6 +6,7 @@
 // =============================================================================
 
 import { useEffect, useRef, useCallback, useImperativeHandle } from "react";
+import { useRouter } from "next/navigation";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -248,11 +249,13 @@ export function MapboxMap({
   routeProfile,
   onRouteUpdate,
 }: MapboxMapProps) {
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const weatherMarkersRef = useRef<mapboxgl.Marker[]>([]);
+  const hoverPopupRef = useRef<mapboxgl.Popup | null>(null);
 
   useImperativeHandle(mapHandle, () => ({
     flyToFarm(slug: string) {
@@ -416,14 +419,43 @@ export function MapboxMap({
 
       el.addEventListener("click", (e) => {
         e.stopPropagation();
-        onFarmSelect(farm.slug);
-        map.flyTo({
-          center: [loc.longitude, loc.latitude],
-          zoom: Math.max(zoom, 12),
-          pitch: 0,
-          bearing: 0,
-          duration: 1000,
-        });
+        router.push(`/kmetije/${farm.slug}`);
+      });
+
+      el.addEventListener("mouseenter", () => {
+        hoverPopupRef.current?.remove();
+
+        const container = document.createElement("div");
+        container.className = "farm-hover-tooltip";
+
+        if (farm.coverImageUrl) {
+          const img = document.createElement("img");
+          img.src = farm.coverImageUrl;
+          img.alt = "";
+          img.className = "farm-hover-tooltip__img";
+          container.appendChild(img);
+        }
+
+        const nameEl = document.createElement("span");
+        nameEl.className = "farm-hover-tooltip__name";
+        nameEl.textContent = farm.name;
+        container.appendChild(nameEl);
+
+        hoverPopupRef.current = new mapboxgl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          offset: [0, -54],
+          className: "farm-hover-popup",
+          maxWidth: "220px",
+        })
+          .setLngLat([loc.longitude, loc.latitude])
+          .setDOMContent(container)
+          .addTo(map);
+      });
+
+      el.addEventListener("mouseleave", () => {
+        hoverPopupRef.current?.remove();
+        hoverPopupRef.current = null;
       });
 
       if (farm.slug === activeFarmSlug) {
@@ -454,7 +486,7 @@ export function MapboxMap({
         markersRef.current.set(`poi-${lm.id}`, marker);
       });
     }
-  }, [farms, landmarks, activeFarmSlug, onFarmSelect, onLandmarkSelect]);
+  }, [farms, landmarks, activeFarmSlug, onLandmarkSelect, router]);
 
   useEffect(() => {
     const map = mapRef.current;

@@ -1,20 +1,12 @@
 "use client";
 
-// =============================================================================
-// NaKmetiji.si — NavbarClient (Handcrafted Luxury Redesign)
-//
-// Desktop: Floating glassmorphic island (32px radius) centered with spring
-//          entrance animation. Shrinks on scroll. Progress bar integrated.
-// Mobile:  Bottom-anchored tab bar for thumb reachability + slide-up drawer
-//          for expanded menu. No more hamburger at top.
-// =============================================================================
-
 import Link from "next/link";
 import { useState, useEffect, useTransition } from "react";
 import { motion, AnimatePresence, useSpring, useMotionValueEvent, useScroll } from "framer-motion";
 import {
-  Menu, X, Plus, Search, User, Shield, LayoutDashboard,
-  LogOut, Stamp, ChevronRight, Home, Map, BookOpen,
+  Menu, X, Plus, User, Shield, LayoutDashboard,
+  LogOut, Stamp, Leaf, TreePine, Map, BookOpen,
+  Home, Sprout, Mountain,
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabase/client";
@@ -26,41 +18,43 @@ interface Props {
   vloga: string | null;
 }
 
-// Spring config for lazy, organic entrance
 const SPRING_ENTER = { type: "spring" as const, stiffness: 120, damping: 20, mass: 0.8 };
+
+// Nature icon per nav link
+const NAV_ICONS: Record<string, React.ElementType> = {
+  "/":          Home,
+  "/kmetije":   TreePine,
+  "/zemljevid": Map,
+  "/paketi":    Sprout,
+  "/blog":      BookOpen,
+  "/o-nas":     Leaf,
+};
 
 export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
   const router   = useRouter();
   const pathname = usePathname();
 
-  const [scrolled,      setScrolled]      = useState(false);
-  const [mobileOpen,    setMobileOpen]    = useState(false);
-  const [userMenuOpen,  setUserMenuOpen]  = useState(false);
-  const [isPending,     startTransition]  = useTransition();
+  const [scrolled,     setScrolled]     = useState(false);
+  const [mobileOpen,   setMobileOpen]   = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isPending,    startTransition] = useTransition();
 
-  // ── Scroll progress ────────────────────────────────────────────────────────
   const { scrollYProgress } = useScroll();
   const progressSpring = useSpring(scrollYProgress, { stiffness: 200, damping: 40 });
   const [progressPct, setProgressPct] = useState(0);
+  useMotionValueEvent(progressSpring, "change", (v) => setProgressPct(Math.round(v * 100)));
 
-  useMotionValueEvent(progressSpring, "change", (v) => {
-    setProgressPct(Math.round(v * 100));
-  });
-
-  // ── Scroll state ───────────────────────────────────────────────────────────
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 48);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // ── Body scroll lock when mobile menu open ─────────────────────────────────
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
 
-  // ── Close user menu on outside click ──────────────────────────────────────
   useEffect(() => {
     if (!userMenuOpen) return;
     const handler = () => setUserMenuOpen(false);
@@ -68,7 +62,6 @@ export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
     return () => document.removeEventListener("click", handler);
   }, [userMenuOpen]);
 
-  // ── Close mobile menu on route change ─────────────────────────────────────
   useEffect(() => { startTransition(() => setMobileOpen(false)); }, [pathname]);
 
   function handleOdjava() {
@@ -83,182 +76,214 @@ export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
   const isActive = (href: string) =>
     pathname === href || (href !== "/" && pathname.startsWith(href));
 
-  // /zemljevid uses an edge-to-edge app-bar layout instead of the floating pill,
-  // so the nav blends with the sidebar + map seams instead of hovering over them.
   const isMapPage = pathname?.startsWith("/zemljevid") ?? false;
 
-  // Mobile bottom nav items
-  const mobileNavItems = [
-    { label: "Domov", href: "/", icon: Home },
-    { label: "Kmetije", href: "/kmetije", icon: Map },
-    { label: "Blog", href: "/blog", icon: BookOpen },
+  const mobileTabs = [
+    { label: "Domov",    href: "/",          icon: Leaf },
+    { label: "Kmetije",  href: "/kmetije",   icon: TreePine },
+    { label: "Zemljevid",href: "/zemljevid", icon: Mountain },
     ...(isPrijavljen
-      ? [{ label: "Potni list", href: "/moj-potni-list", icon: Stamp }]
-      : [{ label: "Prijava", href: "/prijava", icon: User }]),
+      ? [{ label: "Račun",   href: "/moj-racun",      icon: User }]
+      : [{ label: "Prijava", href: "/prijava",          icon: User }]),
   ];
 
   return (
     <>
       {/* ══════════════════════════════════════════════════════════════════════
-          DESKTOP — Floating Glassmorphic Island
+          DESKTOP — Floating Nature Pill
           ══════════════════════════════════════════════════════════════════════ */}
       <motion.header
-        initial={{ y: -40, opacity: 0 }}
+        initial={{ y: -44, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={SPRING_ENTER}
         style={{ zIndex: "var(--z-nav)" }}
         className="fixed top-0 left-0 right-0 hidden md:block"
       >
-        {/* Scroll progress indicator */}
+        {/* Scroll progress — bark→gold gradient */}
         <div
-          className="absolute top-0 left-0 h-[2px] bg-forest-500 origin-left pointer-events-none rounded-full"
-          style={{ width: `${progressPct}%`, opacity: scrolled ? 0.8 : 0 }}
+          className="absolute top-0 left-0 h-[2px] origin-left pointer-events-none"
+          style={{
+            width: `${progressPct}%`,
+            opacity: scrolled ? 1 : 0,
+            background: "linear-gradient(90deg, #6b3f24, #a67c5b, #D4AF37)",
+            transition: "opacity 0.3s ease",
+          }}
           aria-hidden="true"
         />
 
-        <div
-          className={
-            isMapPage
-              ? "w-full"
-              : `mx-auto max-w-5xl px-4 transition-all duration-700 ${scrolled ? "pt-2" : "pt-4"}`
-          }
-        >
+        <div className={
+          isMapPage
+            ? "w-full"
+            : `mx-auto max-w-5xl px-4 transition-all duration-700 ${scrolled ? "pt-2" : "pt-4"}`
+        }>
           <nav
+            aria-label="Glavna navigacija"
             className={
               isMapPage
-                ? "relative flex items-center justify-between px-6 h-[60px] bg-white/85 backdrop-blur-xl border-b border-earth-200/60 shadow-[0_1px_0_rgba(0,0,0,0.03),0_8px_24px_-16px_rgba(45,90,39,0.18)]"
-                : `nav-pill flex items-center justify-between gap-3 transition-all duration-500 ${scrolled ? "px-3 py-2" : "px-4 py-2.5"}`
+                ? "relative flex items-center justify-between px-6 h-[60px] bg-white/90 backdrop-blur-xl border-b border-earth-200/50"
+                : `flex items-center justify-between gap-3 transition-all duration-500 ${scrolled ? "px-4 py-2" : "px-5 py-2.5"}`
             }
             style={!isMapPage ? {
-              background: "linear-gradient(180deg, #1f4d35 0%, #1a3a2a 100%)",
+              background: "rgba(247, 244, 238, 0.95)",
+              backdropFilter: "blur(24px) saturate(180%)",
+              WebkitBackdropFilter: "blur(24px) saturate(180%)",
               borderRadius: "999px",
-              border: "1px solid rgba(255,255,255,0.06)",
-              boxShadow: "0 12px 36px rgba(15,35,24,0.34), 0 2px 6px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.08)",
+              border: "1px solid rgba(166, 124, 91, 0.22)",
+              boxShadow: scrolled
+                ? "0 6px 32px rgba(106,63,36,0.14), 0 2px 8px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.95)"
+                : "0 2px 16px rgba(106,63,36,0.08), 0 1px 4px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.95)",
+              transition: "box-shadow 0.4s ease",
             } : undefined}
           >
-            {/* Search-bubble + logo cluster */}
-            <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0">
-              <span
-                className={`flex items-center justify-center rounded-full bg-white text-forest-800 shadow-sm transition-all duration-500 ${
-                  scrolled ? "h-8 w-8" : "h-9 w-9"
-                }`}
-                aria-hidden="true"
-              >
-                <Search size={scrolled ? 13 : 15} strokeWidth={2.5} />
-              </span>
-              {!isMapPage ? (
-                <Logo size={scrolled ? "sm" : "md"} variant="light" href={null} />
-              ) : (
-                <Logo size="sm" variant="dark" href={null} />
-              )}
+            {/* Logo — čist, brez ikone */}
+            <Link href="/" className="flex-shrink-0" aria-label="NaKmetiji — domača stran">
+              <Logo size={scrolled ? "sm" : "md"} variant="dark" href={null} />
             </Link>
 
+            {/* Separator */}
+            {!isMapPage && (
+              <div className="h-4 w-px bg-bark-200/70 flex-shrink-0" aria-hidden="true" />
+            )}
+
             {/* Nav links */}
-            <div className="flex items-center gap-0.5">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`relative px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-300 ${
-                    isMapPage
-                      ? isActive(link.href)
-                        ? "text-forest-800 bg-forest-100/60"
-                        : "text-forest-700/70 hover:text-forest-800 hover:bg-forest-50/60"
-                      : isActive(link.href)
-                        ? "text-white bg-white/15"
-                        : "text-cream/80 hover:text-white hover:bg-white/10"
-                  }`}
-                  style={!isMapPage ? { color: isActive(link.href) ? "#fff" : "rgba(244,241,234,0.78)" } : undefined}
-                >
-                  {link.label}
-                </Link>
-              ))}
+            <div className="flex items-center gap-0.5 flex-1">
+              {navLinks.map((link) => {
+                const active = isActive(link.href);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`relative px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-200 ${
+                      isMapPage
+                        ? active
+                          ? "text-forest-800 bg-forest-100/60"
+                          : "text-forest-700/70 hover:text-forest-800 hover:bg-forest-50/60"
+                        : active
+                          ? "bg-bark-100/90 text-bark-800"
+                          : "text-earth-700/75 hover:text-earth-900 hover:bg-bark-50/90"
+                    }`}
+                  >
+                    {link.label}
+                    {/* Active dot */}
+                    {!isMapPage && active && (
+                      <span
+                        className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-bark-500"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </Link>
+                );
+              })}
             </div>
 
-            {/* Right actions */}
-            <div className="flex items-center gap-2">
-              {/* Dodaj kmetijo CTA */}
+            {/* Right: CTA + Auth */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Dodaj kmetijo — forest green, ne zlata */}
               <Link
                 href="/dodaj-kmetijo"
-                className="rounded-full px-4 py-2 text-sm font-bold text-white shadow-md hover:shadow-lg hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 inline-flex items-center gap-1.5"
-                style={{ background: "linear-gradient(180deg, #2d8a56 0%, #2D5A27 100%)" }}
+                className="relative overflow-hidden rounded-full px-4 py-2 text-sm font-bold text-white shadow-sm hover:shadow-md hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 inline-flex items-center gap-1.5"
+                style={{ background: "linear-gradient(135deg, #2D5A27 0%, #38a169 100%)" }}
               >
-                <Plus size={14} strokeWidth={2.8} />
-                Dodaj
+                <span
+                  className="absolute inset-0 pointer-events-none animate-shimmer rounded-full"
+                  style={{
+                    backgroundImage: "linear-gradient(90deg, transparent 20%, rgba(255,255,255,0.12) 50%, transparent 80%)",
+                    backgroundSize: "200% 100%",
+                  }}
+                  aria-hidden="true"
+                />
+                <Plus size={13} strokeWidth={2.8} className="relative" />
+                <span className="relative">Dodaj</span>
               </Link>
 
-              {/* Auth block */}
+              {/* Auth */}
               {isPrijavljen ? (
                 <div className="relative">
                   <button
                     onClick={(e) => { e.stopPropagation(); setUserMenuOpen(!userMenuOpen); }}
-                    className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold transition-all ${
+                    aria-expanded={userMenuOpen}
+                    aria-haspopup="true"
+                    className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold border transition-all duration-200 ${
                       isMapPage
-                        ? "border border-forest-200/60 text-forest-800 hover:bg-forest-50/60"
-                        : "text-cream/90 hover:text-white hover:bg-white/10 border border-white/15"
+                        ? "border-forest-200/60 text-forest-800 hover:bg-forest-50/60"
+                        : "text-earth-700/80 hover:text-earth-900 hover:bg-bark-50 border-bark-200/60"
                     }`}
                   >
-                    {vloga === "super_admin" ? <Shield size={14} /> : <User size={14} />}
-                    {vloga === "super_admin" ? "Admin" : "Račun"}
+                    {vloga === "super_admin"
+                      ? <Shield size={14} className="text-bark-600" />
+                      : <User size={14} className="text-bark-500" />}
+                    <span>{vloga === "super_admin" ? "Admin" : "Račun"}</span>
                   </button>
 
                   <AnimatePresence>
                     {userMenuOpen && (
                       <motion.div
-                        initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                        initial={{ opacity: 0, y: 8, scale: 0.96 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                        transition={{ duration: 0.18, ease: "easeOut" }}
+                        exit={{ opacity: 0, y: 6, scale: 0.96 }}
+                        transition={{ duration: 0.16, ease: "easeOut" }}
                         onClick={(e) => e.stopPropagation()}
-                        className="absolute right-0 top-full mt-3 w-56 bg-white rounded-3xl shadow-xl border border-earth-200/60 overflow-hidden"
+                        className="absolute right-0 top-full mt-2.5 w-56 rounded-3xl overflow-hidden"
+                        style={{
+                          background: "#FDFBF7",
+                          border: "1px solid rgba(166, 124, 91, 0.18)",
+                          boxShadow: "0 16px 48px rgba(106,63,36,0.16), 0 4px 12px rgba(0,0,0,0.08)",
+                        }}
                       >
-                        <Link
-                          href="/moj-racun"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-earth-700 hover:bg-earth-50 transition-colors"
-                        >
-                          <LayoutDashboard size={16} className="text-forest-600" />
-                          Moj račun
-                        </Link>
+                        {/* Header */}
+                        <div className="px-4 py-3 border-b border-bark-100/80">
+                          <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-bark-400">Moj račun</p>
+                        </div>
 
-                        {vloga === "lastnik" && (
+                        <div className="py-1.5">
                           <Link
-                            href="/dashboard"
+                            href="/moj-racun"
                             onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-earth-700 hover:bg-earth-50 transition-colors"
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-earth-700 hover:bg-bark-50 transition-colors"
                           >
-                            <LayoutDashboard size={16} className="text-forest-600" />
-                            Vodstvo kmetije
+                            <User size={15} className="text-bark-500" />
+                            Pregled računa
                           </Link>
-                        )}
 
-                        <Link
-                          href="/moj-racun?tab=passport"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-emerald-700 hover:bg-emerald-50 transition-colors"
-                        >
-                          <Stamp size={16} className="text-emerald-500" />
-                          Zeleni potni list
-                        </Link>
+                          {vloga === "lastnik" && (
+                            <Link
+                              href="/dashboard"
+                              onClick={() => setUserMenuOpen(false)}
+                              className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-earth-700 hover:bg-bark-50 transition-colors"
+                            >
+                              <LayoutDashboard size={15} className="text-forest-600" />
+                              Vodstvo kmetije
+                            </Link>
+                          )}
 
-                        {vloga === "super_admin" && (
                           <Link
-                            href="/admin"
+                            href="/moj-racun?tab=passport"
                             onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-purple-700 hover:bg-purple-50 transition-colors"
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-forest-700 hover:bg-forest-50 transition-colors"
                           >
-                            <Shield size={16} className="text-purple-600" />
-                            Admin plošča
+                            <Stamp size={15} className="text-forest-500" />
+                            Zeleni potni list
                           </Link>
-                        )}
 
-                        <div className="border-t border-earth-100" />
+                          {vloga === "super_admin" && (
+                            <Link
+                              href="/admin"
+                              onClick={() => setUserMenuOpen(false)}
+                              className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-purple-700 hover:bg-purple-50 transition-colors"
+                            >
+                              <Shield size={15} className="text-purple-500" />
+                              Admin plošča
+                            </Link>
+                          )}
+                        </div>
+
+                        <div className="border-t border-bark-100/80" />
                         <button
                           onClick={handleOdjava}
                           disabled={isPending}
                           className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors w-full disabled:opacity-50"
                         >
-                          <LogOut size={16} />
+                          <LogOut size={15} />
                           {isPending ? "Odjavljam..." : "Odjava"}
                         </button>
                       </motion.div>
@@ -266,18 +291,16 @@ export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
                   </AnimatePresence>
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5">
-                  <Link
-                    href="/prijava"
-                    className={`rounded-full px-3 py-2 text-sm font-semibold transition-all duration-300 ${
-                      isMapPage
-                        ? "text-forest-700 hover:bg-forest-50/60"
-                        : "text-cream/85 hover:text-white hover:bg-white/10"
-                    }`}
-                  >
-                    Prijava
-                  </Link>
-                </div>
+                <Link
+                  href="/prijava"
+                  className={`rounded-full px-3 py-2 text-sm font-semibold transition-all duration-200 border ${
+                    isMapPage
+                      ? "text-forest-700 border-transparent hover:bg-forest-50/60"
+                      : "text-earth-700 border-bark-200/60 hover:bg-bark-50 hover:text-earth-900"
+                  }`}
+                >
+                  Prijava
+                </Link>
               )}
             </div>
           </nav>
@@ -285,184 +308,231 @@ export function NavbarClient({ navLinks, isPrijavljen, vloga }: Props) {
       </motion.header>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          MOBILE — Bottom-Anchored Tab Navigation
+          MOBILE — Top bar: logo + user/menu
           ══════════════════════════════════════════════════════════════════════ */}
-
-      {/* Top bar — minimal: logo + expand button */}
       <motion.header
         initial={{ y: -24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={SPRING_ENTER}
         style={{ zIndex: "var(--z-nav)" }}
-        className={`fixed top-0 left-0 right-0 md:hidden transition-all duration-500 ${
-          scrolled ? "glass-nav shadow-sm" : "bg-transparent"
-        }`}
+        className="fixed top-0 left-0 right-0 md:hidden glass-nav"
       >
-        <nav className="flex items-center justify-between px-5 py-3">
-          <Link href="/" className="flex items-center gap-2 group">
-            <span className="flex items-center justify-center h-8 w-8 rounded-full bg-white text-forest-800 shadow-sm">
-              <Search size={14} strokeWidth={2.5} />
-            </span>
-            <Logo size="sm" variant={scrolled ? "dark" : "light"} href={null} />
-          </Link>
+        <nav className="flex items-center justify-between px-4 h-14">
+          <Logo size="sm" variant="dark" href="/" />
 
-          <button
-            className={`p-2 rounded-2xl transition-colors ${
-              scrolled ? "hover:bg-earth-100 text-forest-800" : "hover:bg-white/10 text-white"
-            }`}
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label={mobileOpen ? "Zapri meni" : "Odpri meni"}
-            aria-expanded={mobileOpen}
-          >
-            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          <div className="flex items-center gap-1.5">
+            {isPrijavljen ? (
+              <Link
+                href="/moj-racun"
+                className="flex items-center justify-center h-9 w-9 rounded-full bg-bark-100/80 text-bark-700 hover:bg-bark-200/80 transition-colors"
+                aria-label="Moj račun"
+              >
+                {vloga === "super_admin" ? <Shield size={15} /> : <User size={15} />}
+              </Link>
+            ) : (
+              <Link
+                href="/prijava"
+                className="rounded-full px-3.5 py-1.5 text-xs font-bold text-white transition-colors"
+                style={{ background: "linear-gradient(135deg, #2D5A27, #38a169)" }}
+              >
+                Prijava
+              </Link>
+            )}
+            <button
+              className="flex items-center justify-center h-9 w-9 rounded-full hover:bg-bark-100/80 text-earth-700 transition-colors"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label={mobileOpen ? "Zapri meni" : "Odpri meni"}
+              aria-expanded={mobileOpen}
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={mobileOpen ? "close" : "open"}
+                  initial={{ rotate: -90, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: 90, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="flex items-center justify-center"
+                >
+                  {mobileOpen ? <X size={18} /> : <Menu size={18} />}
+                </motion.span>
+              </AnimatePresence>
+            </button>
+          </div>
         </nav>
       </motion.header>
 
-      {/* Bottom tab bar */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          MOBILE — Bottom Tab Bar
+          ══════════════════════════════════════════════════════════════════════ */}
       <div
         className="fixed bottom-0 left-0 right-0 md:hidden mobile-bottom-nav"
         style={{ zIndex: "var(--z-nav)" }}
       >
-        <div className="flex items-center justify-around px-2 pt-1 pb-[env(safe-area-inset-bottom)]">
-          {mobileNavItems.map((item) => {
+        <div className="flex items-stretch justify-around px-1 pt-1.5 pb-[max(10px,env(safe-area-inset-bottom))]">
+          {mobileTabs.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[44px] px-3 py-2 rounded-2xl transition-all duration-300 ${
-                  active
-                    ? "text-forest-700"
-                    : "text-earth-500 hover:text-forest-600"
-                }`}
+                className="flex flex-col items-center justify-center gap-1 flex-1 py-1 min-h-[52px] transition-all duration-200"
               >
-                <div className={`p-1.5 rounded-xl transition-all duration-300 ${
-                  active ? "bg-forest-100" : ""
+                {/* Icon pill */}
+                <div className={`flex items-center justify-center w-12 h-8 rounded-2xl transition-all duration-250 ${
+                  active ? "bg-bark-100/90" : "bg-transparent"
                 }`}>
-                  <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+                  <Icon
+                    size={active ? 22 : 20}
+                    strokeWidth={active ? 2.2 : 1.7}
+                    className={`transition-colors duration-200 ${active ? "text-bark-700" : "text-earth-400"}`}
+                  />
                 </div>
-                <span className="text-[10px] font-semibold">{item.label}</span>
+                {/* Label */}
+                <span className={`text-[10px] font-semibold leading-none tracking-tight transition-colors duration-200 ${
+                  active ? "text-bark-700" : "text-earth-400"
+                }`}>
+                  {item.label}
+                </span>
               </Link>
             );
           })}
         </div>
       </div>
 
-      {/* ── Mobile expanded drawer ────────────────────────────────────────── */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          MOBILE — Slide-down drawer
+          ══════════════════════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {mobileOpen && (
           <>
             <motion.div
-              key="mobile-backdrop"
+              key="backdrop"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm md:hidden"
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/35 backdrop-blur-sm md:hidden"
               style={{ zIndex: 39 }}
               onClick={() => setMobileOpen(false)}
             />
-            <motion.div
-              key="mobile-drawer"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+
+            <motion.aside
+              key="drawer"
+              initial={{ opacity: 0, y: -12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.98 }}
               transition={SPRING_ENTER}
-              className="fixed top-16 left-4 right-4 md:hidden glass-island p-5 shadow-2xl"
-              style={{ zIndex: "var(--z-nav)" }}
+              className="fixed top-16 left-3 right-3 md:hidden rounded-3xl overflow-hidden"
+              style={{
+                zIndex: "var(--z-nav)",
+                background: "rgba(253, 251, 247, 0.97)",
+                backdropFilter: "blur(28px) saturate(160%)",
+                WebkitBackdropFilter: "blur(28px) saturate(160%)",
+                border: "1px solid rgba(166, 124, 91, 0.18)",
+                boxShadow: "0 24px 64px rgba(106,63,36,0.18), 0 8px 24px rgba(0,0,0,0.08)",
+              }}
             >
-              {/* Nav links */}
-              <div className="flex flex-col gap-0.5 mb-4">
-                {navLinks.map((link, i) => (
-                  <motion.div
-                    key={link.href}
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.04, ...SPRING_ENTER }}
-                  >
-                    <Link
-                      href={link.href}
-                      className={`flex items-center justify-between py-3 px-3 rounded-2xl text-sm font-medium transition-colors ${
-                        isActive(link.href)
-                          ? "bg-forest-100/60 text-forest-700"
-                          : "text-forest-800 hover:bg-forest-50"
-                      }`}
-                    >
-                      {link.label}
-                      {isActive(link.href) && (
-                        <ChevronRight size={14} className="text-forest-500" />
-                      )}
-                    </Link>
-                  </motion.div>
-                ))}
+              {/* Sekcija: Odkrivaj */}
+              <div className="p-3 pb-2">
+                <p className="px-3 pt-2 pb-2 text-[9px] font-bold uppercase tracking-[0.22em] text-bark-400/80">
+                  Odkrivaj
+                </p>
+                <div className="flex flex-col gap-0.5">
+                  {navLinks.map((link, i) => {
+                    const Icon = NAV_ICONS[link.href] ?? Leaf;
+                    const active = isActive(link.href);
+                    return (
+                      <motion.div
+                        key={link.href}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.035, ...SPRING_ENTER }}
+                      >
+                        <Link
+                          href={link.href}
+                          className={`flex items-center gap-3 py-2.5 px-3 rounded-2xl text-sm font-medium transition-all duration-200 ${
+                            active
+                              ? "bg-bark-100/90 text-bark-800"
+                              : "text-earth-800 hover:bg-bark-50/80"
+                          }`}
+                        >
+                          <Icon
+                            size={16}
+                            strokeWidth={active ? 2.2 : 1.8}
+                            className={active ? "text-bark-600" : "text-earth-400"}
+                          />
+                          <span className="flex-1">{link.label}</span>
+                          {active && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-bark-500 flex-shrink-0" />
+                          )}
+                        </Link>
+                      </motion.div>
+                    );
+                  })}
+                </div>
               </div>
 
-              <div className="border-t border-earth-100 pt-4 flex flex-col gap-2">
+              {/* Divider */}
+              <div className="mx-3 border-t border-bark-100/70" />
+
+              {/* Sekcija: Akcije */}
+              <div className="p-3 pt-2 flex flex-col gap-2">
                 <Link
                   href="/dodaj-kmetijo"
-                  className="rounded-2xl bg-forest-700 text-white text-center py-3 font-semibold text-sm hover:bg-forest-600 transition-colors flex items-center justify-center gap-2"
+                  className="rounded-2xl flex items-center justify-center gap-2 py-3 text-sm font-bold text-white transition-all hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg, #2D5A27, #38a169)" }}
                 >
-                  <Plus size={16} /> Dodaj kmetijo
+                  <Plus size={15} strokeWidth={2.5} />
+                  Dodaj kmetijo
                 </Link>
 
                 {isPrijavljen ? (
                   <>
                     <Link
-                      href="/moj-racun"
-                      className="rounded-2xl border border-forest-200 text-forest-800 text-center py-3 font-semibold text-sm hover:bg-forest-50 transition-colors flex items-center justify-center gap-2"
+                      href="/moj-racun?tab=passport"
+                      className="rounded-2xl border border-forest-200/80 text-forest-700 text-center py-2.5 text-sm font-semibold hover:bg-forest-50 transition-colors flex items-center justify-center gap-2"
                     >
-                      <LayoutDashboard size={16} /> Moj račun
+                      <Stamp size={15} /> Zeleni potni list
                     </Link>
+
                     {vloga === "lastnik" && (
                       <Link
                         href="/dashboard"
-                        className="rounded-2xl border border-forest-200 text-forest-800 text-center py-3 font-semibold text-sm hover:bg-forest-50 transition-colors flex items-center justify-center gap-2"
+                        className="rounded-2xl border border-bark-200/80 text-bark-700 text-center py-2.5 text-sm font-semibold hover:bg-bark-50 transition-colors flex items-center justify-center gap-2"
                       >
-                        <LayoutDashboard size={16} /> Vodstvo kmetije
+                        <LayoutDashboard size={15} /> Vodstvo kmetije
                       </Link>
                     )}
-                    <Link
-                      href="/moj-racun?tab=passport"
-                      className="rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-center py-3 font-semibold text-sm hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Stamp size={16} /> Zeleni potni list
-                    </Link>
+
                     {vloga === "super_admin" && (
                       <Link
                         href="/admin"
-                        className="rounded-2xl border border-purple-200 text-purple-700 text-center py-3 font-semibold text-sm hover:bg-purple-50 transition-colors flex items-center justify-center gap-2"
+                        className="rounded-2xl border border-purple-200 text-purple-700 text-center py-2.5 text-sm font-semibold hover:bg-purple-50 transition-colors flex items-center justify-center gap-2"
                       >
-                        <Shield size={16} /> Admin plošča
+                        <Shield size={15} /> Admin plošča
                       </Link>
                     )}
+
                     <button
                       onClick={handleOdjava}
                       disabled={isPending}
-                      className="rounded-2xl border border-red-200 text-red-500 text-center py-3 font-semibold text-sm hover:bg-red-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                      className="rounded-2xl border border-red-200/80 text-red-500 text-center py-2.5 text-sm font-semibold hover:bg-red-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 w-full"
                     >
-                      <LogOut size={16} />
+                      <LogOut size={15} />
                       {isPending ? "Odjavljam..." : "Odjava"}
                     </button>
                   </>
                 ) : (
-                  <>
-                    <Link
-                      href="/prijava"
-                      className="rounded-2xl border border-forest-200 text-forest-800 text-center py-3 font-semibold text-sm hover:bg-forest-50 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <User size={16} /> Prijava
-                    </Link>
-                    <Link
-                      href="/registracija"
-                      className="rounded-2xl bg-forest-700 text-white text-center py-3 font-semibold text-sm hover:bg-forest-600 transition-colors flex items-center justify-center gap-2"
-                    >
-                      Registracija
-                    </Link>
-                  </>
+                  <Link
+                    href="/registracija"
+                    className="rounded-2xl border border-bark-200/80 text-bark-700 text-center py-2.5 text-sm font-semibold hover:bg-bark-50 transition-colors"
+                  >
+                    Registracija
+                  </Link>
                 )}
               </div>
-            </motion.div>
+            </motion.aside>
           </>
         )}
       </AnimatePresence>
