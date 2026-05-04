@@ -776,6 +776,43 @@ select:focus-visible {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* ── Film grain — dark sections ─────────────────────────────────────────── */
+/* Use .section-grain on a position:relative wrapper. */
+
+.section-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.044;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  mix-blend-mode: overlay;
+}
+
+/* ── Section overline label ──────────────────────────────────────────────── */
+
+.section-overline {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.30em;
+}
+
+.section-overline::before {
+  content: "";
+  display: inline-block;
+  width: 24px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
 /* ── Farm hover tooltip popup ───────────────────────────────────────────── */
 
 .farm-hover-popup .mapboxgl-popup-content {

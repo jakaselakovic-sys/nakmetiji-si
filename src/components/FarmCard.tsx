@@ -80,7 +80,7 @@ function Thumbtack({ color = "#d4a853" }: { color?: string }) {
   );
 }
 
-export function FarmCard({ farm, priority, index = 0 }: { farm: FarmCardData; priority?: boolean; index?: number }) {
+export function FarmCard({ farm, priority, index = 0, canvas = "light", featured = false }: { farm: FarmCardData; priority?: boolean; index?: number; canvas?: "light" | "dark"; featured?: boolean }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isInView = useInView(cardRef, { once: true, margin: "-60px" });
@@ -120,6 +120,7 @@ export function FarmCard({ farm, priority, index = 0 }: { farm: FarmCardData; pr
   }
 
   const tilt = TILTS[index % TILTS.length];
+  const isDark = canvas === "dark";
   const regionLabel = REGION_LABELS[farm.region] ?? farm.region;
   const obcinaLabel = farm.obcina ? farm.obcina : null;
 
@@ -163,14 +164,20 @@ export function FarmCard({ farm, priority, index = 0 }: { farm: FarmCardData; pr
             `,
             border: farm.paket === "titan_elite"
               ? "1.5px solid rgba(212,168,83,0.55)"
-              : "1px solid rgba(60,40,20,0.10)",
-            boxShadow: farm.paket === "titan_elite"
-              ? "0 6px 32px rgba(212,168,83,0.22), 0 0 0 1px rgba(212,168,83,0.28), inset 0 0 0 1px rgba(255,255,255,0.4)"
-              : "0 6px 24px rgba(45,35,20,0.14), 0 1px 3px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(255,255,255,0.4)",
+              : isDark
+                ? "1px solid rgba(255,255,255,0.10)"
+                : "1px solid rgba(60,40,20,0.10)",
+            boxShadow: isDark
+              ? farm.paket === "titan_elite"
+                ? "0 12px 56px rgba(0,0,0,0.82), 0 0 0 1.5px rgba(212,168,83,0.38), 0 0 48px rgba(212,168,83,0.15), inset 0 0 0 1px rgba(255,255,255,0.46)"
+                : "0 10px 48px rgba(0,0,0,0.78), 0 3px 10px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.44)"
+              : farm.paket === "titan_elite"
+                ? "0 6px 32px rgba(212,168,83,0.22), 0 0 0 1px rgba(212,168,83,0.28), inset 0 0 0 1px rgba(255,255,255,0.4)"
+                : "0 6px 24px rgba(45,35,20,0.14), 0 1px 3px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(255,255,255,0.4)",
           }}
         >
           {/* Image */}
-          <div className="relative aspect-[4/5] sm:aspect-[3/4] overflow-hidden rounded-[3px]">
+          <div className={`relative ${featured ? "aspect-[4/3]" : "aspect-[4/5] sm:aspect-[3/4]"} overflow-hidden rounded-[3px]`}>
             <Image
               src={farm.coverImageUrl || "/images/bg-vineyards.webp"}
               alt={farm.name}
