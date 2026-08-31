@@ -67,7 +67,7 @@ jobs:
 
       - name: Shrani build (3 dni)
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: next-build-${{ github.sha }}
           path: .next/
@@ -103,7 +103,7 @@ jobs:
 
       - name: Naloži poročilo testov
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report-${{ github.sha }}
           path: tests/playwright-report/
