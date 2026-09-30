@@ -184,6 +184,30 @@ Cap parallax at 3.5% of the frame width, and check depth edges at 100%.
 - Pexels / Commons / CC BY YouTube from the original source's own channel;
 - ≤ 15% combined, ≤ 15 s per clip, narrated over, never captioned as 1834.
 
+**Contextual YouTube clips** (required step, under `CLAUDE.md`'s YouTube rule):
+1. **Find candidates for each weak window from Phase C** where real moving footage would help. Use YouTube's Creative Commons filter and the Data API (`videos.list` → `status.license == "creativeCommon"`). Likely subjects:
+   - present-day Westminster, the Thames, the Palace interiors;
+   - surviving tally sticks in museum collections;
+   - hand-carving and splitting wood;
+   - a coal vs. wood furnace, fire behaviour;
+   - banknotes and bank ledgers;
+   - modern payment screens without branding.
+2. **Keep a clip only if:**
+   - its licence is CC BY;
+   - the uploader is the original source (the institution's own channel, or the person who filmed it);
+   - it isn't a documentary, news or TV broadcast, or music video;
+   - it doesn't show real people or brands in a way that implies endorsement.
+
+   **Nothing filmed can show 1834:** never present a clip as the historical event.
+3. **Download with yt-dlp** into `raw/ep01-v2/youtube/`: best ≤ 1080p, keep the original file and the `.info.json`, and screenshot the licence line into `raw/ep01-v2/terms/`.
+4. **Ledger row first**, then place the clip. The row holds: video URL, channel, licence, the screenshot path, and the credit line for the description.
+5. **Use rules:**
+   - ≤ 15 s uncut, always narrated over;
+   - graded to the film's look;
+   - never the opening shot;
+   - stock + YouTube ≤ 15% of runtime combined, measured by the edit gate.
+6. **If no clip passes these rules for a moment, don't loosen them.** Use a living plate or a reconstruction instead, and note it in `EP01-V2-PLAN.md`.
+
 **Transitions:**
 - match cuts (tally split → two phone screens; Turner fire → furnace mouth);
 - an ink or burn wipe at act breaks (one style, used consistently);
