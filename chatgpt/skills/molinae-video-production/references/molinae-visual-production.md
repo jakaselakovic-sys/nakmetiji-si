@@ -1,0 +1,1 @@
+../../../../.claude/skills/molinae-visual-production/SKILL.md
